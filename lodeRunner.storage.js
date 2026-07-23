@@ -614,28 +614,4 @@ function genUserLevel(levels)
 	}
 }
 
-//=======================================
-// BEGIN for set|get|clear localstorage
-//=======================================
-function setStorage(key, value) 
-{
-	if(typeof(window.localStorage) != 'undefined'){ 
-		window.localStorage.setItem(key,value); 
-	} 
-}
-
-function getStorage(key) 
-{
-	var value = null;
-	if(typeof(window.localStorage) != 'undefined'){ 
-		value = window.localStorage.getItem(key); 
-	} 
-	return value;
-}
-
-function clearStorage(key) 
-{
-	if(typeof(window.localStorage) != 'undefined'){ 
-		window.localStorage.removeItem(key); 
-	} 
-}
+// setStorage / getStorage / clearStorage: lodeRunner.storageCore.js

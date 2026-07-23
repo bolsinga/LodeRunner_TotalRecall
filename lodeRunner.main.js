@@ -391,77 +391,59 @@ function initVariable()
 
 function buildLevelMap(levelMap) 
 {
+	// Resolve base/act (incl. maxGuard culling + first-&-wins) in pure helper;
+	// this function only attaches CreateJS bitmaps/sprites.
+	var resolved = resolveLevelMap(levelMap, maxGuard);
 	var index = 0;
-	var mapGuardCount = 0; //Number of original guards 
-	
-	//(1) create empty map[x][y] array;
+
 	map = [];
 	for(var x = 0; x < NO_OF_TILES_X; x++) {
 		map[x] = [];
 		for(var y = 0; y < NO_OF_TILES_Y; y++) {
-			map[x][y] = {}; 
-			if(levelMap.charAt(index++) == '0') mapGuardCount++;
+			map[x][y] = {
+				base: resolved.map[x][y].base,
+				act: resolved.map[x][y].act,
+				bitmap: null
+			};
 		}
 	}
-	
-	//(2) draw map
-	index = 0;
+
 	for(var y = 0; y < NO_OF_TILES_Y; y++) {
 		for(var x = 0; x < NO_OF_TILES_X; x++) {
 			var id = levelMap.charAt(index++);
 			var curTile;
+			var cell = resolved.map[x][y];
 
 			switch(id) {
 			default:		
 			case ' ': //empty
-				map[x][y].base = EMPTY_T;
-				map[x][y].act  = EMPTY_T;
-				map[x][y].bitmap = null;
 				continue;
 			case '#': //Normal Brick
-				map[x][y].base = BLOCK_T;
-				map[x][y].act = BLOCK_T;	
 				curTile = map[x][y].bitmap = getThemeBitmap("brick");
 				break;	
 			case '@': //Solid Brick
-				map[x][y].base = SOLID_T;
-				map[x][y].act  = SOLID_T;
 				curTile = map[x][y].bitmap = getThemeBitmap("solid");
 				break;	
 			case 'H': //Ladder
-				map[x][y].base =LADDR_T;
-				map[x][y].act  =LADDR_T;
 				curTile = map[x][y].bitmap = getThemeBitmap("ladder");
 				break;	
 			case '-': //Line of rope
-				map[x][y].base = BAR_T;
-				map[x][y].act  = BAR_T;
 				curTile = map[x][y].bitmap = getThemeBitmap("rope");
 				break;	
 			case 'X': //False brick
-				map[x][y].base = TRAP_T; //behavior same as empty
-				map[x][y].act  = TRAP_T; 
 				curTile = map[x][y].bitmap = getThemeBitmap("brick");
 				break;
 			case 'S': //Ladder appears at end of level
-				map[x][y].base = HLADR_T; //behavior same as empty before end of level
-				map[x][y].act  = EMPTY_T; //behavior same as empty before end of level
 				curTile = map[x][y].bitmap = getThemeBitmap("ladder");
 				curTile.set({alpha:0});	//hide the laddr
 				break;
 			case '$': //Gold chest
-				map[x][y].base = GOLD_T; //keep gold on base map
-				map[x][y].act  = EMPTY_T;
 				curTile = map[x][y].bitmap = getThemeBitmap("gold");
 				goldCount++;	
 				break;	
-			case '0': //Guard
-				map[x][y].base = EMPTY_T;
-				map[x][y].act  = GUARD_T;  
-				map[x][y].bitmap = null;
-				if(--mapGuardCount >= maxGuard) {
-					map[x][y].act = EMPTY_T;
-					continue;  //too many guards, set this tile as empty
+			case '0': //Guard - spawn only if resolveLevelMap kept GUARD_T
+				if(cell.act != GUARD_T) {
+					continue;  // culled by maxGuard
 				}
 
 				curTile = new createjs.Sprite(guardData, "runLeft");
@@ -476,13 +458,9 @@ function buildLevelMap(levelMap)
 				guardCount++;	
 				curTile.stop();	
 				break;	
-			case '&': //Player
-				map[x][y].base = EMPTY_T;
-				map[x][y].act  = RUNNER_T;	
-				map[x][y].bitmap = null;
-				if(runner !=  null) {
-					map[x][y].act  = EMPTY_T;	
-					continue;  //too many runner, set this tile as empty
+			case '&': //Player - spawn only if resolveLevelMap kept RUNNER_T
+				if(cell.act != RUNNER_T) {
+					continue;  // demoted (extra runner)
 				}
 				runner = {};	
 				curTile = runner.sprite = new createjs.Sprite(runnerData, "runRight");
@@ -497,7 +475,6 @@ function buildLevelMap(levelMap)
 			mainStage.addChild(curTile); 
 		}
 	}
-	assert(mapGuardCount == 0, "Error: mapCuardCount design error !" );
 	moveSprite2Top();
 }
 

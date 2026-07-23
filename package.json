@@ -1,0 +1,11 @@
+{
+  "name": "loderunner-totalrecall",
+  "private": true,
+  "description": "HTML5 Lode Runner remake - characterization tests for regression safety",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

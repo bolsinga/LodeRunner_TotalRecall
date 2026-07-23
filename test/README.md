@@ -1,0 +1,42 @@
+# Tests
+
+Characterization / regression suite for Lode Runner Total Recall.
+
+## Requirements
+
+- Node.js **≥ 18** (local machine confirmed on v26.5.0). Uses built-in `node:test` / `node:assert` - no npm install needed.
+
+## Run
+
+```bash
+npm test
+```
+
+Or:
+
+```bash
+node --test test/*.test.js
+```
+
+## What is covered (Stage 1)
+
+| Suite | Kind | Locks |
+|-------|------|--------|
+| `level-integrity.test.js` | characterization | All classic/pro/revenge/fan/championship levels: 28×16, legal tiles, one `&` |
+| `level-integrity.test.js` | characterization | `parseLevelChar` / `parseLevelMap` tile mapping + classic L1 snapshot |
+| `level-map-culling.test.js` | characterization | `resolveLevelMap` maxGuard culling + first-`&`-wins (the buildLevelMap path Stage 2 will risk) |
+| `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
+| `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
+| `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |
+| `demo-data.test.js` | characterization | `demoData1` record schema |
+
+## Conventions
+
+- **Behavior change ⇒ update or add tests in the same commit.**
+- Prefer labeling tests as **characterization** (current output) vs **correctness** (intended output). Known-buggy chrome/iris behavior may be locked as characterization until Stage 2 fixes it.
+- Pure helpers live in `lodeRunner.levelParse.js` (`parseLevelChar`, `resolveLevelMap`), `lodeRunner.shareCodec.js`, `lodeRunner.storageCore.js` and are loaded in the browser via `lodeRunner.html`.
+- `buildLevelMap` in `main.js` calls `resolveLevelMap(levelMap, maxGuard)` for base/act (including culling), then only attaches CreateJS sprites. Do not re-introduce inline culling in `main.js`.
+
+## CI
+
+No CI configured. Run `npm test` locally before every commit. Revisit if a shared remote workflow is added.
