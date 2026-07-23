@@ -1234,11 +1234,17 @@ function openingScreen(r)
 	}
 }
 
+var startBlinkTimer = 0;
+
 function beginPlay()
 {
 	gameState = GAME_START;
 	keyAction = ACT_STOP;
-	runner.sprite.gotoAndPlay();
+	// Stay frozen (and blink in mainTick) until first move - original Lode Runner behavior.
+	// Previously gotoAndPlay() made the runner run in place during GAME_START.
+	runner.sprite.stop();
+	runner.sprite.visible = true;
+	startBlinkTimer = 0;
 	changingLevel = 0;
 		
 	if(recordMode) initRecordVariable();
@@ -1342,8 +1348,14 @@ function mainTick(event)
 	
 	switch(gameState) {
 	case GAME_START:
-		countAutoDemoTimer();	
+		countAutoDemoTimer();
+		// Flash runner while waiting for first key/move (classic behavior)
+		if(++startBlinkTimer >= 8) {
+			startBlinkTimer = 0;
+			runner.sprite.visible = !runner.sprite.visible;
+		}
 		if(keyAction != ACT_STOP && keyAction != ACT_UNKNOWN) {
+			runner.sprite.visible = true;
 			disableAutoDemoTimer();	
 			gamepadClearId();	
 			gameState = GAME_RUNNING;
