@@ -158,11 +158,14 @@ function setBackground()
 	var background = new createjs.Shape();
 	background.graphics.beginFill("#000000").drawRect(0, 0, canvas.width, canvas.height);
 	mainStage.addChild(background);
-	document.body.style.background = backgroundColor;
+	// Respect Ctrl+B chrome toggle during level iris / redraws
+	document.body.style.background = playChromeVisible ? backgroundColor : "#000000";
 }
 
 function showCoverPage()
 {
+	playChromeVisible = 1;
+	document.body.style.background = backgroundColor;
 	menuIconDisable(1);
 	clearIdleDemoTimer();
 	mainStage.removeAllChildren();	
@@ -1161,6 +1164,27 @@ function menuIconDisable(hidden)
 	themeColorObj.disable(hidden);
 }
 
+// Play chrome = purple page frame + side control icons. Ctrl+B toggles.
+var playChromeVisible = 1;
+
+function setPlayChrome(visible)
+{
+	playChromeVisible = visible ? 1 : 0;
+	if (playChromeVisible) {
+		document.body.style.background = backgroundColor;
+		menuIconEnable();
+	} else {
+		document.body.style.background = "#000000";
+		menuIconDisable(1);
+	}
+}
+
+function togglePlayChrome()
+{
+	setPlayChrome(!playChromeVisible);
+	showTipsText(playChromeVisible ? "CHROME ON" : "CHROME OFF", 1500);
+}
+
 var showStartTipsMsg = 1;
 function initShowDataMsg(showMsg)
 {
@@ -1215,6 +1239,7 @@ function initForPlay()
 {
 	menuIconEnable();
 	showDataMsg();
+	if (!playChromeVisible) setPlayChrome(0);
 }
 
 function openingScreen(r)

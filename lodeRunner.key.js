@@ -71,7 +71,10 @@ function pressCtrlKey(code)
 			showTipsText("SOUND ON", 1500);
 		}
 		soundIconObj.updateSoundImage(); //toggle sound On/Off icon	
-		break;	
+		break;
+	case KEYCODE_B: //CTRL-B : toggle play chrome (black frame / side icons)
+		togglePlayChrome();
+		break;
 	case KEYCODE_LEFT: //SHIFT + <- : speed down
 		setSpeed(-1);	
 		break;	
@@ -286,6 +289,9 @@ function gameResume()
 	gameState = lastGameState;
 	soundResume(soundFall);
 	soundResume(soundDig);
+	if (gameState == GAME_START || gameState == GAME_RUNNING) {
+		setPlayChrome(playChromeVisible);
+	}
 }
 
 function gamePause()
@@ -294,6 +300,9 @@ function gamePause()
 	gameState = GAME_PAUSE;
 	soundPause(soundFall);
 	soundPause(soundDig);
+	// Temporarily show chrome for menu access (do not change playChromeVisible)
+	document.body.style.background = backgroundColor;
+	menuIconEnable();
 }
 
 function handleKeyDown(event) 
