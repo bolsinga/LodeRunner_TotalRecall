@@ -1,3 +1,7 @@
+//=============================================================================
+// Theme recolor: sample original solid hue, build tinted bitmaps per color id.
+// Pixel work is plain canvas + getImageData/putImageData (no offscreen Stage).
+//=============================================================================
 
 var baseBitmapName = [
 	"empty", "brick", "solid", "ladder", "rope",
@@ -66,6 +70,15 @@ function getThemeBitmap(name)
 	return themeBaseBitmap[name+ curTheme+curColorId[curTheme]].clone();
 }
 
+/** Image source for the active theme tile (no clone). */
+function getThemeBitmapImage(name)
+{
+	var bmp = (name == "eraser")
+		? themeBaseBitmap[name]
+		: themeBaseBitmap[name + curTheme + curColorId[curTheme]];
+	return bmp ? bmp.image : null;
+}
+
 function getThemeImage(name) 
 {
 	return preload.getResult(name);
@@ -85,63 +98,52 @@ function getCurColorId()
 	return curColorId[curTheme];
 }
 
+//2D context that will be read back via getImageData
+function themeReadbackContext(canvas)
+{
+	return canvas.getContext("2d", { willReadFrequently: true });
+}
+
 function getOrgImageColor(themeName)
 {
-	var canvas = document.createElement('canvas');
-	var ctx=canvas.getContext("2d");
-	var stage = new createjs.Stage(canvas);
-	var bitmap = new createjs.Bitmap(getThemeImage("solid"+themeName)); //"solid" as sample image
-	var imgData, orgColor;
-	
-	canvas.width  = bitmap.getBounds().width;
-	canvas.height = bitmap.getBounds().height;
-	stage.addChild(bitmap);	
-	stage.update();
-	stage.cache(0, 0, canvas.width, canvas.height);
+	var img = getThemeImage("solid"+themeName); //"solid" as sample image
+	var canvas = document.createElement("canvas");
+	canvas.width = img.naturalWidth || img.width;
+	canvas.height = img.naturalHeight || img.height;
+	var ctx = themeReadbackContext(canvas);
+	ctx.drawImage(img, 0, 0);
 
-	imgData=ctx.getImageData(0, 0, canvas.width, canvas.height);
-	orgColor = [imgData.data[0], imgData.data[1], imgData.data[2] ];
-	stage.uncache();
-	stage.removeAllChildren();
-	stage.update();
-	
-	return orgColor;
+	var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+	return [imgData.data[0], imgData.data[1], imgData.data[2]];
 }
 
 function createBitmap(imageName, oldColor, newColor)
 {
-	var bitmap = new createjs.Bitmap(getThemeImage(imageName));
-	var newBitmap;
-	
-	if(newColor != null && (newBitmap = changeBitmapColor(bitmap, oldColor, newColor)) != null)
-		return newBitmap; //color changed
-	else 
-		return bitmap;
+	var img = getThemeImage(imageName);
+	var tintedCanvas;
+
+	if (newColor != null && (tintedCanvas = changeImageColor(img, oldColor, newColor)) != null)
+		return new createjs.Bitmap(tintedCanvas); //color changed
+	else
+		return new createjs.Bitmap(img);
 }
 
-function changeBitmapColor(bitmap, oldColor, newColor)
+//tint matching pixels on a copy of img; returns canvas or null if unchanged
+function changeImageColor(img, oldColor, newColor)
 {
-	var canvas = document.createElement('canvas');
-	var stage = new createjs.Stage(canvas);
-	var changed;
-	
-	canvas.width  = bitmap.getBounds().width;
-	canvas.height = bitmap.getBounds().height;
-	stage.addChild(bitmap);	
-	stage.update();
-	stage.cache(0, 0, canvas.width, canvas.height);
+	var canvas = document.createElement("canvas");
+	canvas.width = img.naturalWidth || img.width;
+	canvas.height = img.naturalHeight || img.height;
+	var ctx = themeReadbackContext(canvas);
+	ctx.drawImage(img, 0, 0);
 
-	changed = changeColor(canvas, oldColor, newColor);
-	stage.uncache();
-	stage.removeAllChildren();
-	
-	if(changed) return (new createjs.Bitmap(stage.canvas));
-	else return null;
+	if (changeColor(canvas, oldColor, newColor)) return canvas;
+	return null;
 }
 
 function changeColor(canvas, oldColor, newColor)
 {
-	var ctx=canvas.getContext("2d");
+	var ctx = themeReadbackContext(canvas);
 	var imgData=ctx.getImageData(0, 0, canvas.width, canvas.height);
 	var data = imgData.data;
 	var bitChanged = 0;
@@ -154,7 +156,6 @@ function changeColor(canvas, oldColor, newColor)
 		var red   = data[i + 0];
 		var green = data[i + 1];
 		var blue  = data[i + 2];
-		var alpha = data[i + 3];
 		if(oldMin[0] <= red   && red   <= oldMax[0] && 
 		   oldMin[1] <= green && green <= oldMax[1] &&
 		   oldMin[2] <= blue  && blue  <= oldMax[2]) 

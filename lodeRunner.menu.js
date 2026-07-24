@@ -957,69 +957,12 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			return selectMap;
 		}	
 		
+		//Thumbnail for the select grid only; flatten via renderLevelMapToCanvas.
+		//BR->TL scan / first-MAX_NEW_GUARD-guards + first-runner cull (differs from
+		//resolveLevelMap row-major culling) - see lodeRunner.levelThumb.js.
 		function level2Bitmap(levelMap)
 		{
-			var container = new createjs.Container();	
-			var guardCount = 0, runner = 0;
-			var bitmap;
-	
-			//--------------------------------------------
-			// Parser map from right-bottom to left-top
-			// for drop guards if too manys	
-			//--------------------------------------------
-			var index = NO_OF_TILES_Y * NO_OF_TILES_X - 1;
-			for(var y = NO_OF_TILES_Y-1; y >= 0; y--) {
-				for(var x = NO_OF_TILES_X-1; x >= 0; x--) {
-					var id = levelMap.charAt(index--);		
-
-					var curTile;	
-					switch(id) {
-					default:		
-					case ' ': //empty
-						continue;
-					case '#': //Normal Brick
-						curTile = getThemeBitmap("brick");
-						break;	
-					case '@': //Solid Brick
-						curTile = getThemeBitmap("solid");
-						break;	
-					case 'H': //Ladder
-						curTile = getThemeBitmap("ladder");
-						break;	
-					case '-': //Line of rope
-						curTile = getThemeBitmap("rope");
-						break;	
-					case 'X': //False brick
-						curTile = getThemeBitmap("brick");
-						break;
-					case 'S': //Ladder appears at end of level
-						continue;
-					case '$': //Gold chest
-						curTile = getThemeBitmap("gold");
-						break;	
-					case '0': //Guard
-						if(++guardCount > MAX_NEW_GUARD) { 
-							continue;  //too many guard , set this tile as empty
-						}
-						curTile = new createjs.Sprite(guardData, "runLeft");
-						curTile.stop();	
-						break;	
-					case '&': //Player
-						if(++runner > 1) {
-							continue;  //too many runner, set this tile as empty
-						}
-						curTile = new createjs.Sprite(runnerData, "runRight");
-						curTile.stop();	
-						break;	
-					}
-					curTile.setTransform(x * BASE_TILE_X*MAP_SCALE, y * BASE_TILE_Y*MAP_SCALE,MAP_SCALE, MAP_SCALE);
-					container.addChild(curTile); 
-				}
-			}	
-			container.cache(0, 0, SELECT_SIZE_X, SELECT_SIZE_Y);
-			bitmap = new createjs.Bitmap( container.cacheCanvas); //change "cont.getCacheDataURL()" to "cont.cacheCanvas"
-			container.removeAllChildren();
-			return bitmap;
+			return levelMapToBitmap(levelMap, MAP_SCALE, MAP_SCALE, SELECT_SIZE_X, SELECT_SIZE_Y);
 		}
 		
 		//for demo mode
@@ -3559,67 +3502,7 @@ function restoreDialog(id, _callBackFun)
 
 	function level2Bitmap(levelMap, scaleX, scaleY)
 	{
-		var container = new createjs.Container();	
-		var guardCount = 0, runner = 0;
-		var bitmap;
-
-		//--------------------------------------------
-		// Parser map from right-bottom to left-top
-		// for drop guards if too manys	
-		//--------------------------------------------
-		var index = NO_OF_TILES_Y * NO_OF_TILES_X - 1;
-		for(var y = NO_OF_TILES_Y-1; y >= 0; y--) {
-			for(var x = NO_OF_TILES_X-1; x >= 0; x--) {
-				var id = levelMap.charAt(index--);		
-
-				var curTile;	
-				switch(id) {
-				default:		
-				case ' ': //empty
-					continue;
-				case '#': //Normal Brick
-					curTile = getThemeBitmap("brick");
-					break;	
-				case '@': //Solid Brick
-					curTile = getThemeBitmap("solid");
-					break;	
-				case 'H': //Ladder
-					curTile = getThemeBitmap("ladder");
-					break;	
-				case '-': //Line of rope
-					curTile = getThemeBitmap("rope");
-					break;	
-				case 'X': //False brick
-					curTile = getThemeBitmap("brick");
-					break;
-				case 'S': //Ladder appears at end of level
-					continue;
-				case '$': //Gold chest
-					curTile = getThemeBitmap("gold");
-					break;	
-				case '0': //Guard
-					if(++guardCount > MAX_NEW_GUARD) { 
-						continue;  //too many guard , set this tile as empty
-					}
-					curTile = new createjs.Sprite(guardData, "runLeft");
-					curTile.stop();	
-					break;	
-				case '&': //Player
-					if(++runner > 1) {
-						continue;  //too many runner, set this tile as empty
-					}
-					curTile = new createjs.Sprite(runnerData, "runRight");
-					curTile.stop();	
-					break;	
-				}
-				curTile.setTransform(x*BASE_TILE_X*scaleX, y*BASE_TILE_Y*scaleX, scaleX, scaleY);
-				container.addChild(curTile); 
-			}
-		}	
-		container.cache(0, 0, previewMapX, previewMapY);
-		bitmap = new createjs.Bitmap( container.cacheCanvas); // change "cont.getCacheDataURL()" to "cont.cacheCanvas"
-		container.removeAllChildren();
-		return bitmap;
+		return levelMapToBitmap(levelMap, scaleX, scaleY, previewMapX, previewMapY);
 	}	
 
 	function restoreConfirm(rc)

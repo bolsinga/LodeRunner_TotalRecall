@@ -37,6 +37,7 @@ node --test test/*.test.js
 | `iconCanvas.test.js` | characterization | `createIconCanvas` draw/hover/alpha/pointer + `iconBitmapNaturalSize` |
 | `info-overlay.test.js` | characterization | info.js has no CreateJS/enableMouseOver; edit input is pointer-driven (no `editTick`/setFPS(60)) |
 | `edit-guards.test.js` | correctness | Edit mode blocks attract-demo; unsaved-map unload/leave guards exist |
+| `recolor-thumb.test.js` | characterization | colorTheme recolor uses plain-canvas readback (no Stage); level thumbs flatten via `levelThumb.js` |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |
