@@ -38,6 +38,7 @@ var KEYCODE_BKSPACE = 8, //backspace
 	KEYCODE_SUBTRACT = 109,  //Add KEYCODE_SUBTRACT & KEYCODE_HYPHEN for support fireFox 'dash' keycode
 	KEYCODE_HYPHEN   = 173,  //
 	KEYCODE_DASH = 189, //'-'
+	KEYCODE_EQUALS = 187, //'=' / '+' (no Shift); Firefox often 61
 	KEYCODE_DOT  = 190, //'.'
 
 	KEYCODE_U = 85,  //dig left

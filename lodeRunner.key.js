@@ -75,11 +75,20 @@ function pressCtrlKey(code)
 	case KEYCODE_B: //CTRL-B : toggle play chrome (black frame / side icons)
 		togglePlayChrome();
 		break;
-	case KEYCODE_LEFT: //SHIFT + <- : speed down
-		setSpeed(-1);	
-		break;	
-	case KEYCODE_RIGHT: //SHIFT + -> : speed up
-		setSpeed(1);	
+	case KEYCODE_DASH: //CTRL- '-' : speed down (Mac-friendly; Ctrl+arrows switch Spaces)
+	case KEYCODE_HYPHEN:
+	case KEYCODE_SUBTRACT:
+		setSpeed(-1);
+		break;
+	case KEYCODE_EQUALS: //CTRL- '=' : speed up (same key as +, no Shift)
+	case 61: // Firefox '='
+		setSpeed(1);
+		break;
+	case KEYCODE_LEFT: //CTRL-LEFT : speed down (kept for non-Mac)
+		setSpeed(-1);
+		break;
+	case KEYCODE_RIGHT: //CTRL-RIGHT : speed up (kept for non-Mac)
+		setSpeed(1);
 		break;
 	case KEYCODE_H:	//CTRL-H : redHat mode on/off
 		toggleRedhatMode();
