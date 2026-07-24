@@ -1,5 +1,5 @@
 //=============================================================================
-// Pure helpers: theme image/sound manifest entries for PreloadJS.
+// Pure helpers: theme image/sound manifest entries for the asset/sound loaders.
 // Used by lodeRunner.preload.js; testable without CreateJS.
 //=============================================================================
 
@@ -35,7 +35,7 @@ var THEME_SOUND_FILES = [
 	{ id: "trap", file: "trap" }
 ];
 
-//image + sound LoadQueue items for one theme; C64 adds goldFinish1-6
+//image + sound manifest items for one theme; C64 adds goldFinish1-6
 function buildThemeAssetManifest(themeName, themeImagePath, themeSoundPath, noCache)
 {
 	var q = noCache || "";
@@ -78,7 +78,7 @@ function isSoundAssetSrc(src)
 	return /\.ogg(\?|$)/i.test(String(src));
 }
 
-//split LoadQueue-style items into images (PreloadJS) vs sounds (Web Audio)
+//split manifest items into images (asset cache) vs sounds (Web Audio)
 function partitionAssetManifest(list)
 {
 	var images = [];

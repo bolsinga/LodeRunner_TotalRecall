@@ -32,7 +32,6 @@ var returnBitmap, select1Bitmap, nextBitmap;
 var openFolderBitmap; // for restore custom levels
 var nextMapBitmap, prevMapBitmap; // for restore custom levels
 var yesBitmap, noBitmap;
-var coverPageLoad;
 var noCache = "?" + VERSION+ ".1051230";
 
 function showLoadingPage() 
@@ -41,17 +40,13 @@ function showLoadingPage()
 		{ src: "image/cover.png"+noCache,  id: "cover" },
 		{ src: themeImagePath + THEME_APPLE2 + "/runner.png"+noCache,  id: "runner" }
 	];
-		
-	coverPageLoad = new createjs.LoadQueue(true);
-	coverPageLoad.addEventListener("error", handleCoverPageError);
-	coverPageLoad.addEventListener("fileload", handleCoverPageFileLoad);
-	coverPageLoad.addEventListener("complete", handleCoverPageComplete);
-	coverPageLoad.loadManifest(coverPageImages);
-		
-	function handleCoverPageError(e)
-	{
-		console.log("error", e);
-	}
+
+	assetLoadManifest(coverPageImages, {
+		onFileLoad: handleCoverPageFileLoad,
+		onError: function (e) { console.log("error", e); }
+	}).then(function () {
+		preloadResource();
+	});
 
 	function handleCoverPageFileLoad(e)
 	{
@@ -63,11 +58,6 @@ function showLoadingPage()
 			createRunnerSpriteSheet(e.result);
 			break;
 		} 
-	}
-
-	function handleCoverPageComplete(e)
-	{
-		preloadResource();
 	}
 		
 	function addCover2Screen(image)
@@ -126,7 +116,6 @@ function createRunnerSpriteSheet(runnerImage)
 //*****************************************************************************		
 //BEGIN of preload		
 //*****************************************************************************		
-var preload; //preload resource object
 var firstPlay = 0;
 
 var runnerData;
@@ -140,7 +129,7 @@ var soundFall, soundDig, soundPass, soundEnding;
 var themeImagePath = "image/Theme/";
 var themeSoundPath = "sound/Theme/";
 
-/** Themes whose image/sound packs are already in the LoadQueue. */
+/** Themes whose image/sound packs are already cached. */
 var themeAssetsLoaded = {};
 var themeSwitchPending = 0;
 
@@ -150,18 +139,13 @@ function isThemeAssetsLoaded(themeName)
 }
 
 /**
- * Ensure theme sprites/sounds are in `preload`, then build color bitmaps.
+ * Ensure theme sprites/sounds are loaded, then build color bitmaps.
  * callback() always runs (even if already loaded).
  */
 function ensureThemeLoaded(themeName, callback)
 {
 	if (themeAssetsLoaded[themeName]) {
 		ensureThemeBaseBitmaps(themeName);
-		if (callback) callback();
-		return;
-	}
-	if (!preload) {
-		error("ensureThemeLoaded: preload queue missing");
 		if (callback) callback();
 		return;
 	}
@@ -182,14 +166,12 @@ function ensureThemeLoaded(themeName, callback)
 	}
 
 	if (!imagesDone) {
-		function onImages()
-		{
-			preload.removeEventListener("complete", onImages);
+		assetLoadManifest(parts.images, {
+			onError: function (e) { console.log("error", e); }
+		}).then(function () {
 			imagesDone = true;
 			done();
-		}
-		preload.addEventListener("complete", onImages);
-		preload.loadManifest(parts.images);
+		});
 	}
 	if (!soundsDone) {
 		soundLoadManifest(parts.sounds).then(function () {
@@ -273,32 +255,6 @@ function preloadResource()
 	var imagesDone = parts.images.length === 0;
 	var soundsDone = parts.sounds.length === 0;
 	var loadCompleted = false;
-	
-	preload = new createjs.LoadQueue(true);
-	preload.addEventListener("error", handleFileError);
-	preload.addEventListener("progress", handleProgress);
-	preload.addEventListener("complete", handleImagesComplete);
-
-	if (!imagesDone) preload.loadManifest(parts.images);
-	if (!soundsDone) {
-		soundLoadManifest(parts.sounds, function (loaded, total) {
-			soundProgress = total ? (loaded / total) : 1;
-			updateCombinedProgress();
-		}).then(function () {
-			soundsDone = true;
-			maybeHandleComplete();
-		}).catch(function (err) {
-			console.log("sound load error", err);
-			soundsDone = true;
-			maybeHandleComplete();
-		});
-	} else {
-		soundProgress = 1;
-	}
-	if (imagesDone) {
-		imgProgress = 1;
-		maybeHandleComplete();
-	}
 
 	createjs.Ticker.setFPS(30);
 	createjs.Ticker.addEventListener("tick", mainStage);
@@ -324,11 +280,6 @@ function preloadResource()
 	
 	mainStage.addChild(runnerSprite, progress, progressBorder, percentTxt);
 	
-	function handleFileError(event) 
-	{
-		console.log("error", event);
-	}
-
 	function updateCombinedProgress()
 	{
 		var imgW = parts.images.length;
@@ -341,21 +292,6 @@ function preloadResource()
 		percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
 	}
 
-	function handleProgress(event) 
-	{
-		imgProgress = event.total ? (event.loaded / event.total) : 1;
-		updateCombinedProgress();
-	}
-
-	function handleImagesComplete()
-	{
-		preload.removeEventListener("complete", handleImagesComplete);
-		imagesDone = true;
-		imgProgress = 1;
-		updateCombinedProgress();
-		maybeHandleComplete();
-	}
-
 	function maybeHandleComplete()
 	{
 		if (loadCompleted || !imagesDone || !soundsDone) return;
@@ -363,11 +299,43 @@ function preloadResource()
 		handleComplete();
 	}
 
+	// Start loads after progress UI exists (onProgress may fire synchronously).
+	if (!imagesDone) {
+		assetLoadManifest(parts.images, {
+			onProgress: function (loaded, total) {
+				imgProgress = total ? (loaded / total) : 1;
+				updateCombinedProgress();
+			},
+			onError: function (e) { console.log("error", e); }
+		}).then(function () {
+			imagesDone = true;
+			imgProgress = 1;
+			updateCombinedProgress();
+			maybeHandleComplete();
+		});
+	}
+	if (!soundsDone) {
+		soundLoadManifest(parts.sounds, function (loaded, total) {
+			soundProgress = total ? (loaded / total) : 1;
+			updateCombinedProgress();
+		}).then(function () {
+			soundsDone = true;
+			maybeHandleComplete();
+		}).catch(function (err) {
+			console.log("sound load error", err);
+			soundsDone = true;
+			maybeHandleComplete();
+		});
+	} else {
+		soundProgress = 1;
+	}
+	if (imagesDone) {
+		imgProgress = 1;
+		maybeHandleComplete();
+	}
+
 	function handleComplete() 
 	{
-		preload.removeEventListener("progress", handleProgress);
-		preload.removeEventListener("error", handleFileError);
-
 		themeAssetsLoaded[curTheme] = 1;
 
 		percentTxt.text = "100%";
@@ -556,7 +524,6 @@ function themeDataReset(resetAll)
 
 function createSpriteSheet()
 {
-	//createRunnerSpriteSheet(coverPageLoad.getResult("runner"));
 	createRunnerSpriteSheet(getThemeBitmap("runner").image);
 	createPreloadSpriteSheet();
 	createFlagSpriteSheet();
