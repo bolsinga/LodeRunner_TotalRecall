@@ -505,7 +505,7 @@ function digHole(action)
 	
 	if(curAiVersion < 3) {
 		holeObj.sprite.gotoAndPlay(holeShape);
-		holeObj.sprite.on("animationend", digComplete);
+		holeObj.sprite.addEventListener("animationend", digComplete);
 	} else {
 		if(action == ACT_DIG_LEFT) holeShape = digHoleLeft;
 		else holeShape = digHoleRight; 
@@ -617,7 +617,7 @@ function fillHole(x, y)
 	fillSprite.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale);
 	
 	if(curAiVersion < 3) {
-		fillSprite.on("animationend", fillComplete, null, false, {obj:fillSprite} );
+		fillSprite.addEventListener("animationend", fillComplete);
 		fillSprite.play();
 	} else {
 		fillSprite.curFrameIdx  =   0;
@@ -642,9 +642,10 @@ function fillComplete(evt, data)
 	//don't use "divide command", it will cause loss of accuracy while scale changed (ex: tileScale = 0.6...)
 	//var x = this.x / tileWScale | 0; //this : scope default to the dispatcher
 	//var y = this.y / tileHScale | 0;
-	
-	var fillObj = data.obj;
-	var x = fillObj.pos.x, y = fillObj.pos.y; //get position 
+
+	//AI<3 animationend passes evt (target = sprite); AI>=3 processFillHole passes {obj:sprite}
+	var fillObj = data ? data.obj : evt.target;
+	var x = fillObj.pos.x, y = fillObj.pos.y; //get position
 
 	map[x][y].bitmap.set({alpha:1}); //display block
 	fillObj.removeAllEventListeners ("animationend");

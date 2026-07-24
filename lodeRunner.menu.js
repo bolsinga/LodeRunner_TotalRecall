@@ -137,9 +137,9 @@ function helpMenuClass(_stage, _bitmap, _editBitmap, _scale)
 			cross = new createjs.Shape();
 			cycle = new createjs.Shape();
 			closeIcon.addChild(cycle, cross);
-			closeIcon.on("mouseover", handleMouseOver);
-			closeIcon.on("mouseout", handleMouseOut);
-			closeIcon.on("click", closeHelpMenu);
+			closeIcon.addEventListener("mouseover", handleMouseOver);
+			closeIcon.addEventListener("mouseout", handleMouseOut);
+			closeIcon.addEventListener("click", closeHelpMenu);
 			closeIcon.x = startX+menuX - closeBoxSize*3;
 			closeIcon.y = startY + closeBoxSize*2;
 			stage.enableMouseOver(30);
@@ -223,9 +223,9 @@ function closeIconClass(_width, _height, _stage, _scale, _activeColor, _callBack
 			cross = new createjs.Shape();
 			cycle = new createjs.Shape();
 			closeIcon.addChild(cycle, cross);
-			closeIcon.on("mouseover", handleMouseOver);
-			closeIcon.on("mouseout", handleMouseOut);
-			closeIcon.on("click", handleMouseClick);
+			closeIcon.addEventListener("mouseover", handleMouseOver);
+			closeIcon.addEventListener("mouseout", handleMouseOut);
+			closeIcon.addEventListener("click", handleMouseClick);
 			closeIcon.x = _width  - closeBoxSize*3;
 			closeIcon.y = _height + closeBoxSize*2;
 			//_stage.enableMouseOver(30);
@@ -573,7 +573,7 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			      .drawRect(BORDER1+BORDER2-1, CANVAS_SIZE_Y-BORDER1, SLIDE_AREA_X+2, BORDER1).endFill();
 		
 		border1.addChild(vBorder1, vBorder2);
-		border1.on("mouseover", function() { dialogStage.cursor ="default"; });
+		border1.addEventListener("mouseover", function() { dialogStage.cursor ="default"; });
 		dialogStage.addChild(border1);
 	}
 	
@@ -641,10 +641,10 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			
 			tabs[i].tabId = i;
 			
-			tabs[i].on("mouseover", function(){ dialogStage.cursor = 'pointer'; dialogStage.update();});
-			tabs[i].on("mouseout", function() { dialogStage.cursor = 'default'; dialogStage.update();});
+			tabs[i].addEventListener("mouseover", function(){ dialogStage.cursor = 'pointer'; dialogStage.update();});
+			tabs[i].addEventListener("mouseout", function() { dialogStage.cursor = 'default'; dialogStage.update();});
 			
-			tabs[i].on("click", tabMouseClick);					   
+			tabs[i].addEventListener("click", tabMouseClick);					   
 		}
 		
 		tabsLine = new createjs.Shape();
@@ -695,12 +695,13 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			moveChild2Top(dialogStage, tabsLine);
 		}
 		
-		function tabMouseClick() {
-			if(activePage != this.tabId) {
+		function tabMouseClick(evt) {
+			var tabId = evt.currentTarget.tabId;
+			if(activePage != tabId) {
 				tabsInActiveAll();
-				tabsActive(this.tabId);
-				setSlidePage(this.tabId);
-				activePage = this.tabId;
+				tabsActive(tabId);
+				setSlidePage(tabId);
+				activePage = tabId;
 			}
 		}
 	}
@@ -754,18 +755,18 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 					createSelectLevel(x, y);
 				}
 			}
-			background.on("mouseover", function() {
+			background.addEventListener("mouseover", function() {
 				dialogStage.cursor =  "url('cursor/openhand.cur'), auto";}
 			);
-			background.on("mouseout", function() { 
+			background.addEventListener("mouseout", function() { 
 				dialogStage.cursor =  "default";}
 			);
 			
-			slider.on("mousedown", function(evt) {
+			slider.addEventListener("mousedown", function(evt) {
 				diffY = evt.currentTarget.y - evt.stageY;
 			});
 
-			slider.on("pressmove",function(evt) {
+			slider.addEventListener("pressmove", function(evt) {
 				debug("pressmove (1) x=" + evt.stageX + ", y=" + evt.stageY); 
 				if(sliderMoved++ <= 0) firstPressMoveY = evt.stageY;
 				
@@ -784,7 +785,7 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 				dialogStage.update();   
 			});
 		
-			slider.on("pressup", function(evt) {
+			slider.addEventListener("pressup", function(evt) {
 				debug("press-up (0)");
 				sliderMoved = firstPressMoveY = 0;
 				dialogStage.cursor =  "url('cursor/openhand.cur'), auto";
@@ -842,9 +843,9 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			slider.addChild(selectRect[id]);
 			
 			if(playMode != PLAY_DEMO || (playMode == PLAY_DEMO && (typeof demoData[level-1] != "undefined"))) {
-				selectRect[id].on('click', selectClick);
-				selectRect[id].on('mouseover', selectMouseOver);
-				selectRect[id].on('mouseout', selectMouseOut);
+				selectRect[id].addEventListener('click', selectClick);
+				selectRect[id].addEventListener('mouseover', selectMouseOver);
+				selectRect[id].addEventListener('mouseout', selectMouseOut);
 			}
 			
 			selectRect[id].myId = id;
@@ -1079,28 +1080,30 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 			removeCoverBackground();
 			restoreKeyState();
 			if(_postFun) _postFun();
-			_activeFun(this.myLevel);
+			_activeFun(evt.currentTarget.myLevel);
 		}
-		
-		function selectMouseOver()
+
+		function selectMouseOver(evt)
 		{
-			var border = this.getChildAt(0);
-	
+			var rect = evt.currentTarget;
+			var border = rect.getChildAt(0);
+
 			if(playMode == PLAY_EDIT && editLevelData == _levelData) { //del box only for "custom levels", NOT for "LOAD"
-				delSelectObj[this.myId].selectOver();	
+				delSelectObj[rect.myId].selectOver();
 			}
-			
+
 			border.alpha = 1;
 			dialogStage.cursor = 'pointer';
 			dialogStage.update();
 		}
-		
-		function selectMouseOut()
+
+		function selectMouseOut(evt)
 		{
-			var border = this.getChildAt(0);
-			
+			var rect = evt.currentTarget;
+			var border = rect.getChildAt(0);
+
 			if(playMode == PLAY_EDIT && editLevelData == _levelData) { //del box only for "custom levels", NOT for "LOAD"
-				if(this.myId < delSelectObj.length)	delSelectObj[this.myId].selectOut();	
+				if(rect.myId < delSelectObj.length)	delSelectObj[rect.myId].selectOut();
 				////else debug("mouse out: select deleted");
 			}
 			
@@ -1172,9 +1175,9 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 				cycle = new createjs.Shape();
 				delIconObj = new createjs.Container();
 				delIconObj.addChild(cycle, cross);
-				delIconObj.on("mouseover", handleMouseOver);
-				delIconObj.on("mouseout", handleMouseOut);
-				delIconObj.on("click", handleMouseClick);
+				delIconObj.addEventListener("mouseover", handleMouseOver);
+				delIconObj.addEventListener("mouseout", handleMouseOut);
+				delIconObj.addEventListener("click", handleMouseClick);
 				delIconObj.x = SELECT_SIZE_X  - closeBoxSize*2;
 				delIconObj.y = closeBoxSize;
 			
@@ -1481,9 +1484,9 @@ function menuDialog(_titleName, _itemList, _stage, _scale, _closeIconEnable, _cl
 			menuButtonObj[i].y = startY+TITLE_AREA_Y+(ITEM_AREA_Y+ITEM_GAP_Y) * i;
 			menuButtonObj[i].myId = i;
 
-			menuButtonObj[i].on('click', buttonClick);
-			menuButtonObj[i].on('mouseover', buttonMouseOver);
-			menuButtonObj[i].on('mouseout', buttonMouseOut);			
+			menuButtonObj[i].addEventListener('click', buttonClick);
+			menuButtonObj[i].addEventListener('mouseover', buttonMouseOver);
+			menuButtonObj[i].addEventListener('mouseout', buttonMouseOut);			
 			_stage.addChild(menuButtonObj[i]);
 		}
 		buttonActive(menuButtonObj[_itemList[0].activeItem]);
@@ -1546,12 +1549,13 @@ function menuDialog(_titleName, _itemList, _stage, _scale, _closeIconEnable, _cl
 		text.shadow = null;
 	}
 	
-	function buttonMouseOver()
+	function buttonMouseOver(evt)
 	{
-		if(this.myId != _itemList[0].activeItem) {
+		var button = evt.currentTarget;
+		if(button.myId != _itemList[0].activeItem) {
 			buttonInactive(menuButtonObj[_itemList[0].activeItem]);
-			buttonActive(this);
-			_itemList[0].activeItem = this.myId;
+			buttonActive(button);
+			_itemList[0].activeItem = button.myId;
 		}
 		_stage.cursor = 'pointer';
 		_stage.update();
@@ -2223,9 +2227,9 @@ function levelPassDialog(_level, _getGold, _guardDead, _time, _hiScore,
 			menuButton[i].y = yOffset;
 			menuButton[i].addChild(border, button, bitmap[i]);
 			
-			menuButton[i].on('click', buttonClick);
-			menuButton[i].on('mouseover', buttonMouseOver);
-			menuButton[i].on('mouseout', buttonMouseOut);	
+			menuButton[i].addEventListener('click', buttonClick);
+			menuButton[i].addEventListener('mouseover', buttonMouseOver);
+			menuButton[i].addEventListener('mouseout', buttonMouseOut);	
 			menuButton[i].myId = i;
 			_stage.addChild(menuButton[i]);
 
@@ -2233,19 +2237,18 @@ function levelPassDialog(_level, _getGold, _guardDead, _time, _hiScore,
 		_stage.update();
 	}
 	
-	function buttonClick()
+	function buttonClick(evt)
 	{
 		removeAllObj();
 		_stage.cursor = 'default';
 		_stage.enableMouseOver(0);
-		if(_callBack) _callBack(this.myId);
-		//debug(this.myId);
+		if(_callBack) _callBack(evt.currentTarget.myId);
 	}
 	
-	function buttonMouseOver()
+	function buttonMouseOver(evt)
 	{
-		var border = this.getChildAt(0);
-	
+		var border = evt.currentTarget.getChildAt(0);
+
 		border.graphics.clear();
 		border.graphics.beginFill(BUTTON_BORDER_COLOR)
 			.drawRoundRect(-BUTTON_BORDER_SIZE*2, -BUTTON_BORDER_SIZE*2, 
@@ -2255,10 +2258,10 @@ function levelPassDialog(_level, _getGold, _guardDead, _time, _hiScore,
 		_stage.update();
 	}
 	
-	function buttonMouseOut()
+	function buttonMouseOut(evt)
 	{
-		var border = this.getChildAt(0);
-	
+		var border = evt.currentTarget.getChildAt(0);
+
 		border.graphics.clear();
 		border.graphics.beginFill(BUTTON_BACKGROUND_COLOR)
 			.drawRoundRect(-BUTTON_BORDER_SIZE*2, -BUTTON_BORDER_SIZE*2, 
@@ -2424,9 +2427,9 @@ function yesNoDialog(_txtMsg, _yesBitmap, _noBitmap, _stage, _scale, _callBack)
 			menuButton[i].y = textObj[textObj.length-1].y + TEXT_MSG_SIZE*2;
 			menuButton[i].addChild(border, button, bitmap[i]);
 			
-			menuButton[i].on('click', buttonClick);
-			menuButton[i].on('mouseover', buttonMouseOver);
-			menuButton[i].on('mouseout', buttonMouseOut);	
+			menuButton[i].addEventListener('click', buttonClick);
+			menuButton[i].addEventListener('mouseover', buttonMouseOver);
+			menuButton[i].addEventListener('mouseout', buttonMouseOut);	
 			menuButton[i].myId = i;
 			_stage.addChild(menuButton[i]);
 
@@ -2434,20 +2437,19 @@ function yesNoDialog(_txtMsg, _yesBitmap, _noBitmap, _stage, _scale, _callBack)
 		_stage.update();
 	}
 	
-	function buttonClick()
+	function buttonClick(evt)
 	{
 		restoreKeyState();
 		removeAllObj();
 		_stage.cursor = 'default';
 		_stage.enableMouseOver(0);
-		if(_callBack) _callBack(!this.myId+0);
-		//debug(this.myId);
+		if(_callBack) _callBack(!evt.currentTarget.myId+0);
 	}
 	
-	function buttonMouseOver()
+	function buttonMouseOver(evt)
 	{
-		var border = this.getChildAt(0);
-	
+		var border = evt.currentTarget.getChildAt(0);
+
 		border.graphics.clear();
 		border.graphics.beginFill(BUTTON_BORDER_COLOR)
 			.drawRoundRect(-BUTTON_BORDER_SIZE*2, -BUTTON_BORDER_SIZE*2, 
@@ -2457,10 +2459,10 @@ function yesNoDialog(_txtMsg, _yesBitmap, _noBitmap, _stage, _scale, _callBack)
 		_stage.update();
 	}
 	
-	function buttonMouseOut()
+	function buttonMouseOut(evt)
 	{
-		var border = this.getChildAt(0);
-	
+		var border = evt.currentTarget.getChildAt(0);
+
 		border.graphics.clear();
 		border.graphics.beginFill(BUTTON_BACKGROUND_COLOR)
 			.drawRoundRect(-BUTTON_BORDER_SIZE*2, -BUTTON_BORDER_SIZE*2, 
@@ -2636,9 +2638,9 @@ function backupDialog(id, _callBackFun)
 		buttonObj.x = startX + (menuX - buttonSizeX)/2|0;
 		buttonObj.y = startY+ yOffset;
 
-		buttonObj.on('click', buttonClick);
-		buttonObj.on('mouseover', buttonMouseOver);
-		buttonObj.on('mouseout', buttonMouseOut);			
+		buttonObj.addEventListener('click', buttonClick);
+		buttonObj.addEventListener('mouseover', buttonMouseOver);
+		buttonObj.addEventListener('mouseout', buttonMouseOut);			
 		_stage.addChild(buttonObj);
 	}
 	
@@ -3042,9 +3044,9 @@ function restoreDialog(id, _callBackFun)
 		buttonObj.x = (menuX - buttonSizeX)/2|0;
 		buttonObj.y = fileInfoBoxYOffset + fileInfoBoxSizeY + MSG_GAP_Y|0;
 
-		buttonObj.on('click', buttonClick);
-		buttonObj.on('mouseover', buttonMouseOver);
-		buttonObj.on('mouseout', buttonMouseOut);	
+		buttonObj.addEventListener('click', buttonClick);
+		buttonObj.addEventListener('mouseover', buttonMouseOver);
+		buttonObj.addEventListener('mouseout', buttonMouseOut);	
 		buttonObj.alpha = 0;
 		dialogStage.addChild(buttonObj);
 	}
@@ -3068,9 +3070,9 @@ function restoreDialog(id, _callBackFun)
 		nextMapButtonObj.y = previewMapYOffset + previewMapY + previewMapGapX/2;
 		nextMapButtonObj.myId = 1;
 		nextMapButtonObj.addChild(borderNext, nextMapBitmap);
-		nextMapButtonObj.on('click', PreviewButtonClick);
-		nextMapButtonObj.on('mouseover', PreviewButtonMouseOver);
-		nextMapButtonObj.on('mouseout', PreviewButtonMouseOut);		
+		nextMapButtonObj.addEventListener('click', PreviewButtonClick);
+		nextMapButtonObj.addEventListener('mouseover', PreviewButtonMouseOver);
+		nextMapButtonObj.addEventListener('mouseout', PreviewButtonMouseOut);		
 		nextMapButtonObj.alpha = 0;
 		dialogStage.addChild(nextMapButtonObj);
 		
@@ -3083,15 +3085,15 @@ function restoreDialog(id, _callBackFun)
 		prevMapButtonObj.y = previewMapYOffset + previewMapY + previewMapGapX/2;
 		prevMapButtonObj.myId = 2;
 		prevMapButtonObj.addChild(borderPrev, prevMapBitmap);
-		prevMapButtonObj.on('click', PreviewButtonClick);
-		prevMapButtonObj.on('mouseover', PreviewButtonMouseOver);
-		prevMapButtonObj.on('mouseout', PreviewButtonMouseOut);		
+		prevMapButtonObj.addEventListener('click', PreviewButtonClick);
+		prevMapButtonObj.addEventListener('mouseover', PreviewButtonMouseOver);
+		prevMapButtonObj.addEventListener('mouseout', PreviewButtonMouseOut);		
 		prevMapButtonObj.alpha = 0;
 		dialogStage.addChild(prevMapButtonObj);
 		
-		function PreviewButtonClick()
+		function PreviewButtonClick(evt)
 		{
-			var myId = this.myId;
+			var myId = evt.currentTarget.myId;
 			var totalLevels = tmpCustomLevels.length;
 			switch(myId) {
 				case 1: //next page
@@ -3112,18 +3114,18 @@ function restoreDialog(id, _callBackFun)
 			displayPreviewMap(myId);
 		}
 
-		function PreviewButtonMouseOver()
+		function PreviewButtonMouseOver(evt)
 		{
-			var backgroundObj = this.getChildAt(0);
+			var backgroundObj = evt.currentTarget.getChildAt(0);
 
 			backgroundObj.alpha = 1;	
 			dialogStage.cursor = 'pointer';
 			dialogStage.update();			
 		}
 
-		function PreviewButtonMouseOut()
+		function PreviewButtonMouseOut(evt)
 		{
-			var backgroundObj = this.getChildAt(0);
+			var backgroundObj = evt.currentTarget.getChildAt(0);
 
 			backgroundObj.alpha = PREVIEWMAP_BUTTON_GRAY_ALPHA;	
 			dialogStage.cursor = 'default';
@@ -3421,9 +3423,9 @@ function restoreDialog(id, _callBackFun)
 		openFolderButtonObj.y = yOffset;
 		openFolderButtonObj.addChild(border, button, openFolderBitmap);
 
-		openFolderButtonObj.on('click', openButtonClick);
-		openFolderButtonObj.on('mouseover', openButtonMouseOver);
-		openFolderButtonObj.on('mouseout', openButtonMouseOut);	
+		openFolderButtonObj.addEventListener('click', openButtonClick);
+		openFolderButtonObj.addEventListener('mouseover', openButtonMouseOver);
+		openFolderButtonObj.addEventListener('mouseout', openButtonMouseOut);	
 		dialogStage.addChild(openFolderButtonObj);
 		
 		function openButtonClick()

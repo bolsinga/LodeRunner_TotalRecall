@@ -8,7 +8,6 @@ function mainMenuIconClass( _screenX1, _screenY1, _scale, _mainMenuBitmap)
 	var mainMainCanvas, stage;
 	var	menuIcon, menuBG;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _mainMenuBitmap.getBounds().width * _scale;
 	var bitmapY = _mainMenuBitmap.getBounds().height * _scale;	
@@ -49,16 +48,16 @@ function mainMenuIconClass( _screenX1, _screenY1, _scale, _mainMenuBitmap)
 	
 	function enableMouseHandler()
 	{
-		mouseOverHandler = menuIcon.on("mouseover", mouseOver);
-		mouseOutHandler = menuIcon.on("mouseout", mouseOut);
-		mouseClickHandler = menuIcon.on("click", mouseClick);
+		menuIcon.addEventListener("mouseover", mouseOver);
+		menuIcon.addEventListener("mouseout", mouseOut);
+		menuIcon.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		menuIcon.removeEventListener("mouseover", mouseOverHandler);
-		menuIcon.removeEventListener("mouseout", mouseOutHandler);
-		menuIcon.removeEventListener("click", mouseClickHandler);
+		menuIcon.removeEventListener("mouseover", mouseOver);
+		menuIcon.removeEventListener("mouseout", mouseOut);
+		menuIcon.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -157,7 +156,6 @@ function selectIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	var selectCanvas, stage;
 	var	selectIcon, selectBG;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _bitmap.getBounds().width * _scale;
 	var bitmapY = _bitmap.getBounds().height * _scale;	
@@ -201,16 +199,16 @@ function selectIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	
 	function enableMouseHandler()
 	{
-		mouseOverHandler = selectIcon.on("mouseover", mouseOver);
-		mouseOutHandler = selectIcon.on("mouseout", mouseOut);
-		mouseClickHandler = selectIcon.on("click", mouseClick);
+		selectIcon.addEventListener("mouseover", mouseOver);
+		selectIcon.addEventListener("mouseout", mouseOut);
+		selectIcon.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		selectIcon.removeEventListener("mouseover", mouseOverHandler);
-		selectIcon.removeEventListener("mouseout", mouseOutHandler);
-		selectIcon.removeEventListener("click", mouseClickHandler);
+		selectIcon.removeEventListener("mouseover", mouseOver);
+		selectIcon.removeEventListener("mouseout", mouseOut);
+		selectIcon.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -345,7 +343,6 @@ function demoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _bitmap.getBounds().width * _scale;
 	var bitmapY = _bitmap.getBounds().height * _scale;	
@@ -394,16 +391,16 @@ function demoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -498,7 +495,6 @@ function soundIconClass( _screenX1, _screenY1, _scale, _soundOnBitmap, _soundOff
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _soundOnBitmap.getBounds().width * _scale;
 	var bitmapY = _soundOnBitmap.getBounds().height * _scale;	
@@ -538,16 +534,16 @@ function soundIconClass( _screenX1, _screenY1, _scale, _soundOnBitmap, _soundOff
 
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -647,7 +643,6 @@ function repeatActionIconClass( _screenX1, _screenY1, _scale, _repeatActionOnBit
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _repeatActionOnBitmap.getBounds().width * _scale;
 	var bitmapY = _repeatActionOnBitmap.getBounds().height * _scale;	
@@ -686,16 +681,16 @@ function repeatActionIconClass( _screenX1, _screenY1, _scale, _repeatActionOnBit
 
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -784,7 +779,6 @@ function infoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _bitmap.getBounds().width * _scale;
 	var bitmapY = _bitmap.getBounds().height * _scale;	
@@ -824,16 +818,16 @@ function infoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -936,7 +930,6 @@ function helpIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _bitmap.getBounds().width * _scale;
 	var bitmapY = _bitmap.getBounds().height * _scale;	
@@ -976,16 +969,16 @@ function helpIconClass( _screenX1, _screenY1, _scale, _bitmap)
 
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -1089,7 +1082,6 @@ function themeIconClass( _screenX1, _screenY1, _scale, _themeBitmapApple2, _them
 	var themeCanvas, stage;
 	var	themeIcon, themeBG;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _themeBitmapApple2.getBounds().width * _scale;
 	var bitmapY = _themeBitmapApple2.getBounds().height * _scale;	
@@ -1132,16 +1124,16 @@ function themeIconClass( _screenX1, _screenY1, _scale, _themeBitmapApple2, _them
 	
 	function enableMouseHandler()
 	{
-		mouseOverHandler = themeIcon.on("mouseover", mouseOver);
-		mouseOutHandler = themeIcon.on("mouseout", mouseOut);
-		mouseClickHandler = themeIcon.on("click", mouseClick);
+		themeIcon.addEventListener("mouseover", mouseOver);
+		themeIcon.addEventListener("mouseout", mouseOut);
+		themeIcon.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		themeIcon.removeEventListener("mouseover", mouseOverHandler);
-		themeIcon.removeEventListener("mouseout", mouseOutHandler);
-		themeIcon.removeEventListener("click", mouseClickHandler);
+		themeIcon.removeEventListener("mouseover", mouseOver);
+		themeIcon.removeEventListener("mouseout", mouseOut);
+		themeIcon.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}
@@ -1274,7 +1266,6 @@ function pasteIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	var canvas, stage;
 	var	iconObj, bgObj;
 	var saveStateObj;
-	var mouseOverHandler = null, mouseOutHandler = null, mouseClickHandler = null;
 	
 	var bitmapX = _bitmap.getBounds().width * _scale;
 	var bitmapY = _bitmap.getBounds().height * _scale;	
@@ -1317,16 +1308,16 @@ function pasteIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	
 	function enableMouseHandler()
 	{
-		mouseOverHandler = iconObj.on("mouseover", mouseOver);
-		mouseOutHandler = iconObj.on("mouseout", mouseOut);
-		mouseClickHandler = iconObj.on("click", mouseClick);
+		iconObj.addEventListener("mouseover", mouseOver);
+		iconObj.addEventListener("mouseout", mouseOut);
+		iconObj.addEventListener("click", mouseClick);
 	}
 	
 	function disableMouseHandler()
 	{
-		iconObj.removeEventListener("mouseover", mouseOverHandler);
-		iconObj.removeEventListener("mouseout", mouseOutHandler);
-		iconObj.removeEventListener("click", mouseClickHandler);
+		iconObj.removeEventListener("mouseover", mouseOver);
+		iconObj.removeEventListener("mouseout", mouseOut);
+		iconObj.removeEventListener("click", mouseClick);
 		stage.cursor = "default";
 		stage.update();
 	}

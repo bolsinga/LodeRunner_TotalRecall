@@ -121,10 +121,11 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	
 	function removeCanvas2()
 	{
+		createjs.Ticker.removeEventListener("tick", scoreStage); //no-op unless name entry attached it
 		scoreStage.removeAllChildren();
 		scoreStage.update();
 		document.body.removeChild(canvas2);
-	}	
+	}
 	
 	function setScoreBackground()
 	{
@@ -200,7 +201,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	{
 		var name, nameText;
 		var curPos = 0;
-		var savedKeyDownHander, hiScoreTicker;
+		var savedKeyDownHander;
 		var cursor;
 
 		if(winner) endingMusicPlay(); //6/15/2015, play ending music for winner
@@ -221,7 +222,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			//copyPlayerName();
 			redrawName();
 			changeKeyDownHandler();
-			hiScoreTicker = createjs.Ticker.on("tick", scoreStage);	
+			createjs.Ticker.addEventListener("tick", scoreStage);
 		}
 		
 		function changeKeyDownHandler()
@@ -256,7 +257,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			scoreStage.removeChild(cursor);
 			scoreStage.update();
 			
-			createjs.Ticker.off("tick", hiScoreTicker);
+			createjs.Ticker.removeEventListener("tick", scoreStage);
 			setTimeout( function() { closeScoreTable(); }, 1500);
 			
 			inputNameState = 0;

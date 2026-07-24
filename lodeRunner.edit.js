@@ -196,10 +196,10 @@ function createEditMap()
 	addEditorButton();
 	
 	mouseInStage = 1;
-	mainStage.on("stagemouseup", stageMouseUp);
-	mainStage.on("stagemousedown", stageMouseDown);
-	mainStage.on("mouseleave", function() { mouseInStage = 0; });
-	mainStage.on("mouseenter", function() { mouseInStage = 1; });
+	mainStage.addEventListener("stagemouseup", stageMouseUp);
+	mainStage.addEventListener("stagemousedown", stageMouseDown);
+	mainStage.addEventListener("mouseleave", function() { mouseInStage = 0; });
+	mainStage.addEventListener("mouseenter", function() { mouseInStage = 1; });
 }
 
 function clearEditMap()
@@ -307,13 +307,14 @@ function startEditTicker()
 	stopEditTicker();
 	createjs.Ticker.setFPS(60);
 	mainStage.enableMouseOver(0);
-	gameTicker = createjs.Ticker.on("tick", editTick);	
+	createjs.Ticker.addEventListener("tick", editTick);
+	gameTicker = editTick;
 }
-	
+
 function stopEditTicker()
 {
 	if(gameTicker) {
-		createjs.Ticker.off("tick", gameTicker);
+		createjs.Ticker.removeEventListener("tick", gameTicker);
 		mainStage.enableMouseOver(0);
 		//mainStage.cursor = 'default';
 		gameTicker = null;
@@ -354,7 +355,7 @@ function drawSelectIcon(id, x, y)
 	tile.x = x;
 	tile.y = y;
 	tile.myId = id;
-	tile.on('click', selectTileClick);
+	tile.addEventListener('click', selectTileClick);
 	mainStage.addChild(tile);
 	
 	tile.x1 = x + tileWScale;
@@ -362,20 +363,21 @@ function drawSelectIcon(id, x, y)
 	editorTile[id] = tile;
 }
 	
-function selectTileClick()
+function selectTileClick(evt)
 {
-	var actBorder = this.getChildAt(0);
+	var tile = evt.currentTarget;
+	var actBorder = tile.getChildAt(0);
 	var inActBorder = selectedTile.getChildAt(0);
-	
+
 	inActBorder.graphics.clear();
 	inActBorder.graphics.beginFill("black").drawRect(-editBorder, -editBorder, tileWScale+editBorder*2, tileHScale+editBorder*2).endFill();
-	
+
 	actBorder.graphics.clear();
 	actBorder.graphics.beginFill("red").drawRect(-editBorder, -editBorder, tileWScale+editBorder*2, tileHScale+editBorder*2).endFill();
-	
-	actTile = baseTile[this.myId];
+
+	actTile = baseTile[tile.myId];
 	cursorTileObj.getChildAt(1).image =  actTile.image;
-	selectedTile = this;
+	selectedTile = tile;
 }
 	
 function drawEditLevel()
@@ -438,7 +440,7 @@ function drawNewButton()
 		
 	newButton.x = x;
 	newButton.y = y;
-	newButton.on('click', newButtonClick);
+	newButton.addEventListener('click', newButtonClick);
 	mainStage.addChild(newButton);	
 	
 	newButton.x1 = x + width;
@@ -509,7 +511,7 @@ function drawLoadButton()
 		
 	loadButton.x = x;
 	loadButton.y = y;
-	loadButton.on('click', loadButtonClick);
+	loadButton.addEventListener('click', loadButtonClick);
 	mainStage.addChild(loadButton);	
 	initLoadVariable();
 
@@ -616,7 +618,7 @@ function drawTestButton()
 		
 	testButton.x = x;
 	testButton.y = y;
-	testButton.on('click', testButtonClick);
+	testButton.addEventListener('click', testButtonClick);
 	testButton.alpha = 0;
 	mainStage.addChild(testButton);	
 
@@ -657,7 +659,7 @@ function drawSaveButton()
 		
 	saveButton.x = x;
 	saveButton.y = y;
-	saveButton.on('click', saveButtonClick);
+	saveButton.addEventListener('click', saveButtonClick);
 	saveButton.alpha = 0;
 	mainStage.addChild(saveButton);	
 	

@@ -245,7 +245,7 @@ function guardMoveStep( id, action)
 				themeSoundPlay("trap");
 				shakeTimeStart = recordCount; //for debug
 				if(curAiVersion < 3) {
-					curGuard.sprite.on("animationend", function() { climbOut(id); });
+					curGuard.sprite.addEventListener("animationend", function() { climbOut(id); });
 				} else {
 					add2GuardShakeQueue(id, newShape);
 				}
@@ -887,7 +887,7 @@ function guardReborn(x, y)
 	
 	rebornTimeStart = recordCount;
 	if(curAiVersion < 3) {
-		curGuard.sprite.on("animationend", function() { rebornComplete(id); });
+		curGuard.sprite.addEventListener("animationend", function() { rebornComplete(id); });
 		curGuard.sprite.gotoAndPlay("reborn");
 	} else {
 		add2RebornQueue(id);

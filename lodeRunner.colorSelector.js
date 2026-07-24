@@ -15,7 +15,6 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 	var colorSelectorIsSmall = 0;
 	
 	var outFocusTimer = null;
-	var colorStageTicker = null;
 	
 	var self = this;
 	var enabled = 0;
@@ -133,9 +132,9 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 
 	function setColorSelectorMouseEvent()
 	{
-		colorSelector.on("mouseover", mouseOver);
-		colorSelector.on("mouseout", mouseOut);
-		colorSelector.on("click", mouseClick);
+		colorSelector.addEventListener("mouseover", mouseOver);
+		colorSelector.addEventListener("mouseout", mouseOut);
+		colorSelector.addEventListener("click", mouseClick);
 
 		function mouseOver()
 		{
@@ -173,16 +172,16 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 	
 	function setActiveCircleMouseEvent()
 	{
-		activeCircle.on("mouseover", function(){
+		activeCircle.addEventListener("mouseover", function(){
 			if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
-			if(colorSelectorIsSmall) return; 
+			if(colorSelectorIsSmall) return;
 			colorSelector.cursor = "pointer";
 		});
-		activeCircle.on("mouseout", function(){
-			if(colorSelectorIsSmall) return; 
+		activeCircle.addEventListener("mouseout", function(){
+			if(colorSelectorIsSmall) return;
 			colorSelector.cursor = "default";
 		});
-		activeCircle.on("click",function() {
+		activeCircle.addEventListener("click",function() {
 			if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
 			if(colorSelectorIsSmall) return;
 			setTransformTimeout(0); //clear timeout
@@ -203,14 +202,13 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 				createjs.Tween.get(colorSelector)
 				.to({scaleX: 1, scaleY: 1}, 100)
 				.call(function(){
-					colorSelectorIsSmall = 0; 
+					colorSelectorIsSmall = 0;
 					setActiveCircle();
 					colorSelector.cursor = "default";
-					createjs.Ticker.off("tick", colorStageTicker);
-					colorStageTicker = null;
+					createjs.Ticker.removeEventListener("tick", colorStage);
 					colorStage.update();
 				});
-				colorStageTicker = createjs.Ticker.on("tick", colorStage);
+				createjs.Ticker.addEventListener("tick", colorStage);
 			}
 			
 		} else {
@@ -225,18 +223,17 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 				createjs.Tween.get(colorSelector)
 				.to({scaleX: smallScale, scaleY: smallScale}, 100)
 				.call(function(){
-					colorCanvas.width = px * 2 * smallScale; 
-					colorCanvas.height = py * 2 * smallScale; 
-					
-					colorSelectorIsSmall = 1; 
+					colorCanvas.width = px * 2 * smallScale;
+					colorCanvas.height = py * 2 * smallScale;
+
+					colorSelectorIsSmall = 1;
 					//setActiveCircle();
 					//self.themeChange();
 					colorSelector.cursor = "pointer";
-					createjs.Ticker.off("tick", colorStageTicker);
-					colorStageTicker = null;
+					createjs.Ticker.removeEventListener("tick", colorStage);
 					colorStage.update();
 				});
-				colorStageTicker = createjs.Ticker.on("tick", colorStage);
+				createjs.Ticker.addEventListener("tick", colorStage);
 			}
 		}
 	}	
@@ -265,49 +262,46 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 
 	function setColorShapeMouseEvent(shape, id)
 	{
-		shape.on("mouseover", mouseOver, null, false, {id:id});
-		shape.on("mouseout", mouseOut, null, false, {id:id});
-		shape.on("click", mouseClick, null, false, {id:id});
-		
-		function mouseOver(evt, data)
+		shape.addEventListener("mouseover", mouseOver);
+		shape.addEventListener("mouseout", mouseOut);
+		shape.addEventListener("click", mouseClick);
+
+		function mouseOver(evt)
 		{
-			var id = data.id;
 			var curColorId = getCurColorId();
-			
+
 			if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
 			if(colorSelectorIsSmall) return;
-			
+
 			colorSelector.cursor = "pointer";
 			setColorShape(colorShape[id], id, getThemeTileColor(id));
 			colorStage.update();
 		}
-		
-		function mouseOut(evt, data)
+
+		function mouseOut(evt)
 		{
-			var id = data.id;
 			var curColorId = getCurColorId();
-			
+
 			if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
 			if(colorSelectorIsSmall) return;
-			
+
 			colorSelector.cursor = "default";
 			setColorShape(colorShape[id], id,  pinker(getThemeTileColor(id)));
 			colorStage.update();
 		}
-		
-		function mouseClick(evt, data)
+
+		function mouseClick(evt)
 		{
-			var id = data.id;
 			var curColorId = getCurColorId();
-			
+
 			if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
 			if(colorSelectorIsSmall || curColorId == id) return;
-			
+
 			themeColorChange(id);
 			setActiveCircle();
 			colorStage.update();
 		}
-	}	
+	}
 	
 	function setTransformTimeout(enable)
 	{

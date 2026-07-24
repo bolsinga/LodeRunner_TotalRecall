@@ -43,9 +43,9 @@ function showLoadingPage()
 	];
 		
 	coverPageLoad = new createjs.LoadQueue(true);
-	coverPageLoad.on("error", handleCoverPageError);
-	coverPageLoad.on("fileload", handleCoverPageFileLoad);
-	coverPageLoad.on("complete", handleCoverPageComplete);
+	coverPageLoad.addEventListener("error", handleCoverPageError);
+	coverPageLoad.addEventListener("fileload", handleCoverPageFileLoad);
+	coverPageLoad.addEventListener("complete", handleCoverPageComplete);
 	coverPageLoad.loadManifest(coverPageImages);
 		
 	function handleCoverPageError(e)
@@ -170,13 +170,13 @@ function ensureThemeLoaded(themeName, callback)
 
 	function done()
 	{
-		preload.off("complete", done);
+		preload.removeEventListener("complete", done);
 		themeAssetsLoaded[themeName] = 1;
 		ensureThemeBaseBitmaps(themeName);
 		if (callback) callback();
 	}
 
-	preload.on("complete", done);
+	preload.addEventListener("complete", done);
 	preload.loadManifest(manifest);
 }
 
@@ -246,14 +246,14 @@ function preloadResource()
 	preload = new createjs.LoadQueue(true);
 	createjs.Sound.alternateExtensions = ["mp3"];
 	preload.installPlugin(createjs.Sound);
-	preload.on("error", handleFileError);
-	preload.on("progress", handleProgress);
-	preload.on("complete", handleComplete);
+	preload.addEventListener("error", handleFileError);
+	preload.addEventListener("progress", handleProgress);
+	preload.addEventListener("complete", handleComplete);
 
 	preload.loadManifest(resource);
 
 	createjs.Ticker.setFPS(30);
-	var preloadTicker = createjs.Ticker.on("tick", mainStage);
+	createjs.Ticker.addEventListener("tick", mainStage);
 
 	//Set runner sprite size & position
 	runnerSprite.setTransform(COVER_SIDE_X* tileScale, 
@@ -291,9 +291,9 @@ function preloadResource()
 
 	function handleComplete(event) 
 	{
-		preload.off("progress", handleProgress);
-		preload.off("complete", handleComplete);
-		preload.off("error", handleFileError);
+		preload.removeEventListener("progress", handleProgress);
+		preload.removeEventListener("complete", handleComplete);
+		preload.removeEventListener("error", handleFileError);
 
 		themeAssetsLoaded[curTheme] = 1;
 
@@ -418,7 +418,7 @@ function preloadResource()
 		createHelpObj();
 		createMenuBitmapIcon();
 		getFirstPlayInfo();
-		createjs.Ticker.off("tick", preloadTicker); //remove ticker of cover page
+		createjs.Ticker.removeEventListener("tick", mainStage); //remove ticker of cover page
 		waitIdleDemo(4000); //wait user key or show demo level
 	}
 }

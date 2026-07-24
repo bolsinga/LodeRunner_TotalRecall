@@ -233,12 +233,12 @@ function infoMenuClass(_stage, _scale)
 				infoObj[i].msgHeight = infoObj[i].msg.getBounds().height;
 					
 				infoObj[i].flag.msgObj = infoObj[i].msg;	
-				infoObj[i].flag.on('mouseover',function(evt) {
-					this.msgObj.set({alpha:1});	
+				infoObj[i].flag.addEventListener('mouseover', function(evt) {
+					evt.currentTarget.msgObj.set({alpha:1});
 					_stage.update();
 				});
-				infoObj[i].flag.on('mouseout', function(evt){
-					this.msgObj.set({alpha:0});	
+				infoObj[i].flag.addEventListener('mouseout', function(evt){
+					evt.currentTarget.msgObj.set({alpha:0});
 					_stage.update();
 				});
 					
@@ -260,16 +260,16 @@ function infoMenuClass(_stage, _scale)
 				infoObj[i].texLinktHeight = infoObj[i].textLink.getBounds().height;
 
 				infoObj[i].textLink.url = infoList[i].url;	
-				infoObj[i].textLink.on('mouseover',function(evt) {
+				infoObj[i].textLink.addEventListener('mouseover', function(evt) {
 					_stage.cursor = "pointer";
 					_stage.update();
 				});
-				infoObj[i].textLink.on('mouseout', function(evt){
+				infoObj[i].textLink.addEventListener('mouseout', function(evt){
 					_stage.cursor = "default";
 					_stage.update();
 				});
-				infoObj[i].textLink.on('click', function(evt){
-					window.open(this.url).focus();
+				infoObj[i].textLink.addEventListener('click', function(evt){
+					window.open(evt.currentTarget.url).focus();
 					_stage.cursor = "default";
 					_stage.update();
 				});
@@ -421,9 +421,9 @@ function infoMenuClass(_stage, _scale)
 			cross = new createjs.Shape();
 			cycle = new createjs.Shape();
 			closeIcon.addChild(cycle, cross);
-			closeIcon.on("mouseover", handleMouseOver);
-			closeIcon.on("mouseout", handleMouseOut);
-			closeIcon.on("click", closeInfoMenu);
+			closeIcon.addEventListener("mouseover", handleMouseOver);
+			closeIcon.addEventListener("mouseout", handleMouseOut);
+			closeIcon.addEventListener("click", closeInfoMenu);
 			closeIcon.x = startX+menuX - CLOSE_BOX_SIZE*3;
 			closeIcon.y = startY + CLOSE_BOX_SIZE*2;
 			_stage.enableMouseOver(30);

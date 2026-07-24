@@ -213,26 +213,27 @@ function stopDemoAndPlay()
 	selectGame(showStartMsg);
 }
 
-var stageClickListener = null, stagePressListener = null;
+var stageClickListenerEnabled = false;
+
+function stageClickHandler(evt) { stopDemoAndPlay(); }
 
 function enableStageClickEvent()
 {
 	disableStageClickEvent();
-	
+
 	//createjs.Touch.enable(mainStage);
-	stageClickListener = mainStage.on("click", function(evt) { stopDemoAndPlay(); });
-	//stagePressListener = mainStage.on("press", function(evt) { stopDemoAndPlay(); });
+	mainStage.addEventListener("click", stageClickHandler);
+	stageClickListenerEnabled = true;
 }
 
 function disableStageClickEvent()
 {
 	var rc = 0;
-	
-	if(stageClickListener) { rc = 1; mainStage.off("click", stageClickListener); }
-	//if(stagePressListener) { rc = 1; mainStage.off("press", stagePressListener); }
-	stageClickListener = stagePressListener = null;
+
+	if(stageClickListenerEnabled) { rc = 1; mainStage.removeEventListener("click", stageClickHandler); }
+	stageClickListenerEnabled = false;
 	//createjs.Touch.disable(mainStage);
-	
+
 	return rc;
 }
 
@@ -301,13 +302,14 @@ function startPlayTicker()
 	} else {
 		createjs.Ticker.setFPS(speedMode[speed]);
 	}
-	gameTicker = createjs.Ticker.on("tick", mainTick);	
+	createjs.Ticker.addEventListener("tick", mainTick);
+	gameTicker = mainTick;
 }
-	
+
 function stopPlayTicker()
 {
 	if(gameTicker) {
-		createjs.Ticker.off("tick", gameTicker);	
+		createjs.Ticker.removeEventListener("tick", gameTicker);
 		gameTicker = null;
 	}
 }
