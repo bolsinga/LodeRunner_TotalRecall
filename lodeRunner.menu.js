@@ -515,7 +515,7 @@ function selectDialog(_titleName, _checkBitmap, _levelData, _activeLevel, _scree
 		dialogStage.removeAllChildren();
 		dialogStage.enableMouseOver(0);
 		dialogStage.cursor ="default";
-		createjs.Ticker.removeEventListener(dialogStage);
+		createjs.Ticker.removeEventListener("tick", dialogStage);
 		document.body.removeChild(canvas1);
 	}		
 	
@@ -3686,7 +3686,7 @@ function restoreDialog(id, _callBackFun)
 	{
 		dialogStage.removeAllChildren();
 		dialogStage.enableMouseOver(0);
-		createjs.Ticker.removeEventListener(dialogStage);
+		createjs.Ticker.removeEventListener("tick", dialogStage);
 		document.body.removeChild(restoreCanvas);
 	}
 	
