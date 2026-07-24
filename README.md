@@ -87,6 +87,14 @@ This program build with Javascript + [CreateJS](http://www.createjs.com).
 </tr>
 </table>
 
+### * Useful shortcuts
+
+| Key / control | Action |
+|---------------|--------|
+| **Esc** | Pause (temporarily shows side icons if chrome was hidden) |
+| **?** icon | Help overlay |
+| **Ctrl+B** | Toggle side chrome on/off |
+
 ### * Play on a Local Machine
 #### A simple web server is required to play LoderRunner on a local machine; follow these instructions for Windows:
 1. Download and extract the source code into a directory.

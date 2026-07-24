@@ -30,6 +30,7 @@ node --test test/*.test.js
 | `lazy-load.test.js` | characterization | HTML critical path is classic-only; lazy pack wiring in `playVersionInfo` |
 | `theme-preload.test.js` | characterization | Theme asset manifests: active theme only at boot, other on first toggle |
 | `inventory.test.js` | characterization | Every root script is wired in HTML or known-lazy; registry `levelCount` matches packs |
+| `html-shell.test.js` | characterization | HTML shell meta: lang/charset/viewport, no obsolete IE meta |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |
