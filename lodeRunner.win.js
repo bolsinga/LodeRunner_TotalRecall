@@ -2,15 +2,11 @@ var endingLoadFinish=0;
 function loadEndingMusic()
 {
 	if(endingLoadFinish) return;
-	createjs.Sound.alternateExtensions = ["mp3"];
-	createjs.Sound.registerSound({id:"win", src:"sound/ending/win.ogg"});	
-
-	createjs.Sound.addEventListener("fileload", handleFileLoad);
-	function handleFileLoad(event) {
-    	// A sound has been preloaded.
-		//console.log("Preloaded:", event.id, event.src);
+	soundLoadManifest([{ id: "win", src: "sound/ending/win.ogg" }]).then(function () {
 		endingLoadFinish = 1;
-	}
+	}).catch(function (err) {
+		console.log("ending music load failed", err);
+	});
 }
 
 function endingMusicPlay()

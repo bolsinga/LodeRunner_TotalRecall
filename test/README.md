@@ -32,6 +32,7 @@ node --test test/*.test.js
 | `inventory.test.js` | characterization | Every root script is wired in HTML or known-lazy; registry `levelCount` matches packs |
 | `html-shell.test.js` | characterization | HTML shell meta: lang/charset/viewport, no obsolete IE meta |
 | `tween.test.js` | correctness | `tweenGet` chains: interpolation, completion-once, override cancel |
+| `sound.test.js` | correctness | Web Audio layer: ogg/mp3 fallback, instance stop/restart, pause offset |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |

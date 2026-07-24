@@ -71,3 +71,21 @@ function otherThemeName(themeName)
 {
 	return (themeName === THEME_C64) ? THEME_APPLE2 : THEME_C64;
 }
+
+//true for sound manifest entries (primary extension .ogg)
+function isSoundAssetSrc(src)
+{
+	return /\.ogg(\?|$)/i.test(String(src));
+}
+
+//split LoadQueue-style items into images (PreloadJS) vs sounds (Web Audio)
+function partitionAssetManifest(list)
+{
+	var images = [];
+	var sounds = [];
+	for (var i = 0; i < list.length; i++) {
+		if (isSoundAssetSrc(list[i].src)) sounds.push(list[i]);
+		else images.push(list[i]);
+	}
+	return { images: images, sounds: sounds };
+}

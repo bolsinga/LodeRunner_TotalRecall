@@ -115,9 +115,9 @@ function soundPlay(name)
 	if(soundDisable()) return;
 	
 	if(typeof name == "string") {
-		return createjs.Sound.play(name);
+		return soundPlayById(name);
 	} else {
-		name.stop(); //12/21/2014 , for support soundJS 0.6.0
+		name.stop(); //restart persistent instance from the beginning
 		name.play();
 	}
 }
@@ -125,7 +125,7 @@ function soundPlay(name)
 function soundStop(name)
 {
 	if(typeof name == "string") {
-		return createjs.Sound.stop(name);
+		return soundStopById(name);
 	} else {
 		name.stop();
 	}
@@ -134,23 +134,15 @@ function soundStop(name)
 function soundPause(name)
 {
 	if(soundDisable()) return;
-	
-	if(typeof name == "string") {
-		return createjs.Sound.pause(name);
-	} else {
-		name.paused=true; //SoundJS 0.6.2 API Changed, 8/28/2016 
-	}
+
+	if(typeof name != "string") name.pause();
 }
 
 function soundResume(name)
 {
 	if(soundDisable()) return;
-	
-	if(typeof name == "string") {
-		return createjs.Sound.resume(name);
-	} else {
-		name.paused=false; //SoundJS 0.6.2 API Changed, 8/28/2016
-	}
+
+	if(typeof name != "string") name.resume();
 }
 
 //==============================
@@ -284,29 +276,3 @@ function getDemoData(playData)
 	}
 }
 
-//===========================================================================
-// Chrome 66 policy changes default mute autoplay, need resume it 
-// https://developers.google.com/web/updates/2017/09/autoplay-policy-changes 
-//
-// Reference: https://github.com/CreateJS/SoundJS/issues/297
-//===========================================================================
-function resumeAudioContext() 
-{
-	// handler for fixing suspended audio context in Chrome
-	//------------------------------------------------------------------
-	// Error Msgs:
-	// "The AudioContext was not allowed to start. 
-	//  It must be resume (or created) after a user gesture on the page.
-	//  https://goo.gl/7K7WLu"
-	//------------------------------------------------------------------
-	try {
-		if (createjs.WebAudioPlugin.context.state === "suspended") {
-			createjs.WebAudioPlugin.context.resume();
-			console.log("Resume Web Audio context...");
-		}
-	} catch (e) {
-		// SoundJS context or web audio plugin may not exist
-		console.error("There was an error while trying to resume the SoundJS Web Audio context...");
-		console.error(e);
-	}
-}

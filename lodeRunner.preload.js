@@ -167,17 +167,41 @@ function ensureThemeLoaded(themeName, callback)
 	}
 
 	var manifest = buildThemeAssetManifest(themeName, themeImagePath, themeSoundPath, noCache);
+	var parts = partitionAssetManifest(manifest);
+	var imagesDone = parts.images.length === 0;
+	var soundsDone = parts.sounds.length === 0;
+	var finished = false;
 
 	function done()
 	{
-		preload.removeEventListener("complete", done);
+		if (finished || !imagesDone || !soundsDone) return;
+		finished = true;
 		themeAssetsLoaded[themeName] = 1;
 		ensureThemeBaseBitmaps(themeName);
 		if (callback) callback();
 	}
 
-	preload.addEventListener("complete", done);
-	preload.loadManifest(manifest);
+	if (!imagesDone) {
+		function onImages()
+		{
+			preload.removeEventListener("complete", onImages);
+			imagesDone = true;
+			done();
+		}
+		preload.addEventListener("complete", onImages);
+		preload.loadManifest(parts.images);
+	}
+	if (!soundsDone) {
+		soundLoadManifest(parts.sounds).then(function () {
+			soundsDone = true;
+			done();
+		}).catch(function (err) {
+			console.log("ensureThemeLoaded sound error", err);
+			soundsDone = true;
+			done();
+		});
+	}
+	if (imagesDone && soundsDone) done();
 }
 
 function preloadResource() 
@@ -242,15 +266,39 @@ function preloadResource()
 		{ src: "cursor/closedhand.cur"+noCache, id:"closeHand"}
 		
 	].concat(buildThemeAssetManifest(curTheme, themeImagePath, themeSoundPath, noCache));
+
+	var parts = partitionAssetManifest(resource);
+	var imgProgress = 0;
+	var soundProgress = 0;
+	var imagesDone = parts.images.length === 0;
+	var soundsDone = parts.sounds.length === 0;
+	var loadCompleted = false;
 	
 	preload = new createjs.LoadQueue(true);
-	createjs.Sound.alternateExtensions = ["mp3"];
-	preload.installPlugin(createjs.Sound);
 	preload.addEventListener("error", handleFileError);
 	preload.addEventListener("progress", handleProgress);
-	preload.addEventListener("complete", handleComplete);
+	preload.addEventListener("complete", handleImagesComplete);
 
-	preload.loadManifest(resource);
+	if (!imagesDone) preload.loadManifest(parts.images);
+	if (!soundsDone) {
+		soundLoadManifest(parts.sounds, function (loaded, total) {
+			soundProgress = total ? (loaded / total) : 1;
+			updateCombinedProgress();
+		}).then(function () {
+			soundsDone = true;
+			maybeHandleComplete();
+		}).catch(function (err) {
+			console.log("sound load error", err);
+			soundsDone = true;
+			maybeHandleComplete();
+		});
+	} else {
+		soundProgress = 1;
+	}
+	if (imagesDone) {
+		imgProgress = 1;
+		maybeHandleComplete();
+	}
 
 	createjs.Ticker.setFPS(30);
 	createjs.Ticker.addEventListener("tick", mainStage);
@@ -281,18 +329,43 @@ function preloadResource()
 		console.log("error", event);
 	}
 
-	function handleProgress(event) 
+	function updateCombinedProgress()
 	{
+		var imgW = parts.images.length;
+		var soundW = parts.sounds.length;
+		var totalW = imgW + soundW;
+		var ratio = totalW ? ((imgProgress * imgW) + (soundProgress * soundW)) / totalW : 1;
 		progress.graphics.clear();
-		progress.graphics.beginFill("gold").drawRect(0,0,width*(event.loaded / event.total),height);
-		percentTxt.text = (100*(event.loaded / event.total)|0) + "%";
+		progress.graphics.beginFill("gold").drawRect(0,0,width*ratio,height);
+		percentTxt.text = (100*ratio|0) + "%";
 		percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
 	}
 
-	function handleComplete(event) 
+	function handleProgress(event) 
+	{
+		imgProgress = event.total ? (event.loaded / event.total) : 1;
+		updateCombinedProgress();
+	}
+
+	function handleImagesComplete()
+	{
+		preload.removeEventListener("complete", handleImagesComplete);
+		imagesDone = true;
+		imgProgress = 1;
+		updateCombinedProgress();
+		maybeHandleComplete();
+	}
+
+	function maybeHandleComplete()
+	{
+		if (loadCompleted || !imagesDone || !soundsDone) return;
+		loadCompleted = true;
+		handleComplete();
+	}
+
+	function handleComplete() 
 	{
 		preload.removeEventListener("progress", handleProgress);
-		preload.removeEventListener("complete", handleComplete);
 		preload.removeEventListener("error", handleFileError);
 
 		themeAssetsLoaded[curTheme] = 1;
@@ -425,11 +498,11 @@ function preloadResource()
 
 function createSoundInstance()
 {
-	soundFall = createjs.Sound.createInstance("fall" + curTheme); 
-	soundDig = createjs.Sound.createInstance("dig" + curTheme);
-	soundPass = createjs.Sound.createInstance("pass" + curTheme);
+	soundFall = soundCreateInstance("fall" + curTheme); 
+	soundDig = soundCreateInstance("dig" + curTheme);
+	soundPass = soundCreateInstance("pass" + curTheme);
 	
-	soundEnding = createjs.Sound.createInstance("ending"); //for training mode only 
+	soundEnding = soundCreateInstance("ending"); //for training mode only 
 	
 }
 
