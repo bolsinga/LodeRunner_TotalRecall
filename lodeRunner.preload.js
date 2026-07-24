@@ -340,7 +340,7 @@ function preloadResource()
 		y = (BASE_SCREEN_Y - SIGNET_UNDER_Y - signetBitmap.getBounds().height)* tileScale;
 		signetBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
 		signetBitmap.set({alpha:0.8});
-		createjs.Tween.get(signetBitmap).set({alpha:0.8}).to({alpha:1}, 500);
+		tweenGet(signetBitmap).set({alpha:0.8}).to({alpha:1}, 500);
 	}	
 	
 	//create remake image 
@@ -352,7 +352,7 @@ function preloadResource()
 		remakeBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
 		remakeBitmap.rotation = -5;
 		remakeBitmap.set({alpha:0.6});
-		createjs.Tween.get(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
+		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
 	}
 	
 	function createHelpObj()

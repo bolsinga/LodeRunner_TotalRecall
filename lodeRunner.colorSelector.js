@@ -199,7 +199,7 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 				colorSelectorIsSmall = 0;
 				colorSelector.cursor = "default";
 			} else {
-				createjs.Tween.get(colorSelector)
+				tweenGet(colorSelector)
 				.to({scaleX: 1, scaleY: 1}, 100)
 				.call(function(){
 					colorSelectorIsSmall = 0;
@@ -220,7 +220,7 @@ function colorSelectorClass(_screenX1, _screenY1, baseX)
 				colorCanvas.width = px * 2 * smallScale; 
 				colorCanvas.height = py * 2 * smallScale; 
 			} else {
-				createjs.Tween.get(colorSelector)
+				tweenGet(colorSelector)
 				.to({scaleX: smallScale, scaleY: smallScale}, 100)
 				.call(function(){
 					colorCanvas.width = px * 2 * smallScale;

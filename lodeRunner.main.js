@@ -888,8 +888,8 @@ function showTipsText(text, time, text1)
 	mainStage.addChild(tipsText);
 	
 	if(time){
-		createjs.Tween.get(tipsRect,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
-		createjs.Tween.get(tipsText,{override:true}).set({alpha:1}).to({alpha:0}, time);
+		tweenGet(tipsRect,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
+		tweenGet(tipsText,{override:true}).set({alpha:1}).to({alpha:0}, time);
 	}
 	
 	if(text1 != null) { //second tips 
@@ -915,8 +915,8 @@ function showTipsText(text, time, text1)
 		mainStage.addChild(tipsText1);
 	
 		if(time){
-			createjs.Tween.get(tipsRect1,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
-			createjs.Tween.get(tipsText1,{override:true}).set({alpha:1}).to({alpha:0}, time);
+			tweenGet(tipsRect1,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
+			tweenGet(tipsText1,{override:true}).set({alpha:1}).to({alpha:0}, time);
 		}
 	}	
 	
@@ -1010,7 +1010,7 @@ function gameOverAnimation()
 	rectBlock.setTransform(x, y, tileScale, tileScale).set({regX:regX, regY:regY});
 	
 	gameOverImage.setTransform(x, y, tileScale, tileScale).set({regX:regX, regY:regY});
-	createjs.Tween.get(gameOverImage)
+	tweenGet(gameOverImage)
 			.to({scaleY:-tileScale},80)
 			.to({scaleY:tileScale},80)
 			.to({scaleY:-tileScale},100)

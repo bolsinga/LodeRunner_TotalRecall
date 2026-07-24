@@ -65,7 +65,7 @@ function showTipsMsg(_tipsTxt, _stage, _scale, _tipsTxt1)
 	
 	_stage.addChild(tipsText);
 	
-	createjs.Tween.get(tipsText).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
+	tweenGet(tipsText).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
 		.call(function(){_stage.removeChild(tipsText);});
 		
 	if(_tipsTxt1 != null) {
@@ -79,7 +79,7 @@ function showTipsMsg(_tipsTxt, _stage, _scale, _tipsTxt1)
 
 		_stage.addChild(tipsText1);
 		
-		createjs.Tween.get(tipsText1).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
+		tweenGet(tipsText1).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
 			.call(function(){_stage.removeChild(tipsText1);});
 		
 	}
