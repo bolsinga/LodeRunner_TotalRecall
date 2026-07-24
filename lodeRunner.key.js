@@ -281,7 +281,7 @@ function pressKey(code)
 		//debug("keycode = " + code);	
 		break;	
 	}
-	if(recordMode && code != KEYCODE_ESC) saveKeyCode(code, keyAction);
+	if(recordMode != RECORD_PLAY && code != KEYCODE_ESC) saveKeyCode(code, keyAction);
 }
 
 function gameResume()

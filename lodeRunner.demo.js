@@ -267,13 +267,21 @@ function respUpdatePlayerDemoData(jsonTxt)
 //==============================
 
 var RECORD_NONE = 0, RECORD_KEY = 1, RECORD_PLAY = 2;
-var recordMode = RECORD_KEY; 
-//var recordMode = RECORD_NONE; 
+var recordMode = RECORD_NONE;
+//var recordMode = RECORD_KEY; //to capture demos
 
 var recordCount, recordKeyCode = 0, lastKeyCode = -1;
 var playRecord, goldRecord, bornRecord;
 var goldRecordIdx, bornRecordIdx;
 var playRecordTime, recordState;
+
+function initInputKeyState()
+{
+	recordKeyCode = 0;
+	lastKeyCode = -1;
+	keyPressed = 0;
+	alwaysRecord = 0;
+}
 
 function initRecordVariable()
 {
@@ -281,11 +289,10 @@ function initRecordVariable()
 	goldRecordIdx = 0;
 	bornRecordIdx = 0;
 	playRecordTime = 0;
+	initInputKeyState();
 
 	switch(recordMode) {
 	case RECORD_KEY:
-		recordKeyCode = 0;
-		lastKeyCode = -1;	
 		playRecord = [];
 		goldRecord = [];
 		bornRecord = [];
@@ -327,59 +334,38 @@ function recordModeToggle(state)
 	} else recordMode = RECORD_KEY;
 }
 
+//sticky/repeat key handling for live play; captures into playRecord when RECORD_KEY
+function processInputKeyState()
+{
+	var capture = (recordMode == RECORD_KEY);
+	var state = {
+		keyPressed: keyPressed,
+		recordKeyCode: recordKeyCode,
+		lastKeyCode: lastKeyCode,
+		keyAction: keyAction,
+		alwaysRecord: alwaysRecord
+	};
+	var next;
+
+	if (repeatAction) {
+		next = advanceRepeatKeyState(state, capture, recordCount, playRecord || []);
+	} else {
+		next = advanceStickyKeyState(
+			state, capture, recordCount, playRecord || [], KEYCODE_SPACE, ACT_STOP
+		);
+	}
+
+	keyPressed = next.keyPressed;
+	recordKeyCode = next.recordKeyCode;
+	lastKeyCode = next.lastKeyCode;
+	keyAction = next.keyAction;
+	alwaysRecord = next.alwaysRecord;
+}
+
 function processRecordKey()
 {
-	switch(recordMode) {
-	case RECORD_KEY: //record the play key action
-		recordKeyAction();
-		break;
-	case RECORD_PLAY: //play the record key 
-		recordPlayDemo();
-		break;
-	}	
+	if(recordMode == RECORD_PLAY) recordPlayDemo();
 	recordCount++;
-}
-
-function recordKeyAction()
-{
-	if(repeatAction) recordKeyAction1();
-	else recordKeyAction2()
-}
-
-//record key for "keyboard repeat on"	   
-function recordKeyAction1()
-{
-	if(!keyPressed) return;
-	if(recordKeyCode != lastKeyCode || alwaysRecord) {
-		playRecord.push(recordCount);
-		playRecord.push(recordKeyCode);
-		lastKeyCode = recordKeyCode;
-	}
-	keyPressed = 0;
-}
-
-//record key for "keyboard repeat off"
-// keyPressed= 1:pressed, 0:released, -1:floating (do nothing till pressed again)
-function recordKeyAction2()
-{
-	switch(keyPressed) {
-	case 1: //pressed
-		if(recordKeyCode != lastKeyCode || alwaysRecord) {
-			playRecord.push(recordCount);
-			playRecord.push(recordKeyCode);
-			lastKeyCode = recordKeyCode;
-		}
-		if(alwaysRecord) keyPressed = -1; //floating
-		break;
-	case 0:	//release	
-		if(recordKeyCode != KEYCODE_SPACE) { 
-			playRecord.push(recordCount);
-			playRecord.push(KEYCODE_SPACE);
-			lastKeyCode = recordKeyCode = KEYCODE_SPACE;
-			keyAction = ACT_STOP;
-		}
-		break;	
-	}
 }
 
 var recordIdx;

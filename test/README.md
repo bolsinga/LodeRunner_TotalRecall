@@ -25,6 +25,7 @@ node --test test/*.test.js
 | `level-integrity.test.js` | characterization | All classic/pro/revenge/fan/championship levels: 28×16, legal tiles, one `&` |
 | `level-integrity.test.js` | characterization | `parseLevelChar` / `parseLevelMap` tile mapping + classic L1 snapshot |
 | `level-map-culling.test.js` | characterization | `resolveLevelMap` maxGuard culling + first-`&`-wins (the buildLevelMap path Stage 2 will risk) |
+| `input-logic.test.js` | correctness | Sticky stop-on-release works without capture; `RECORD_KEY` pushes are optional |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |
@@ -34,8 +35,9 @@ node --test test/*.test.js
 
 - **Behavior change ⇒ update or add tests in the same commit.**
 - Prefer labeling tests as **characterization** (current output) vs **correctness** (intended output). Known-buggy chrome/iris behavior may be locked as characterization until Stage 2 fixes it.
-- Pure helpers live in `lodeRunner.levelParse.js` (`parseLevelChar`, `resolveLevelMap`), `lodeRunner.shareCodec.js`, `lodeRunner.storageCore.js` and are loaded in the browser via `lodeRunner.html`.
+- Pure helpers live in `lodeRunner.levelParse.js` (`parseLevelChar`, `resolveLevelMap`), `lodeRunner.inputLogic.js`, `lodeRunner.shareCodec.js`, `lodeRunner.storageCore.js` and are loaded in the browser via `lodeRunner.html`.
 - `buildLevelMap` in `main.js` calls `resolveLevelMap(levelMap, maxGuard)` for base/act (including culling), then only attaches CreateJS sprites. Do not re-introduce inline culling in `main.js`.
+- Default `recordMode` is `RECORD_NONE`. Stop-on-release input runs via `processInputKeyState()`; demo capture requires setting `RECORD_KEY` in `lodeRunner.demo.js`.
 
 ## CI
 

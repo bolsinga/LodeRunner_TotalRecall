@@ -807,8 +807,14 @@ function playGame(deltaS)
 		playTickTimer = 0;
 	}
 	
-	if(playMode == PLAY_AUTO || playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) playDemo();
-	if(recordMode) processRecordKey();
+	if(playMode == PLAY_AUTO || playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) {
+		playDemo();
+	} else if(recordMode == RECORD_PLAY) {
+		processRecordKey();
+	} else { //stop-on-release must run even when not recording
+		processInputKeyState();
+		if(recordMode == RECORD_KEY) recordCount++;
+	}
 	if(!isDigging()) moveRunner();
 	else processDigHole();
 	if(gameState != GAME_RUNNER_DEAD) moveGuard();
@@ -1249,6 +1255,7 @@ function beginPlay()
 	startBlinkTimer = 0;
 	changingLevel = 0;
 		
+	initInputKeyState();
 	if(recordMode) initRecordVariable();
 	if(playMode == PLAY_AUTO || playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) {
 		initPlayDemo();
