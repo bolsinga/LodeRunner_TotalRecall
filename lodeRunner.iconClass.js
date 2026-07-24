@@ -88,7 +88,7 @@ function mainMenuIconClass( _screenX1, _screenY1, _scale, _mainMenuBitmap)
 		gamePause();
 		if (playMode == PLAY_EDIT) {
 			if (editLevelModified()) saveTestState();
-			stopEditTicker();
+			stopEditInput();
 		} else {
 			stopPlayTicker();
 			stopAllSpriteObj();
@@ -100,7 +100,7 @@ function mainMenuIconClass( _screenX1, _screenY1, _scale, _mainMenuBitmap)
 	{
 		restoreKeyHandler(saveStateObj);
 		if (playMode == PLAY_EDIT) {
-			startEditTicker();
+			startEditInput();
 		} else {
 			startAllSpriteObj();
 			startPlayTicker();
@@ -232,7 +232,7 @@ function selectIconClass( _screenX1, _screenY1, _scale, _bitmap)
 		saveStateObj = saveKeyHandler(noKeyDown);
 		gamePause();
 		if (playMode == PLAY_EDIT) {
-			stopEditTicker();
+			stopEditInput();
 		} else {
 			stopPlayTicker();
 			stopAllSpriteObj();
@@ -244,7 +244,7 @@ function selectIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	{
 		restoreKeyHandler(saveStateObj);
 		if (playMode == PLAY_EDIT) {
-			startEditTicker();
+			startEditInput();
 		} else {
 			startAllSpriteObj();
 			startPlayTicker();
@@ -618,7 +618,7 @@ function infoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 		gamePause();
 		if (playMode == PLAY_EDIT) {
 			if (editLevelModified()) saveTestState();
-			stopEditTicker();
+			stopEditInput();
 		} else {
 			stopPlayTicker();
 			stopAllSpriteObj();
@@ -630,7 +630,7 @@ function infoIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	{
 		restoreKeyHandler(saveStateObj);
 		if (playMode == PLAY_EDIT) {
-			startEditTicker();
+			startEditInput();
 		} else {
 			startAllSpriteObj();
 			startPlayTicker();
@@ -726,7 +726,7 @@ function helpIconClass( _screenX1, _screenY1, _scale, _bitmap)
 		gamePause();
 		if (playMode == PLAY_EDIT) {
 			if (editLevelModified()) saveTestState();
-			stopEditTicker();
+			stopEditInput();
 		} else {
 			stopPlayTicker();
 			stopAllSpriteObj();
@@ -738,7 +738,7 @@ function helpIconClass( _screenX1, _screenY1, _scale, _bitmap)
 	{
 		restoreKeyHandler(saveStateObj);
 		if (playMode == PLAY_EDIT) {
-			startEditTicker();
+			startEditInput();
 		} else {
 			startAllSpriteObj();
 			startPlayTicker();
@@ -874,7 +874,7 @@ function themeIconClass( _screenX1, _screenY1, _scale, _themeBitmapApple2, _them
 		setThemeMode(curTheme);
 		if (playMode == PLAY_EDIT) {
 			if (editLevelModified()) saveTestState();
-			stopEditTicker();
+			stopEditInput();
 		}
 	}
 }

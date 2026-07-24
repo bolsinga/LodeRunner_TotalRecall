@@ -185,7 +185,7 @@ function themeColorChange(id)
 	
 	if(playMode == PLAY_EDIT) {
 		if(editLevelModified()) saveTestState();
-		stopEditTicker();
+		stopEditInput();
 		startEditMode();		
 	} else {
 		changeThemeScreen(); //real time change theme screen

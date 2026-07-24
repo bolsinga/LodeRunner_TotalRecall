@@ -160,6 +160,12 @@ function setBackground()
 
 function showCoverPage()
 {
+	// Attract/cover must not clobber an active edit session
+	if (playMode == PLAY_EDIT || playMode == PLAY_TEST) {
+		disableAutoDemoTimer();
+		clearIdleDemoTimer();
+		return;
+	}
 	playChromeVisible = 1;
 	document.body.style.background = backgroundColor;
 	menuIconDisable(1);
@@ -249,6 +255,12 @@ function anyKeyDown()
 
 function checkIdleTime(maxIdleTime)
 {
+	// Never kick into attract while editing or playtesting a custom level
+	if (playMode == PLAY_EDIT || playMode == PLAY_TEST) {
+		clearIdleDemoTimer();
+		return;
+	}
+
 	var idleTime = (new Date() - startIdleTime);
 		
 	if(idleTime > maxIdleTime){ //start demo

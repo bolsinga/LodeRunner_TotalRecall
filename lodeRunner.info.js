@@ -29,13 +29,13 @@ var revengeInfo = [
 
 var fanBookInfo = [
 	{type: 'TITLE', contain: " Lode Runner Fan Book " },
-	{type: 'TEXT' , contain: 'From : "Apple Lode Runner - The Remake 1.0h"'},
+	{type: 'TEXT' , contain: 'From : "Apple Lode Runner - The Remake 2.0"'},
 	{type: 'TEXT' , contain: "Platform : Microsoft Windows"},
 	{type: 'TEXT' , contain: "Publisher : Spoonbill Software" },
 	{type: 'TEXT' , contain: 'Developer : Custom levels'},
 	{type: 'TEXT_LINK' , text: "URL : ",
-	 				     textLink: "http://www.spoonbillsoftware.com.au/loderunner.htm",
-	 				     url: "http://www.spoonbillsoftware.com.au/loderunner.htm"
+	 				     textLink: "https://www.omninet.net.au/~irhumph/loderunner.htm",
+	 				     url: "https://www.omninet.net.au/~irhumph/loderunner.htm"
 	},
 	{type: 'TEXT' , contain: "Difficulty : \u2605 \u2605 \u2605 \u2605 \u2605" } //★ ★ ★ ★ ★
 ];
@@ -130,13 +130,9 @@ function infoMenu(callbackFun, args)
 	}
 }
 
-function infoMenuClass(_stage, _scale)
+function infoMenuClass(_stageUnused, _scale)
 {
-	var coverBackground, closeIcon;
-	var infoBorder, infoBackground;
-	var infoObj = [];
-	
-	var INFO_BORDER_SIZE  = 24 * _scale;	
+	var INFO_BORDER_SIZE  = 24 * _scale;
 	var INFO_BORDER_HALF  = INFO_BORDER_SIZE / 2;
 		
 	var TITLE_TEXT_SIZE = 40 * _scale;
@@ -149,344 +145,447 @@ function infoMenuClass(_stage, _scale)
 	var FLAG_SCALE = _scale * 5/4;
 	var FLAG_MSG_SIZE = 28 * _scale;
 	var FLAG_MSG_COLOR = "white";
+	var FLAG_FRAME = 32;
 	
 	var TOP_BORDER_SIZE = TITLE_TEXT_SIZE/2 | 0;
 	var BOTTOM_BORDER_SIZE = ITEM_TEXT_SIZE/ 2 | 0;
 	var BORDER_WIDTH =  ITEM_TEXT_SIZE;
 	
 	var CLOSE_BOX_SIZE = 12 * _scale + 2;
-	
+
+	var canvas = null;
+	var ctx = null;
+	var measureCanvas = document.createElement("canvas");
+	var measureCtx = measureCanvas.getContext("2d");
+
+	var rows = [];
+	var hitRegions = [];
+	var closeHover = false;
+	var flagHoverIdx = -1;
+	var linkHoverIdx = -1;
+
 	var menuX, menuY, startX, startY;
+	var screenW, screenH;
 	
 	var callBackFun, callBackArgs;
 	var saveStateObj;
+	var listening = false;
 
+	function measureText(text, font)
+	{
+		measureCtx.font = font;
+		var m = measureCtx.measureText(text);
+		var h = parseFloat(font) || 16;
+		return { width: m.width, height: h };
+	}
+
+	function flagFrameIndex(flagId)
+	{
+		if (flagId && (flagId in countryId)) return countryId[flagId];
+		if ("unknown" in countryId) return countryId["unknown"];
+		return 0;
+	}
+
+	function flagSheetMetrics()
+	{
+		var img = preload.getResult("flag");
+		var cols = Math.max(1, (img.naturalWidth || img.width) / FLAG_FRAME | 0);
+		return { img: img, cols: cols };
+	}
+
+	function drawRoundRect(c, x, y, w, h, r)
+	{
+		if (c.roundRect) {
+			c.beginPath();
+			c.roundRect(x, y, w, h, r);
+			c.fill();
+			return;
+		}
+		c.beginPath();
+		c.moveTo(x + r, y);
+		c.arcTo(x + w, y, x + w, y + h, r);
+		c.arcTo(x + w, y + h, x, y + h, r);
+		c.arcTo(x, y + h, x, y, r);
+		c.arcTo(x, y, x + w, y, r);
+		c.closePath();
+		c.fill();
+	}
+
+	function ensureCanvas()
+	{
+		var gameCanvas = document.getElementById("canvas");
+		screenW = gameCanvas.width;
+		screenH = gameCanvas.height;
+		if (!canvas) {
+			canvas = document.createElement("canvas");
+			canvas.id = "info_overlay";
+			canvas.style.position = "absolute";
+			ctx = canvas.getContext("2d");
+		}
+		canvas.width = screenW;
+		canvas.height = screenH;
+		canvas.style.left = gameCanvas.style.left || (gameCanvas.offsetLeft + "px");
+		canvas.style.top = gameCanvas.style.top || (gameCanvas.offsetTop + "px");
+		if (!canvas.parentNode) document.body.appendChild(canvas);
+	}
+
+	function layoutRows(infoList)
+	{
+		rows = [];
+		menuX = menuY = 0;
+		var maxTextWidth = 0;
+		var sheet = flagSheetMetrics();
+
+		for (var i = 0; i < infoList.length; i++) {
+			var item = infoList[i];
+			var row = { type: item.type };
+			switch (item.type) {
+			case "TITLE": {
+				var font = "bold " + TITLE_TEXT_SIZE + "px Helvetica";
+				var sz = measureText(item.contain, font);
+				row.text = item.contain;
+				row.font = font;
+				row.width = sz.width;
+				row.height = TITLE_TEXT_SIZE;
+				menuY += (row.height * 3 / 2) | 0;
+				break;
+			}
+			case "TEXT": {
+				var fontT = "bold " + ITEM_TEXT_SIZE + "px Helvetica";
+				var szT = measureText(item.contain, fontT);
+				row.text = item.contain;
+				row.font = fontT;
+				row.width = szT.width;
+				row.height = ITEM_TEXT_SIZE;
+				menuY += (row.height * 3 / 2) | 0;
+				break;
+			}
+			case "TEXT_flagID_MSG": {
+				var fontF = "bold " + ITEM_TEXT_SIZE + "px Helvetica";
+				var fontM = "bold " + FLAG_MSG_SIZE + "px Helvetica";
+				var labelSz = measureText(item.text, fontF);
+				var msgSz = measureText(item.msg, fontM);
+				var flagW = FLAG_FRAME * FLAG_SCALE;
+				var flagH = FLAG_FRAME * FLAG_SCALE;
+				row.label = item.text;
+				row.labelFont = fontF;
+				row.textWidth = labelSz.width;
+				row.textHeight = ITEM_TEXT_SIZE;
+				row.flagId = item.flagId;
+				row.flagFrame = flagFrameIndex(item.flagId);
+				row.flagWidth = flagW;
+				row.flagHeight = flagH;
+				row.msg = item.msg;
+				row.msgFont = fontM;
+				row.msgWidth = msgSz.width;
+				row.msgHeight = FLAG_MSG_SIZE;
+				row.width = row.textWidth + row.flagWidth + row.msgWidth;
+				menuY += (row.textHeight * 3 / 2) | 0;
+				break;
+			}
+			case "TEXT_LINK": {
+				var fontL = "bold " + ITEM_TEXT_SIZE + "px Helvetica";
+				var prefixSz = measureText(item.text, fontL);
+				var linkSz = measureText(item.textLink, fontL);
+				row.label = item.text;
+				row.linkText = item.textLink;
+				row.url = item.url;
+				row.font = fontL;
+				row.textWidth = prefixSz.width;
+				row.textHeight = ITEM_TEXT_SIZE;
+				row.linkWidth = linkSz.width;
+				row.width = row.textWidth + row.linkWidth;
+				menuY += (row.textHeight * 3 / 2) | 0;
+				break;
+			}
+			default:
+				error("Error: type don't support, type = " + item.type);
+				continue;
+			}
+			if (maxTextWidth < row.width) maxTextWidth = row.width;
+			rows.push(row);
+		}
+
+		menuX = maxTextWidth + BORDER_WIDTH * 2;
+		menuY += (TOP_BORDER_SIZE + BOTTOM_BORDER_SIZE);
+		startX = (screenW - menuX) / 2 | 0;
+		startY = (screenH - menuY) / 2 | 0;
+		if (startX < 0) startX = 0;
+		if (startY < 0) startY = 0;
+	}
+
+	function buildHitRegions()
+	{
+		hitRegions = [];
+		var tmpY = startY;
+		for (var i = 0; i < rows.length; i++) {
+			var row = rows[i];
+			switch (row.type) {
+			case "TITLE":
+				tmpY += (row.height / 2) | 0;
+				row.x = startX + (menuX - row.width) / 2 | 0;
+				row.y = tmpY;
+				tmpY += row.height * 3 / 2 | 0;
+				break;
+			case "TEXT":
+				row.x = startX + BORDER_WIDTH;
+				row.y = tmpY;
+				tmpY += row.height * 3 / 2 | 0;
+				break;
+			case "TEXT_flagID_MSG":
+				row.x = startX + BORDER_WIDTH;
+				row.y = tmpY;
+				row.flagX = startX + BORDER_WIDTH + row.textWidth;
+				row.flagY = tmpY + (row.textHeight - row.flagHeight) / 3;
+				row.msgX = startX + BORDER_WIDTH + row.textWidth + row.flagWidth;
+				row.msgY = tmpY + (row.textHeight - row.msgHeight);
+				hitRegions.push({
+					type: "flag",
+					rowIdx: i,
+					x: row.flagX,
+					y: row.flagY,
+					w: row.flagWidth,
+					h: row.flagHeight
+				});
+				tmpY += row.textHeight * 3 / 2 | 0;
+				break;
+			case "TEXT_LINK":
+				row.x = startX + BORDER_WIDTH;
+				row.y = tmpY;
+				row.linkX = startX + BORDER_WIDTH + row.textWidth;
+				row.linkY = tmpY;
+				hitRegions.push({
+					type: "link",
+					rowIdx: i,
+					url: row.url,
+					x: row.linkX,
+					y: row.linkY,
+					w: row.linkWidth,
+					h: row.textHeight
+				});
+				tmpY += row.textHeight * 3 / 2 | 0;
+				break;
+			}
+		}
+		hitRegions.push({
+			type: "close",
+			x: startX + menuX - CLOSE_BOX_SIZE * 3 - CLOSE_BOX_SIZE / 2,
+			y: startY + CLOSE_BOX_SIZE * 2 - CLOSE_BOX_SIZE / 2,
+			w: CLOSE_BOX_SIZE * 2.5,
+			h: CLOSE_BOX_SIZE * 2.5
+		});
+	}
+
+	function redraw()
+	{
+		if (!ctx) return;
+		ctx.clearRect(0, 0, screenW, screenH);
+
+		ctx.globalAlpha = 0.3;
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, screenW, screenH);
+		ctx.globalAlpha = 1;
+
+		ctx.globalAlpha = 0.8;
+		ctx.fillStyle = "#FF0";
+		drawRoundRect(ctx, startX - INFO_BORDER_HALF, startY - INFO_BORDER_HALF,
+			menuX + INFO_BORDER_SIZE, menuY + INFO_BORDER_SIZE, INFO_BORDER_HALF);
+		ctx.globalAlpha = 0.6;
+		ctx.fillStyle = "#190218";
+		drawRoundRect(ctx, startX, startY, menuX, menuY, INFO_BORDER_HALF / 2);
+		ctx.globalAlpha = 1;
+
+		var sheet = flagSheetMetrics();
+		for (var i = 0; i < rows.length; i++) {
+			var row = rows[i];
+			switch (row.type) {
+			case "TITLE":
+				ctx.font = row.font;
+				ctx.fillStyle = TITLE_TEXT_COLOR;
+				ctx.shadowColor = TITLE_TEXT_SHADOW_COLOR;
+				ctx.shadowBlur = 2;
+				ctx.textBaseline = "top";
+				ctx.fillText(row.text, row.x, row.y);
+				ctx.shadowBlur = 0;
+				break;
+			case "TEXT":
+				ctx.font = row.font;
+				ctx.fillStyle = ITEM_TEXT_COLOR;
+				ctx.textBaseline = "top";
+				ctx.fillText(row.text, row.x, row.y);
+				break;
+			case "TEXT_flagID_MSG":
+				ctx.font = row.labelFont;
+				ctx.fillStyle = ITEM_TEXT_COLOR;
+				ctx.textBaseline = "top";
+				ctx.fillText(row.label, row.x, row.y);
+				if (sheet.img) {
+					var fi = row.flagFrame | 0;
+					var sx = (fi % sheet.cols) * FLAG_FRAME;
+					var sy = (fi / sheet.cols | 0) * FLAG_FRAME;
+					ctx.drawImage(sheet.img, sx, sy, FLAG_FRAME, FLAG_FRAME,
+						row.flagX, row.flagY, row.flagWidth, row.flagHeight);
+				}
+				if (flagHoverIdx === i) {
+					ctx.font = row.msgFont;
+					ctx.fillStyle = FLAG_MSG_COLOR;
+					ctx.fillText(row.msg, row.msgX, row.msgY);
+				}
+				break;
+			case "TEXT_LINK":
+				ctx.font = row.font;
+				ctx.fillStyle = ITEM_TEXT_COLOR;
+				ctx.textBaseline = "top";
+				ctx.fillText(row.label, row.x, row.y);
+				if (linkHoverIdx === i) {
+					ctx.fillStyle = "#fff";
+				}
+				ctx.fillText(row.linkText, row.linkX, row.linkY);
+				break;
+			}
+		}
+
+		drawCloseIcon(closeHover);
+	}
+
+	function drawCloseIcon(mouseOver)
+	{
+		var cx = startX + menuX - CLOSE_BOX_SIZE * 3;
+		var cy = startY + CLOSE_BOX_SIZE * 2;
+		var alpha = mouseOver ? 0.6 : 0.01;
+		var cycColor = mouseOver ? "red" : "gold";
+
+		ctx.globalAlpha = alpha;
+		ctx.fillStyle = cycColor;
+		ctx.beginPath();
+		ctx.arc(cx + CLOSE_BOX_SIZE / 2, cy + CLOSE_BOX_SIZE / 2, CLOSE_BOX_SIZE * 5 / 4, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.globalAlpha = 1;
+
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = CLOSE_BOX_SIZE / 4;
+		ctx.beginPath();
+		ctx.moveTo(cx, cy);
+		ctx.lineTo(cx + CLOSE_BOX_SIZE, cy + CLOSE_BOX_SIZE);
+		ctx.moveTo(cx + CLOSE_BOX_SIZE, cy);
+		ctx.lineTo(cx, cy + CLOSE_BOX_SIZE);
+		ctx.stroke();
+	}
+
+	function hitTest(mx, my)
+	{
+		for (var i = 0; i < hitRegions.length; i++) {
+			var h = hitRegions[i];
+			if (mx >= h.x && mx <= h.x + h.w && my >= h.y && my <= h.y + h.h) return h;
+		}
+		return null;
+	}
+
+	function canvasLocalXY(e)
+	{
+		var rect = canvas.getBoundingClientRect();
+		var sx = canvas.width / rect.width;
+		var sy = canvas.height / rect.height;
+		return {
+			x: (e.clientX - rect.left) * sx,
+			y: (e.clientY - rect.top) * sy
+		};
+	}
+
+	function onMove(e)
+	{
+		var p = canvasLocalXY(e);
+		var hit = hitTest(p.x, p.y);
+		var nextClose = hit && hit.type === "close";
+		var nextFlag = (hit && hit.type === "flag") ? hit.rowIdx : -1;
+		var nextLink = (hit && hit.type === "link") ? hit.rowIdx : -1;
+		var cursor = (nextClose || nextLink || nextFlag >= 0) ? "pointer" : "default";
+		if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor;
+		if (nextClose !== closeHover || nextFlag !== flagHoverIdx || nextLink !== linkHoverIdx) {
+			closeHover = nextClose;
+			flagHoverIdx = nextFlag;
+			linkHoverIdx = nextLink;
+			redraw();
+		}
+	}
+
+	function onLeave()
+	{
+		if (closeHover || flagHoverIdx >= 0 || linkHoverIdx >= 0) {
+			closeHover = false;
+			flagHoverIdx = -1;
+			linkHoverIdx = -1;
+			redraw();
+		}
+		canvas.style.cursor = "default";
+	}
+
+	function onClick(e)
+	{
+		var p = canvasLocalXY(e);
+		var hit = hitTest(p.x, p.y);
+		if (!hit) return;
+		if (hit.type === "close") {
+			closeInfoMenu();
+			return;
+		}
+		if (hit.type === "link" && hit.url) {
+			window.open(hit.url).focus();
+			canvas.style.cursor = "default";
+		}
+	}
+
+	function enablePointer()
+	{
+		if (listening) return;
+		canvas.addEventListener("mousemove", onMove);
+		canvas.addEventListener("mouseleave", onLeave);
+		canvas.addEventListener("click", onClick);
+		listening = true;
+	}
+
+	function disablePointer()
+	{
+		if (!listening) return;
+		canvas.removeEventListener("mousemove", onMove);
+		canvas.removeEventListener("mouseleave", onLeave);
+		canvas.removeEventListener("click", onClick);
+		listening = false;
+		canvas.style.cursor = "default";
+	}
 
 	this.showInfo = function(info, callback, args)
 	{
-		if(typeof args == "undefined") args = null;
+		if (typeof args == "undefined") args = null;
 		callBackFun = callback;
 		callBackArgs = args;
-		closeIcon = null;
-		
-		initInfo(info);
-		drawBackground();
-		drawInfoBackground();
-		drawInfo();
-		drawCloseIcon(0);
-		_stage.update();
-		
+		closeHover = false;
+		flagHoverIdx = -1;
+		linkHoverIdx = -1;
+
+		ensureCanvas();
+		layoutRows(info);
+		buildHitRegions();
+		redraw();
+		enablePointer();
+
 		saveStateObj = saveKeyHandler(InfoKeyDown);
-	}	
-	
-	function initInfo(infoList)
-	{
-		var textLength;
-		var maxTextWidth =0;
-		
-		infoObj = [];
-		menuX = menuY = 0;
-		for(var i = 0; i < infoList.length; i++) {
-			
-			switch(	infoList[i].type) {
-			case 'TITLE':
-				infoObj[i] = {};	
-				infoObj[i].type = 'TITLE';	
-				infoObj[i].text = new createjs.Text(infoList[i].contain, 
-				                      "bold " + TITLE_TEXT_SIZE + "px Helvetica",TITLE_TEXT_COLOR);
-				infoObj[i].text.shadow = new createjs.Shadow(TITLE_TEXT_SHADOW_COLOR, 1, 1, 1 );
-				infoObj[i].width = infoObj[i].text.getBounds().width;
-				infoObj[i].height = infoObj[i].text.getBounds().height;
-				menuY += (infoObj[i].height * 3/2|0);	
-				break;
-			case 'TEXT':
-				infoObj[i] = {};	
-				infoObj[i].type = 'TEXT';	
-				infoObj[i].text = new createjs.Text(infoList[i].contain, 
-				                      "bold " + ITEM_TEXT_SIZE + "px Helvetica",ITEM_TEXT_COLOR);
-				infoObj[i].width = infoObj[i].text.getBounds().width;
-				infoObj[i].height = infoObj[i].text.getBounds().height;
-				menuY += (infoObj[i].height * 3/2|0);	
-				break;	
-			case 'TEXT_flagID_MSG':
-				infoObj[i] = {};	
-				infoObj[i].type = 'TEXT_flagID_MSG';	
-					
-				infoObj[i].text = new createjs.Text(infoList[i].text, 
-				                      "bold " + ITEM_TEXT_SIZE + "px Helvetica", ITEM_TEXT_COLOR);
-				infoObj[i].textWidth = infoObj[i].text.getBounds().width;
-				infoObj[i].textHeight = infoObj[i].text.getBounds().height;
-					
-				if(infoList[i].flagId in countryId) {
-					infoObj[i].flag = new createjs.Sprite(countryFlagData, infoList[i].flagId);		
-				} else {
-					infoObj[i].flag = new createjs.Sprite(countryFlagData, "unknown");		
-				}
-				infoObj[i].flag.setTransform(0, 0, FLAG_SCALE, FLAG_SCALE);	
-				infoObj[i].flagWidth = infoObj[i].flag.getTransformedBounds().width;
-				infoObj[i].flagHeight = infoObj[i].flag.getTransformedBounds().height;
-					
-				infoObj[i].msg = new createjs.Text(infoList[i].msg, 
-				                      "bold " + FLAG_MSG_SIZE + "px Helvetica", FLAG_MSG_COLOR);
-				infoObj[i].msg.set({alpha:0});	
-				infoObj[i].msgWidth = infoObj[i].msg.getBounds().width;
-				infoObj[i].msgHeight = infoObj[i].msg.getBounds().height;
-					
-				infoObj[i].flag.msgObj = infoObj[i].msg;	
-				infoObj[i].flag.addEventListener('mouseover', function(evt) {
-					evt.currentTarget.msgObj.set({alpha:1});
-					_stage.update();
-				});
-				infoObj[i].flag.addEventListener('mouseout', function(evt){
-					evt.currentTarget.msgObj.set({alpha:0});
-					_stage.update();
-				});
-					
-				infoObj[i].width = infoObj[i].textWidth + infoObj[i].flagWidth + infoObj[i].msgWidth;
-				menuY += (infoObj[i].textHeight * 3/2|0);	
-				break;	
-			case 'TEXT_LINK':		
-				infoObj[i] = {};	
-				infoObj[i].type = 'TEXT_LINK';	
-					
-				infoObj[i].text = new createjs.Text(infoList[i].text, 
-				                      "bold " + ITEM_TEXT_SIZE + "px Helvetica", ITEM_TEXT_COLOR);
-				infoObj[i].textWidth = infoObj[i].text.getBounds().width;
-				infoObj[i].textHeight = infoObj[i].text.getBounds().height;
-					
-				infoObj[i].textLink = new createjs.Text(infoList[i].textLink, 
-				                      "bold " + ITEM_TEXT_SIZE + "px Helvetica", ITEM_TEXT_COLOR);
-				infoObj[i].texLinktWidth = infoObj[i].textLink.getBounds().width;
-				infoObj[i].texLinktHeight = infoObj[i].textLink.getBounds().height;
+	};
 
-				infoObj[i].textLink.url = infoList[i].url;	
-				infoObj[i].textLink.addEventListener('mouseover', function(evt) {
-					_stage.cursor = "pointer";
-					_stage.update();
-				});
-				infoObj[i].textLink.addEventListener('mouseout', function(evt){
-					_stage.cursor = "default";
-					_stage.update();
-				});
-				infoObj[i].textLink.addEventListener('click', function(evt){
-					window.open(evt.currentTarget.url).focus();
-					_stage.cursor = "default";
-					_stage.update();
-				});
-					
-				infoObj[i].width = infoObj[i].textWidth + infoObj[i].texLinktWidth;
-				menuY += (infoObj[i].textHeight * 3/2|0);	
-				break;	
-			default:
-				error("Error: type don't support, type = " + infoList[i].type);
-					continue;	
-			}
-			if(maxTextWidth < infoObj[i].width) maxTextWidth = infoObj[i].width;
-		}
-		menuX = maxTextWidth + BORDER_WIDTH * 2;
-		menuY += (TOP_BORDER_SIZE + BOTTOM_BORDER_SIZE);
-		
-		startX = (_stage.canvas.width-menuX)/2|0;
-		startY = (_stage.canvas.height-menuY)/2|0;
-		if(startX < 0) startX = 0; 
-		if(startY < 0) startY = 0;
-	}
-	
-	function drawBackground()
-	{
-		coverBackground = new createjs.Shape();
-		coverBackground.graphics.beginFill("black").drawRect(0, 0, _stage.canvas.width, _stage.canvas.height).endFill();
-		coverBackground.alpha = 0.3;
-		_stage.addChild(coverBackground);		
-	}	
-	
-	function removeBackground()
-	{
-		_stage.removeChild(coverBackground);
-	}		
-	
-	function drawInfoBackground()
-	{
-	
-		infoBorder = new createjs.Shape();
-		infoBackground = new createjs.Shape();
-	
-		infoBorder.alpha = 0.8;
-		infoBorder.graphics.beginFill("#FF0")
-			.drawRoundRect(startX-INFO_BORDER_HALF, startY-INFO_BORDER_HALF, menuX+INFO_BORDER_SIZE, menuY+INFO_BORDER_SIZE, INFO_BORDER_HALF).endFill();
-		
-		infoBackground.alpha = 0.6;
-		infoBackground.graphics.beginFill("#190218")
-			 .drawRoundRect(startX, startY, menuX, menuY, INFO_BORDER_HALF/2).endFill();
-	
-		_stage.addChild(infoBorder);
-		_stage.addChild(infoBackground);
-	}	
-	
-	function removeInfoBackground()
-	{
-		_stage.removeChild(infoBackground);
-		_stage.removeChild(infoBorder);
-	}
-	
-	function drawInfo()
-	{
-		var tmpY = startY;
-		for(var i = 0; i < infoObj.length; i++) {
-			switch(	infoObj[i].type) {
-			case 'TITLE':
-				tmpY += (infoObj[i].height/2|0);
-				infoObj[i].text.x = startX + (menuX - infoObj[i].width)/2|0;	
-				infoObj[i].text.y = tmpY;	
-				tmpY += infoObj[i].height *3/2|0;
-				_stage.addChild(infoObj[i].text);
-				break;
-			case 'TEXT':
-				infoObj[i].text.x = startX + BORDER_WIDTH;
-				infoObj[i].text.y = tmpY;	
-				tmpY += infoObj[i].height *3/2|0;	
-				_stage.addChild(infoObj[i].text);
-				break;	
-			case 'TEXT_flagID_MSG':
-				infoObj[i].text.x = startX + BORDER_WIDTH;
-				infoObj[i].text.y = tmpY;
-					
-				infoObj[i].flag.x = startX + BORDER_WIDTH + infoObj[i].textWidth;
-				infoObj[i].flag.y = tmpY+ (infoObj[i].textHeight - infoObj[i].flagHeight)/3;
-					
-				infoObj[i].msg.x = startX + BORDER_WIDTH + infoObj[i].textWidth + infoObj[i].flagWidth;
-				infoObj[i].msg.y = tmpY+ (infoObj[i].textHeight - infoObj[i].msgHeight);
-					
-				tmpY += infoObj[i].textHeight *3/2|0;	
-				_stage.addChild(infoObj[i].text);
-				_stage.addChild(infoObj[i].flag);
-				_stage.addChild(infoObj[i].msg);
-				break;	
-			case 'TEXT_LINK':
-				infoObj[i].text.x = startX + BORDER_WIDTH; 	
-				infoObj[i].text.y = tmpY;
-				
-				infoObj[i].textLink.x = startX + BORDER_WIDTH + infoObj[i].textWidth; 	
-				infoObj[i].textLink.y = tmpY;
-				tmpY += infoObj[i].textHeight *3/2|0;	
-				_stage.addChild(infoObj[i].text);
-				_stage.addChild(infoObj[i].textLink);
-				break;	
-			default:
-				error("Error: type don't support, type = " + infoObj[i].type);
-				continue;	
-			}
-		}
-	}
-
-	function removeInfo()
-	{
-		for(var i = 0; i < infoObj.length; i++) {
-			switch(infoObj[i].type) {
-			case 'TITLE':
-			case 'TEXT':
-				_stage.removeChild(infoObj[i].text);
-				break;
-			case 'TEXT_flagID_MSG':
-				_stage.removeChild(infoObj[i].text);
-				_stage.removeChild(infoObj[i].flag);
-				break;
-			case 'TEXT_LINK':
-				_stage.removeChild(infoObj[i].text);
-				_stage.removeChild(infoObj[i].textLink);
-				break;
-			default:
-				error("Error: type don't support, type = " + infoObj[i].type);
-				continue;	
-			}
-		}
-		
-	}
-	
 	function InfoKeyDown(event)
 	{
-		if(!event){ event = window.event; } //cross browser issues exist
-		if(event.keyCode == KEYCODE_ESC) {
+		if (!event) { event = window.event; }
+		if (event.keyCode == KEYCODE_ESC) {
 			closeInfoMenu();
 		}
 		return false;
-	}		
-	
-	function drawCloseIcon(mouseOver)
-	{
-		var cycle, cross;
-		var alpha, cycColor, crosColor;
-		if(closeIcon == null) {
-			closeIcon = new createjs.Container();
-			cross = new createjs.Shape();
-			cycle = new createjs.Shape();
-			closeIcon.addChild(cycle, cross);
-			closeIcon.addEventListener("mouseover", handleMouseOver);
-			closeIcon.addEventListener("mouseout", handleMouseOut);
-			closeIcon.addEventListener("click", closeInfoMenu);
-			closeIcon.x = startX+menuX - CLOSE_BOX_SIZE*3;
-			closeIcon.y = startY + CLOSE_BOX_SIZE*2;
-			_stage.enableMouseOver(30);
-			_stage.addChild(closeIcon);
-		} else {
-			cycle = closeIcon.getChildAt(0);
-			cross = closeIcon.getChildAt(1);
-		}
-		if(mouseOver) {
-			alpha = 0.6;
-			cycColor = "red";
-			crosColor = "white";	
-		} else {
-			alpha = 0.01;
-			cycColor = "gold";
-			crosColor = "white";
-		}
-		
-		var g = cycle.graphics; 
-		g.clear();
-		cycle.alpha = alpha;	
-		g.beginFill(cycColor).dc(CLOSE_BOX_SIZE/2, CLOSE_BOX_SIZE/2, CLOSE_BOX_SIZE*5/4);
-		
-		g = cross.graphics;
-		g.clear();
-		//cross.alpha = 1;
-	    g.setStrokeStyle(CLOSE_BOX_SIZE/4).beginStroke(crosColor).moveTo(0,0)
-		 .lineTo(CLOSE_BOX_SIZE,CLOSE_BOX_SIZE).closePath();
-		
-		g.moveTo(CLOSE_BOX_SIZE,0).lineTo(0,CLOSE_BOX_SIZE).closePath();
-		
-		_stage.update();	
-	}
-	
-	function removeCloseIcon()
-	{
-		_stage.removeChild(closeIcon);
-	}
-	
-	function handleMouseOver(event) 
-	{
-		_stage.cursor = 'pointer'; 
-		drawCloseIcon(1);
 	}
 
-	function handleMouseOut(event) 
+	function closeInfoMenu()
 	{
-		_stage.cursor = 'default'; 
-		drawCloseIcon(0);
-	}
-	
-	function closeInfoMenu() 
-	{
-		removeCloseIcon();
-		removeInfo();
-		removeInfoBackground();
-		removeBackground();
-		_stage.cursor = 'default'; 
-		_stage.update();
-		_stage.enableMouseOver(0);
+		disablePointer();
+		if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
 		restoreKeyHandler(saveStateObj);
-
-		//add setTimeout just don't cause mouse event (click) cascade!
-		if(callBackFun) setTimeout(function() { callBackFun(callBackArgs);}, 10); 
-	}	
+		if (callBackFun) setTimeout(function() { callBackFun(callBackArgs); }, 10);
+	}
 }

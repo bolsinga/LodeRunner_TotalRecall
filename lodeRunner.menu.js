@@ -1779,83 +1779,102 @@ function subEditMenu(id, callbackFun)
 
 function classicPlay(id, callbackFun)
 {
-	ensurePlayVersionLoaded(playData, function () {
-		if(callbackFun != null) callbackFun();
-		if(playMode == PLAY_EDIT) canvasReSize();
-		playMode = PLAY_CLASSIC;
+	function beginClassic()
+	{
+		ensurePlayVersionLoaded(playData, function () {
+			if(playMode == PLAY_EDIT) canvasReSize();
+			playMode = PLAY_CLASSIC;
+			if(callbackFun != null) callbackFun();
 
-		soundStop(soundDig);
-		soundStop(soundFall);
-		disableStageClickEvent();
-		document.onkeydown = handleKeyDown;
-		setLastPlayMode();
-		selectIconObj.disable(1);
-		demoIconObj.disable(1);
-		pasteIconObj.disable();
-		initShowDataMsg();
-		startGame();
-	});
+			soundStop(soundDig);
+			soundStop(soundFall);
+			disableStageClickEvent();
+			document.onkeydown = handleKeyDown;
+			setLastPlayMode();
+			selectIconObj.disable(1);
+			demoIconObj.disable(1);
+			pasteIconObj.disable();
+			initShowDataMsg();
+			startGame();
+		});
+	}
+	if (playMode == PLAY_EDIT) leaveEditMode(beginClassic, callbackFun);
+	else beginClassic();
 }
 
 function modernPlay(id, callbackFun)
 {
-	ensurePlayVersionLoaded(playData, function () {
-		if(callbackFun != null) callbackFun();
-		if(playMode == PLAY_EDIT) canvasReSize();
-		playMode = PLAY_MODERN;
-	
-		soundStop(soundDig);
-		soundStop(soundFall);
-		disableStageClickEvent();
-		document.onkeydown = handleKeyDown;
-		pasteIconObj.disable();
-		setLastPlayMode();
-		initShowDataMsg();
-		startGame();
-	});
+	function beginModern()
+	{
+		ensurePlayVersionLoaded(playData, function () {
+			if(playMode == PLAY_EDIT) canvasReSize();
+			playMode = PLAY_MODERN;
+			if(callbackFun != null) callbackFun();
+
+			soundStop(soundDig);
+			soundStop(soundFall);
+			disableStageClickEvent();
+			document.onkeydown = handleKeyDown;
+			pasteIconObj.disable();
+			setLastPlayMode();
+			initShowDataMsg();
+			startGame();
+		});
+	}
+	if (playMode == PLAY_EDIT) leaveEditMode(beginModern, callbackFun);
+	else beginModern();
 }
 
 function demoPlay(id, callbackFun)
 {
-	ensurePlayVersionLoaded(playData, function () {
-		if (demoPlayData != playData) initDemoData();
-		if(callbackFun != null) callbackFun();
-		if(playMode == PLAY_EDIT) canvasReSize();
-	
-		playMode = PLAY_DEMO;
-	
-		soundStop(soundDig);
-		soundStop(soundFall);
-		demoSoundOff = 1; //always sound off when start demo 
-		anyKeyStopDemo();
-		initShowDataMsg();
-		demoIconObj.disable(1);
-		pasteIconObj.disable();
-		startGame();
-	});
+	function beginDemo()
+	{
+		ensurePlayVersionLoaded(playData, function () {
+			if (demoPlayData != playData) initDemoData();
+			if(playMode == PLAY_EDIT) canvasReSize();
+			playMode = PLAY_DEMO;
+			if(callbackFun != null) callbackFun();
+
+			soundStop(soundDig);
+			soundStop(soundFall);
+			demoSoundOff = 1; //always sound off when start demo
+			anyKeyStopDemo();
+			initShowDataMsg();
+			demoIconObj.disable(1);
+			pasteIconObj.disable();
+			startGame();
+		});
+	}
+	if (playMode == PLAY_EDIT) leaveEditMode(beginDemo, callbackFun);
+	else beginDemo();
 }
 
 function editPlay(id, callbackFun)
 {
-	if(callbackFun != null) callbackFun();
-	if(playMode == PLAY_EDIT) canvasReSize();
-	playMode = PLAY_MODERN;
-	playData = PLAY_DATA_USERDEF;
-	
-	disableStageClickEvent();
-	document.onkeydown = handleKeyDown;
-	setLastPlayMode();
-	//selectIconObj.disable(1);
-	demoIconObj.disable(1);
-	pasteIconObj.disable();
-	if (id < 0) { //id < 0 ==> means call from restore custom levels
-		initShowDataMsg(0); //no tips message
-		setTimeout(function() { showTipsText("RESTORE COMPLETE", 2500);}, 50);
-		startGame(1); // no cycle
-	} else {
-		initShowDataMsg();
-		startGame();
+	function beginEditPlay()
+	{
+		if(playMode == PLAY_EDIT) canvasReSize();
+		playMode = PLAY_MODERN;
+		playData = PLAY_DATA_USERDEF;
+		if(callbackFun != null) callbackFun();
+
+		disableStageClickEvent();
+		document.onkeydown = handleKeyDown;
+		setLastPlayMode();
+		//selectIconObj.disable(1);
+		demoIconObj.disable(1);
+		pasteIconObj.disable();
+		if (id < 0) { //id < 0 ==> means call from restore custom levels
+			initShowDataMsg(0); //no tips message
+			setTimeout(function() { showTipsText("RESTORE COMPLETE", 2500);}, 50);
+			startGame(1); // no cycle
+		} else {
+			initShowDataMsg();
+			startGame();
+		}
 	}
+	if (playMode == PLAY_EDIT) leaveEditMode(beginEditPlay, callbackFun);
+	else beginEditPlay();
 }
 
 function editEdit(id, callbackFun)

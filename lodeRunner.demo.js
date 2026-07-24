@@ -55,6 +55,10 @@ function disableAutoDemoTimer()
 
 function countAutoDemoTimer()
 {
+	if (playMode == PLAY_EDIT || playMode == PLAY_TEST) {
+		disableAutoDemoTimer();
+		return;
+	}
 	if(demoCountEnable) {
 		demoCountTime++;
 		//debug(demoCountTime);

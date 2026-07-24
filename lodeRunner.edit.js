@@ -56,6 +56,9 @@ function startEditMode()
 {
 	playMode = PLAY_EDIT;
 	playData = PLAY_DATA_USERDEF; //for title name only
+	disableAutoDemoTimer();
+	clearIdleDemoTimer();
+	stopPlayTicker();
 	mainStage.removeAllChildren();
 	document.onkeydown = editHandleKeyDown;
 	
@@ -72,9 +75,10 @@ function startEditMode()
 	createBaseTile();
 	createEditMap();
 	checkEditMapEmpty(); // 2021/04
-	startEditTicker();
+	startEditInput();
 	setButtonState();
 	initForPlay();
+	installEditUnloadGuard();
 }
 
 function setEditSelectMenu()
@@ -196,10 +200,8 @@ function createEditMap()
 	addEditorButton();
 	
 	mouseInStage = 1;
-	mainStage.addEventListener("stagemouseup", stageMouseUp);
-	mainStage.addEventListener("stagemousedown", stageMouseDown);
-	mainStage.addEventListener("mouseleave", function() { mouseInStage = 0; });
-	mainStage.addEventListener("mouseenter", function() { mouseInStage = 1; });
+	mouseDown = 0;
+	lastDown = {x:-1, y:-1};
 }
 
 function clearEditMap()
@@ -301,24 +303,84 @@ function addCursorTile()
 
 }
 
-//var gameTicker = null; ....//same as playTicker
-function startEditTicker()
+// Pointer-driven editor input (no Ticker / no setFPS(60)).
+var editInputActive = 0;
+var editPointerHandlers = null;
+
+function editCanvasLocalXY(e)
 {
-	stopEditTicker();
-	createjs.Ticker.setFPS(60);
-	mainStage.enableMouseOver(0);
-	createjs.Ticker.addEventListener("tick", editTick);
-	gameTicker = editTick;
+	var canvas = document.getElementById("canvas");
+	var rect = canvas.getBoundingClientRect();
+	var sx = canvas.width / rect.width;
+	var sy = canvas.height / rect.height;
+	return {
+		x: (e.clientX - rect.left) * sx,
+		y: (e.clientY - rect.top) * sy
+	};
 }
 
-function stopEditTicker()
+function startEditInput()
 {
-	if(gameTicker) {
-		createjs.Ticker.removeEventListener("tick", gameTicker);
-		mainStage.enableMouseOver(0);
-		//mainStage.cursor = 'default';
-		gameTicker = null;
+	stopEditInput();
+	mainStage.enableMouseOver(0);
+
+	var canvas = document.getElementById("canvas");
+	editPointerHandlers = {
+		down: function (e) {
+			if (e.button !== 0 && e.buttons !== 1) return;
+			mouseDown = 1;
+			var p = editCanvasLocalXY(e);
+			editPointerAt(p.x, p.y);
+		},
+		move: function (e) {
+			mouseInStage = 1;
+			if (e.buttons === 0) mouseDown = 0;
+			var p = editCanvasLocalXY(e);
+			editPointerAt(p.x, p.y);
+		},
+		up: function (e) {
+			if (e.button !== 0) return;
+			mouseDown = 0;
+			lastDown = {x:-1, y:-1};
+		},
+		leave: function () {
+			mouseInStage = 0;
+			mouseDown = 0;
+			lastDown = {x:-1, y:-1};
+			if (cursorTileObj) cursorTileObj.alpha = 0;
+			if (editorActiveTileId >= 0) selectTileMouseOut(editorTile[editorActiveTileId]);
+			if (editorButtonMouseOverId >= 0) editorButtonMouseOut(editorButton[editorButtonMouseOverId]);
+			mainStage.update();
+		},
+		enter: function () {
+			mouseInStage = 1;
+		}
+	};
+
+	canvas.addEventListener("pointerdown", editPointerHandlers.down);
+	canvas.addEventListener("pointermove", editPointerHandlers.move);
+	canvas.addEventListener("pointerup", editPointerHandlers.up);
+	canvas.addEventListener("pointerleave", editPointerHandlers.leave);
+	canvas.addEventListener("pointerenter", editPointerHandlers.enter);
+	editInputActive = 1;
+}
+
+function stopEditInput()
+{
+	if (!editInputActive && !editPointerHandlers) return;
+	var canvas = document.getElementById("canvas");
+	if (canvas && editPointerHandlers) {
+		canvas.removeEventListener("pointerdown", editPointerHandlers.down);
+		canvas.removeEventListener("pointermove", editPointerHandlers.move);
+		canvas.removeEventListener("pointerup", editPointerHandlers.up);
+		canvas.removeEventListener("pointerleave", editPointerHandlers.leave);
+		canvas.removeEventListener("pointerenter", editPointerHandlers.enter);
 	}
+	editPointerHandlers = null;
+	editInputActive = 0;
+	mouseDown = 0;
+	lastDown = {x:-1, y:-1};
+	mainStage.enableMouseOver(0);
 }
 
 function drawSelectIcon(id, x, y)
@@ -465,14 +527,14 @@ function drawNewButton()
 			testLevelInfo.fromPlayData = -1; 
 			testLevelInfo.fromLevel = -1;
 		}
-		startEditTicker();
+		startEditInput();
 		gameResume();
 	}
 	
 	function newButtonClick()
 	{
 		gamePause();
-		stopEditTicker();
+		stopEditInput();
 		if(testLevelInfo.modified) {
 			yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale, newLevel);
 		} else {
@@ -523,13 +585,13 @@ function drawLoadButton()
 	{
 		//saveStateObj = saveKeyHandler(noKeyDown);
 		gamePause();
-		stopEditTicker();
+		stopEditInput();
 	}
 	
 	function restoreState()
 	{
 		//restoreKeyHandler(saveStateObj);
-		startEditTicker();
+		startEditInput();
 		gameResume();
 	}
 	
@@ -670,7 +732,7 @@ function drawSaveButton()
 	function saveButtonClick()
 	{
 		gamePause();
-		stopEditTicker();
+		stopEditInput();
 		saveEditLevel();
 		yesNoDialog(["Save Successful", "Play It ?"], yesBitmap, noBitmap, mainStage, tileScale, playConfirm);
 
@@ -684,15 +746,16 @@ function drawSaveButton()
 			startPlayUserLevel();
 		} else { //no
 			setButtonState();
-			startEditTicker();
+			startEditInput();
 		}
 	}
 	
 	function startPlayUserLevel()
 	{
+		removeEditUnloadGuard();
 		playMode = PLAY_MODERN;
 		playData = PLAY_DATA_USERDEF;
-	
+
 		curLevel = testLevelInfo.level;
 		setModernInfo();
 	
@@ -712,7 +775,7 @@ function startTestMode()
 	playData = PLAY_DATA_USERDEF;
 	
 	curLevel = testLevelInfo.level;
-	stopEditTicker();
+	stopEditInput();
 	saveTestState();
 	canvasReSize();
 	document.onkeydown = handleKeyDown; //key press
@@ -755,12 +818,72 @@ function editLevelModified()
 	return (testLevelInfo.modified);
 }
 
+/** True when edit session has unsaved paint (for tab close / leave guards). */
+function editHasUnsavedChanges()
+{
+	return playMode == PLAY_EDIT && editLevelModified();
+}
+
+var editUnloadGuardInstalled = 0;
+
+function editBeforeUnload(e)
+{
+	if (!editHasUnsavedChanges()) return;
+	e.preventDefault();
+	e.returnValue = "";
+	return "";
+}
+
+function installEditUnloadGuard()
+{
+	if (editUnloadGuardInstalled) return;
+	window.addEventListener("beforeunload", editBeforeUnload);
+	editUnloadGuardInstalled = 1;
+}
+
+function removeEditUnloadGuard()
+{
+	if (!editUnloadGuardInstalled) return;
+	window.removeEventListener("beforeunload", editBeforeUnload);
+	editUnloadGuardInstalled = 0;
+}
+
+/**
+ * Leave edit for another mode. Confirms if the map is dirty, then runs nextFun.
+ * cancelFun runs if the user declines (defaults to resume edit input).
+ */
+function leaveEditMode(nextFun, cancelFun)
+{
+	disableAutoDemoTimer();
+	clearIdleDemoTimer();
+	stopEditInput();
+	if (editLevelModified()) {
+		yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale,
+			function (rc) {
+				if (rc) {
+					testLevelInfo.modified = 0;
+					removeEditUnloadGuard();
+					nextFun();
+				} else if (cancelFun) {
+					cancelFun();
+				} else {
+					startEditInput();
+					installEditUnloadGuard();
+					gameResume();
+				}
+			});
+		return;
+	}
+	removeEditUnloadGuard();
+	nextFun();
+}
+
 function editConfirmAbortState(callbackFun)
 {
 	gamePause();
-	stopEditTicker();
+	stopEditInput();
 	yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale, 
-				function(rc) {  gameResume(); if(rc) callbackFun(); else startEditTicker(); } );
+				function(rc) {  gameResume(); if(rc) callbackFun(); else startEditInput(); } );
 }
 
 function disableTestButton()
@@ -799,37 +922,6 @@ function saveEditLevel()
 	setEditSelectMenu();
 }
 	
-function stageMouseDown(event)
-{
-	var e = event.nativeEvent;
-	// ------------------------------------------------------------------------
-	// nativeEvent: https://createjs.com/docs/easeljs/classes/MouseEvent.html
-	// which: https://www.w3schools.com/jsref/event_which.asp
-	// ------------------------------------------------------------------------
-	if( e.which === undefined || e.which == 1 ) { // 1: left, 2: middle, 3: right 
-		// only support left mouse button
-		mouseDown = 1;
-		//console.log(e.which)
-		//console.log("DOWN");
-	}
-}
-	
-function stageMouseUp(event)
-{
-	var e = event.nativeEvent;	
-	// ------------------------------------------------------------------------
-	// nativeEvent: https://createjs.com/docs/easeljs/classes/MouseEvent.html
-	// which: https://www.w3schools.com/jsref/event_which.asp
-	// ------------------------------------------------------------------------
-	if( e.which === undefined || e.which == 1 ) { // 1: left, 2: middle, 3: right
-		// only support left mouse button
-		mouseDown = 0;
-		lastDown = {x:-1, y:-1};
-		//console.log(e.which)
-		//console.log("UP");
-	}
-}
-
 function initMapInfo()
 {
 	lastRunner = null;
@@ -1178,24 +1270,24 @@ function setButtonState()
 	}
 } 
 
-function editTick() 
+/** Process editor pointer at stage/canvas coordinates (replaces editTick poll). */
+function editPointerAt(stageX, stageY)
 {
-	var x = ((mainStage.mouseX-EDIT_PADDING - editStartX)/(tileWScale+EDIT_PADDING));
-	var x = (x < 0)?-1:(x|0);
-	var y = ((mainStage.mouseY-EDIT_PADDING) / (tileHScale+EDIT_PADDING) )| 0;
+	var x = ((stageX-EDIT_PADDING - editStartX)/(tileWScale+EDIT_PADDING));
+	x = (x < 0)?-1:(x|0);
+	var y = ((stageY-EDIT_PADDING) / (tileHScale+EDIT_PADDING) )| 0;
+	var dirty = 0;
 	
 	if(testLevelInfo.level <= MAX_EDIT_LEVEL) {
-		//debug(mainStage.mouseX,editStartX, x,y);
 		if(mouseInStage && x >= 0 && x < NO_OF_TILES_X && y >= 0 && y < NO_OF_TILES_Y) {
-			//edit area
-
-			if(editorActiveTileId >= 0) selectTileMouseOut(editorTile[editorActiveTileId]);
-			if(editorButtonMouseOverId >= 0) editorButtonMouseOut(editorButton[editorButtonMouseOverId]);
+			if(editorActiveTileId >= 0) { selectTileMouseOut(editorTile[editorActiveTileId]); dirty = 1; }
+			if(editorButtonMouseOverId >= 0) { editorButtonMouseOut(editorButton[editorButtonMouseOverId]); dirty = 1; }
 
 			if( x != lastDown.x || y != lastDown.y) {
 				cursorTileObj.alpha = 1;
 				cursorTileObj.x = (tileWScale + EDIT_PADDING) * x+EDIT_PADDING + editStartX;
 				cursorTileObj.y = (tileHScale + EDIT_PADDING) * y+EDIT_PADDING;
+				dirty = 1;
 				if(mouseDown) {
 					var clickTile = editMap[x][y];
 
@@ -1221,12 +1313,18 @@ function editTick()
 				}
 			}
 		} else {
-			checkTileMouseOver(mainStage.mouseX, mainStage.mouseY);
-			checkButtonMouseOver(mainStage.mouseX, mainStage.mouseY);
-			cursorTileObj.alpha = 0;
+			var prevActive = editorActiveTileId;
+			var prevBtn = editorButtonMouseOverId;
+			checkTileMouseOver(stageX, stageY);
+			checkButtonMouseOver(stageX, stageY);
+			if (cursorTileObj.alpha !== 0) {
+				cursorTileObj.alpha = 0;
+				dirty = 1;
+			}
+			if (prevActive !== editorActiveTileId || prevBtn !== editorButtonMouseOverId) dirty = 1;
 		}
 	}
-	mainStage.update();
+	if (dirty) mainStage.update();
 }
 
 function levelMapIsEmpty(levelMap)
