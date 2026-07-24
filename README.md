@@ -95,5 +95,7 @@ This program build with Javascript + [CreateJS](http://www.createjs.com).
 4. Open a web browser and go to "`http://127.0.0.1:8080/lodeRunner.html`".
 #####  <font color="red">Note:</font><font color="blue"> Changing the HTTP port will cause the browser to store "status" or "custom levels" data in a separate storage.</font>
 
+Offline disk-image extractors (not used at runtime) live under [`tools/`](tools/README.md).
+
 ### * <a target="_blank" href="https://simonhung.github.io/LodeRunner_TotalRecall/lodeRunner.html">Play Online</a>
 ------------------------------------

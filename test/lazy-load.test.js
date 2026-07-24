@@ -36,12 +36,19 @@ describe("lazy pack wiring (characterization)", () => {
 		assert.equal(fs.existsSync(path.join(ROOT, "lodeRunner.wData.js")), false);
 	});
 
-	it("playVersionInfo in menu.js wires scripts + levelCount (no verData)", () => {
+	it("playVersionInfo in playVersion.js wires scripts + levelCount (no verData)", () => {
+		const registry = fs.readFileSync(path.join(ROOT, "lodeRunner.playVersion.js"), "utf8");
 		const menu = fs.readFileSync(path.join(ROOT, "lodeRunner.menu.js"), "utf8");
-		assert.match(menu, /function ensurePlayVersionLoaded/);
-		assert.match(menu, /levelCount:\s*150/);
-		assert.match(menu, /script:\s*"lodeRunner\.v\.professional\.js"/);
-		assert.match(menu, /demoScript:\s*"lodeRunner\.wData\.3\.js"/);
-		assert.doesNotMatch(menu, /\.verData\b/);
+		const html = fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8");
+		assert.match(html, /lodeRunner\.playVersion\.js/);
+		assert.match(registry, /function ensurePlayVersionLoaded/);
+		assert.match(registry, /levelCount:\s*150/);
+		assert.match(registry, /script:\s*"lodeRunner\.v\.professional\.js"/);
+		assert.match(registry, /demoScript:\s*"lodeRunner\.wData\.3\.js"/);
+		assert.doesNotMatch(registry, /\.verData\b/);
+		assert.doesNotMatch(menu, /function ensurePlayVersionLoaded/);
+		assert.doesNotMatch(menu, /var playVersionInfo\s*=/);
+		assert.match(menu, /function initMenuVariable/);
+		assert.match(menu, /var gameVersionMenuList\s*=/);
 	});
 });
