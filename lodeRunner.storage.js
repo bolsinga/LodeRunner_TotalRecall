@@ -560,23 +560,6 @@ function setPlayerName(name)
 	setStorage(STORAGE_PLAYER_NAME, name); 	
 }
 
-//===================
-// uid
-//===================
-function getUid()
-{
-	var uid;
-	if((uid = getStorage(STORAGE_UID)) == null)	{
-		uid = "";
-	}
-	return uid;
-}
-
-function setUid(uid)
-{
-	setStorage(STORAGE_UID, uid); 	
-}
-
 //=========================
 // for debug only 
 //=========================

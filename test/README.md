@@ -26,6 +26,7 @@ node --test test/*.test.js
 | `level-integrity.test.js` | characterization | `parseLevelChar` / `parseLevelMap` tile mapping + classic L1 snapshot |
 | `level-map-culling.test.js` | characterization | `resolveLevelMap` maxGuard culling + first-`&`-wins (the buildLevelMap path Stage 2 will risk) |
 | `input-logic.test.js` | correctness | Sticky stop-on-release works without capture; `RECORD_KEY` pushes are optional |
+| `wdata-privacy.test.js` | correctness | Shipped `wData.js` has no IPs / names / locations / uId |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |

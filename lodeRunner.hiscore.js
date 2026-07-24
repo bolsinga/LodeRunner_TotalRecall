@@ -79,16 +79,6 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	
 	}
 
-	function setLastScoreInfo(scoreInfo)
-	{
-		if(typeof cId == "undefined") return;
-		
-		scoreInfo.id = cId;
-		var infoJSON = JSON.stringify(scoreInfo);
-		
-		setStorage(STORAGE_LASTSCORE+_playData, infoJSON); 
-	}
-	
 	function updateScoreInfo()
 	{
 		var addId = -1;
@@ -256,7 +246,6 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			//update name for score info  
 			hiScoreInfo[recordId].n = nameString;
 			setHiScoreInfo();
-			setLastScoreInfo(hiScoreInfo[recordId]); //save last score
 
 			if(nameString != playerName && nameString != "???") { //set and save playerName 
 				playerName = nameString;

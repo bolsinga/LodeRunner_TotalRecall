@@ -184,10 +184,8 @@ var STORAGE_TEST_LEVEL  = "loderunner_testlevel";
 
 var STORAGE_HISCORE_INFO = "loderunner_hiScore";
 
-var STORAGE_LASTSCORE = "loderunner_lastScore";
 
 var STORAGE_PLAYER_NAME = "loderunner_player";
-var STORAGE_UID = "loderunner_uid";
 
 var STORAGE_THEME_MODE = "loderunner_theme";
 var STORAGE_THEME_COLOR = "loderunner_color_";

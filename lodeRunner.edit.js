@@ -1235,35 +1235,3 @@ function levelMapIsEmpty(levelMap)
 	}
 	return 1;
 }
-
-//========================================================
-//
-//  Copy share level to test level or copy map for editig 
-//
-//=========================================================
-function copyShareLevelForEditing()
-{
-	
-	getTestLevel(testLevelInfo);
-	if(testLevelInfo.level <= MAX_EDIT_LEVEL && levelMapIsEmpty(testLevelInfo.levelMap)) {
-		//test map is empty, replace test map with share level map
-		testLevelInfo.levelMap = shareLevelData[0];
-		testLevelInfo.modified = 1;
-		testLevelInfo.pass = 1;
-		testLevelInfo.fromPlayData = testLevelInfo.fromLevel = -1;
-		setTestLevel(testLevelInfo);
-	} else {
-		if (shareLevelData[0] != testLevelInfo.levelMap) {
-			//(testMap != empty and testMap != shareMap) ==> keep shareLevel map to copyMap 
-			copyLevelMap = shareLevelData[0];
-		    copyLevelPassed = 1;
-		}
-	}
-	
-}
-
-function editShareLevel()
-{
-	editEdit(0, null);
-	
-}

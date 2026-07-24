@@ -55,7 +55,6 @@ var curTime = 0; //count from 0 to MAX_TIME_COUNT
 var backgroundColor = "#250535"; //background color
 
 var playerName = "";
-var playerUId = "";
 
 var curTheme = THEME_APPLE2; //support 2 themes: apple2 & C64
 
@@ -86,10 +85,6 @@ function init()
 function loadStoreVariable()
 {
 	playerName = getPlayerName();
-	if( ((playerUid = getUid()) == "" || playerUid.length != 32) && typeof(uId) != "undefined" ) {
-		playerUid = uId; //uId variable in lodeRunner.wData.jss
-		setUid(playerUid);
-	}
 	curTheme = getThemeMode();
 	getThemeColor();
 	getRepeatAction();

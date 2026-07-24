@@ -116,29 +116,13 @@ function getDemoBornPos()
 
 var playerDemoData = [], wDemoData = [];
 var demoPlayData = 0; //for syn demo data with current playData
-var demoDataLoading = 0;
 
 function initDemoData()
 {
 	demoPlayData = playData;
 	playerDemoData = [];
 	wDemoData = [];
-	demoDataLoading = 1; 
-	getDemoData(playData); //ajax 
-}
-
-function setDemoData(jsonTxt)
-{
-	if(jsonTxt.substring(0, 1) == "[" ) { 		
-		wDemoData = JSON.parse(jsonTxt);
-		for(var i = 0; i < wDemoData.length; i++) {
-			playerDemoData[wDemoData[i].level-1] = wDemoData[i]; 
-		}
-	} else {
-		error("Wrong Demo Data: " + jsonTxt);
-	}
-	demoDataLoading = 0; 
-	if(playMode == PLAY_MODERN && gameState == GAME_START ) demoIconObj.enable();
+	getDemoData(playData); //load from lodeRunner.wData.js packs
 }
 
 function initDemoInfo()
@@ -235,31 +219,9 @@ function updatePlayerDemoData(playData, demoDataInfo)
 		godMode: demoDataInfo.godMode,
 		player: playerName,
 		date:   getLocalTime(),
-		location: "Unknown", //update by sendDemoData2Server() resp.
-		cId: "Unknown",
-		ip: "updating"
+		location: "",
+		cId: ""
 	};
-}
-
-//======================
-// resp from server
-//======================
-function respUpdatePlayerDemoData(jsonTxt)
-{
-	var respObj, level;
-	
-	if(jsonTxt.substring(0, 1) == "{" ) { 		
-		respObj = JSON.parse(jsonTxt);
-		level = respObj.level;
-		
-		if(respObj.playData == playData && playerDemoData[level-1].ip == "updating") {
-			playerDemoData[level-1].ip = respObj.ip;
-			playerDemoData[level-1].location = respObj.location;
-			playerDemoData[level-1].cId = respObj.cId;
-		}
-	} else {
-		error("Wrong resp Data: " + jsonTxt);
-	}
 }
 
 //==============================
