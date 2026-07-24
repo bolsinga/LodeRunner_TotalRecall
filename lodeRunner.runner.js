@@ -463,7 +463,6 @@ function processDigHole()
 	if(++holeObj.curFrameIdx < holeObj.shapeFrame.length) {
 		// change frame
 		holeObj.sprite.gotoAndStop(holeObj.shapeFrame[holeObj.curFrameIdx]);
-		holeObj.sprite.currentAnimationFrame = holeObj.curFrameIdx;
 	} else { //dig complete
 		digComplete();
 	}
@@ -526,14 +525,16 @@ function isDigging()
 	
 	if(holeObj.action == ACT_DIGGING) {
 		var x = holeObj.pos.x, y = holeObj.pos.y;
+		//AI>=3 steps frames itself (curFrameIdx); AI<3 plays a named animation
+		var digFrame = (curAiVersion >= 3) ? holeObj.curFrameIdx : holeObj.sprite.currentAnimationFrame;
 		if(map[x][y].act == GUARD_T) { //guard come close to the digging hole !
 			var id = getGuardId(x, y);
-			if(holeObj.sprite.currentAnimationFrame < holeObj.digLimit && guard[id].pos.yOffset > -H4) {
-				if(DEBUG_DIG) loadingTxt.text = "dig : " + holeObj.sprite.currentAnimationFrame + " (X)";
+			if(digFrame < holeObj.digLimit && guard[id].pos.yOffset > -H4) {
+				if(DEBUG_DIG) loadingTxt.text = "dig : " + digFrame + " (X)";
 
 				stopDigging(x,y);
 			} else {
-				if(DEBUG_DIG) loadingTxt.text = "dig : " + holeObj.sprite.currentAnimationFrame + " (O)";
+				if(DEBUG_DIG) loadingTxt.text = "dig : " + digFrame + " (O)";
 				if(curAiVersion >= 3) { //This is a bug while AI VERSION < 3
 					map[x][y+1].act = EMPTY_T; //assume hole complete
 					rc = 1;
@@ -542,14 +543,14 @@ function isDigging()
 		} else {
 			switch( runner.shape ) {
 			case "digLeft":
-				if(holeObj.sprite.currentAnimationFrame > 2 ) {
+				if(digFrame > 2) {
 					runner.sprite.gotoAndStop("runLeft"); //change shape
 					runner.shape = "runLeft";
 					runner.action = ACT_STOP;
 				}
 				break;
 			case "digRight":
-				if(holeObj.sprite.currentAnimationFrame > 2) {
+				if(digFrame > 2) {
 					runner.sprite.gotoAndStop("runRight"); //change shape
 					runner.shape = "runRight";
 					runner.action = ACT_STOP;
