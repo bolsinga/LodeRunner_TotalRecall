@@ -31,15 +31,20 @@ var themeNameList = [THEME_APPLE2, THEME_C64];
 
 function createBaseBitmapInstance()
 {
-	for(var i = 0; i < themeNameList.length; i++) {
-		var themeName = themeNameList[i];
-		var id = curColorId[themeName];
-		orgImageColor[themeName] = getOrgImageColor(themeName);
-		createThemeBaseBitmap(themeName, hexToRGB(themeColor[themeName][id]), id);
-	}
+	// Active theme only at boot; ensureThemeLoaded builds the other on first toggle.
+	ensureThemeBaseBitmaps(curTheme);
 	
 	//for edit mode only 
 	themeBaseBitmap["eraser"] = createBitmap("eraser", null, null);
+}
+
+function ensureThemeBaseBitmaps(themeName)
+{
+	if (!(themeName in orgImageColor)) {
+		orgImageColor[themeName] = getOrgImageColor(themeName);
+	}
+	var id = curColorId[themeName];
+	createThemeBaseBitmap(themeName, hexToRGB(themeColor[themeName][id]), id);
 }
 
 function createThemeBaseBitmap(themeName, newColor, id)

@@ -1214,22 +1214,42 @@ function themeIconClass( _screenX1, _screenY1, _scale, _themeBitmapApple2, _them
 	function mouseClick()
 	{
 		if(gameState == GAME_PAUSE || (gameState == GAME_WAITING && playMode != PLAY_EDIT)) return;
-		curTheme = (curTheme == THEME_APPLE2?THEME_C64:THEME_APPLE2);
-		
-		saveState();
+		if (themeSwitchPending) return;
 
-		soundStop(soundDig); 
-		soundStop(soundFall);
+		var nextTheme = (curTheme == THEME_APPLE2 ? THEME_C64 : THEME_APPLE2);
+
+		function finishSwitch()
+		{
+			themeSwitchPending = 0;
+			curTheme = nextTheme;
+			
+			saveState();
+
+			soundStop(soundDig); 
+			soundStop(soundFall);
 	
-		themeDataReset(1);
-		updateThemeImage(1);
-		themeColorIconUpdate();
-		
-		if(playMode == PLAY_EDIT) {
-			startEditMode();		
-		} else {
-			changeThemeScreen(); //real time change theme screen
+			themeDataReset(1);
+			updateThemeImage(1);
+			themeColorIconUpdate();
+			
+			if(playMode == PLAY_EDIT) {
+				startEditMode();		
+			} else {
+				changeThemeScreen(); //real time change theme screen
+			}
 		}
+
+		if (isThemeAssetsLoaded(nextTheme)) {
+			finishSwitch();
+			return;
+		}
+
+		themeSwitchPending = 1;
+		showTipsText("LOADING THEME...", 0);
+		ensureThemeLoaded(nextTheme, function () {
+			showTipsText("", 50);
+			finishSwitch();
+		});
 	}
 	
 	function saveState()

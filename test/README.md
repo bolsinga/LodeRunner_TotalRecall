@@ -28,6 +28,7 @@ node --test test/*.test.js
 | `input-logic.test.js` | correctness | Sticky stop-on-release works without capture; `RECORD_KEY` pushes are optional |
 | `wdata-privacy.test.js` | correctness | Shipped `wData.N.js` packs have no IPs / names / locations / uId |
 | `lazy-load.test.js` | characterization | HTML critical path is classic-only; lazy pack wiring in `playVersionInfo` |
+| `theme-preload.test.js` | characterization | Theme asset manifests: active theme only at boot, other on first toggle |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |
 | `constants.test.js` | characterization | `def.js` grid / tile / score / `GAME_*` values |
 | `storage.test.js` | characterization | `setStorage` / `getStorage` / `clearStorage` with mock `localStorage` |

@@ -140,6 +140,46 @@ var soundFall, soundDig, soundPass, soundEnding;
 var themeImagePath = "image/Theme/";
 var themeSoundPath = "sound/Theme/";
 
+/** Themes whose image/sound packs are already in the LoadQueue. */
+var themeAssetsLoaded = {};
+var themeSwitchPending = 0;
+
+function isThemeAssetsLoaded(themeName)
+{
+	return !!themeAssetsLoaded[themeName];
+}
+
+/**
+ * Ensure theme sprites/sounds are in `preload`, then build color bitmaps.
+ * callback() always runs (even if already loaded).
+ */
+function ensureThemeLoaded(themeName, callback)
+{
+	if (themeAssetsLoaded[themeName]) {
+		ensureThemeBaseBitmaps(themeName);
+		if (callback) callback();
+		return;
+	}
+	if (!preload) {
+		error("ensureThemeLoaded: preload queue missing");
+		if (callback) callback();
+		return;
+	}
+
+	var manifest = buildThemeAssetManifest(themeName, themeImagePath, themeSoundPath, noCache);
+
+	function done()
+	{
+		preload.off("complete", done);
+		themeAssetsLoaded[themeName] = 1;
+		ensureThemeBaseBitmaps(themeName);
+		if (callback) callback();
+	}
+
+	preload.on("complete", done);
+	preload.loadManifest(manifest);
+}
+
 function preloadResource() 
 {
 	var runnerSprite = new createjs.Sprite(runnerData, "runRight");
@@ -147,49 +187,11 @@ function preloadResource()
 	var progressBorder = new createjs.Shape();
 	var percentTxt = new createjs.Text("0", (COVER_PROGRESS_BAR_H* tileScale) + "px Arial", "#FF0000");
 
+	// Shared UI / SFX + active theme only (other theme loads on first toggle).
 	var resource = [
 		{ src: "image/remake.png"+noCache,  id: "remake" },
 		{ src: "image/signet.png"+noCache,  id: "signet" },
 
-		{ src: themeImagePath + THEME_APPLE2 + "/empty.png"+noCache,   id: "empty" + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/brick.png"+noCache,   id: "brick" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/block.png"+noCache,   id: "solid" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/ladder.png"+noCache,  id: "ladder" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/rope.png"+noCache,    id: "rope" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/trap.png"+noCache,    id: "trapBrick" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/hladder.png"+noCache, id: "hladder" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/gold.png"+noCache,    id: "gold" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/guard1.png"+noCache,  id: "guard1" + THEME_APPLE2  },
-		{ src: themeImagePath + THEME_APPLE2 + "/runner1.png"+noCache, id: "runner1" + THEME_APPLE2  },
-
-		{ src: themeImagePath + THEME_APPLE2 + "/runner.png"+noCache,  id: "runner"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/guard.png"+noCache,   id: "guard"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/redhat.png"+noCache,  id: "redhat"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/hole.png"+noCache,    id: "hole"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/ground.png"+noCache,  id: "ground"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/over.png"+noCache,    id: "over"  + THEME_APPLE2 },
-		{ src: themeImagePath + THEME_APPLE2 + "/text.png"+noCache,    id: "text"  + THEME_APPLE2 },
-
-		
-		{ src: themeImagePath + THEME_C64 + "/empty.png"+noCache,   id: "empty" + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/brick.png"+noCache,   id: "brick" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/block.png"+noCache,   id: "solid" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/ladder.png"+noCache,  id: "ladder" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/rope.png"+noCache,    id: "rope" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/trap.png"+noCache,    id: "trapBrick" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/hladder.png"+noCache, id: "hladder" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/gold.png"+noCache,    id: "gold" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/guard1.png"+noCache,  id: "guard1" + THEME_C64  },
-		{ src: themeImagePath + THEME_C64 + "/runner1.png"+noCache, id: "runner1" + THEME_C64  },
-
-		{ src: themeImagePath + THEME_C64 + "/runner.png"+noCache,  id: "runner"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/guard.png"+noCache,   id: "guard"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/redhat.png"+noCache,  id: "redhat"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/hole.png"+noCache,    id: "hole"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/ground.png"+noCache,  id: "ground"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/over.png"+noCache,    id: "over"  + THEME_C64 },
-		{ src: themeImagePath + THEME_C64 + "/text.png"+noCache,    id: "text"  + THEME_C64 },
-		
 		{ src: "image/eraser.png"+noCache,  id: "eraser" },
 	
 		{ src: "image/help.png"+noCache,    id: "help" },
@@ -228,32 +230,6 @@ function preloadResource()
 		
 		{ src: "image/flags32.png"+noCache,     id: "flag" },
 	
-		{ src: themeSoundPath + THEME_APPLE2 + "/born.ogg"+noCache,    id:"reborn" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/dead.ogg"+noCache,    id:"dead" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/dig.ogg"+noCache,     id:"dig" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/getGold.ogg"+noCache, id:"getGold" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/fall.ogg"+noCache,    id:"fall" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/down.ogg"+noCache,    id:"down" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/pass.ogg"+noCache,    id:"pass" + THEME_APPLE2},
-		{ src: themeSoundPath + THEME_APPLE2 + "/trap.ogg"+noCache,    id:"trap" + THEME_APPLE2},
-
-		
-		{ src: themeSoundPath + THEME_C64 + "/born.ogg"+noCache,    id:"reborn" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/dead.ogg"+noCache,    id:"dead" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/dig.ogg"+noCache,     id:"dig" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/getGold.ogg"+noCache, id:"getGold" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/fall.ogg"+noCache,    id:"fall" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/down.ogg"+noCache,    id:"down" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/pass.ogg"+noCache,    id:"pass" + THEME_C64},
-		{ src: themeSoundPath + THEME_C64 + "/trap.ogg"+noCache,    id:"trap" + THEME_C64},
-
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish1.ogg"+noCache,    id:"goldFinish1"},
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish2.ogg"+noCache,    id:"goldFinish2"},
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish3.ogg"+noCache,    id:"goldFinish3"},
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish4.ogg"+noCache,    id:"goldFinish4"},
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish5.ogg"+noCache,    id:"goldFinish5"},
-		{ src: themeSoundPath + THEME_C64 + "/goldFinish6.ogg"+noCache,    id:"goldFinish6"},
-		
 		{ src: "sound/goldFinish.ogg"+noCache,  id:"goldFinish"},
 		{ src: "sound/ending.ogg"+noCache,      id:"ending"},
 		{ src: "sound/scoreBell.ogg"+noCache,   id:"scoreBell"},
@@ -265,7 +241,7 @@ function preloadResource()
 		{ src: "cursor/openhand.cur"+noCache, id:"openHand"}, //preload cursor
 		{ src: "cursor/closedhand.cur"+noCache, id:"closeHand"}
 		
-	];	
+	].concat(buildThemeAssetManifest(curTheme, themeImagePath, themeSoundPath, noCache));
 	
 	preload = new createjs.LoadQueue(true);
 	createjs.Sound.alternateExtensions = ["mp3"];
@@ -315,6 +291,12 @@ function preloadResource()
 
 	function handleComplete(event) 
 	{
+		preload.off("progress", handleProgress);
+		preload.off("complete", handleComplete);
+		preload.off("error", handleFileError);
+
+		themeAssetsLoaded[curTheme] = 1;
+
 		percentTxt.text = "100%";
 		mainStage.update();
 
