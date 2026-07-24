@@ -23,7 +23,7 @@ function getAutoDemoLevel(initValue)
 		demoCount = 1;
 		demoMaxCount = 3;
 		demoData = demoData1;
-		levelData = playVersionInfo[0].verData;
+		levelData = classicData;
 		demoIdx = 0;
 	} else {
 		demoLevel++;
@@ -122,7 +122,7 @@ function initDemoData()
 	demoPlayData = playData;
 	playerDemoData = [];
 	wDemoData = [];
-	getDemoData(playData); //load from lodeRunner.wData.js packs
+	getDemoData(playData); //load from lazy lodeRunner.wData.N.js packs
 }
 
 function initDemoInfo()

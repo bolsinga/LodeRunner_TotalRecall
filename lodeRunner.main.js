@@ -75,11 +75,12 @@ function init()
 	initMenuVariable();  //init menu variable
 	
 	getLastPlayInfo();
-	initDemoData(); //get demo data from server
-	
-	////genUserLevel(MAX_EDIT_LEVEL); //for debug only
-	getEditLevelInfo(); //load edit levels
-	showLoadingPage(); //preload function 
+	// Load last-played version packs (classic is already in HTML) before preload/demo.
+	ensurePlayVersionLoaded(playData, function () {
+		initDemoData();
+		getEditLevelInfo(); //load edit levels
+		showLoadingPage(); //preload function
+	});
 }
 
 function loadStoreVariable()

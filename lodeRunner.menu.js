@@ -1602,12 +1602,48 @@ function mainMenuClose(callbackFun)
 }
 
 var playVersionInfo = [
-	{ id:1, verData: classicData,  name: gameVersionName[0], info: classicInfo },
-	{ id:3, verData: proData,      name: gameVersionName[2], info: proInfo },
-	{ id:4, verData: revengeData,  name: gameVersionName[3], info: revengeInfo },
-	{ id:5, verData: fanBookData,  name: gameVersionName[4], info: fanBookInfo },
-	{ id:2, verData: championData, name: gameVersionName[1], info: championInfo }
+	// classic is in lodeRunner.html; others lazy-loaded via ensurePlayVersionLoaded()
+	{ id:1, globalName: "classicData",  script: null,                           demoScript: "lodeRunner.wData.1.js", demoGlobal: "wfastDemoData1", levelCount: 150, name: gameVersionName[0], info: classicInfo },
+	{ id:3, globalName: "proData",      script: "lodeRunner.v.professional.js", demoScript: "lodeRunner.wData.3.js", demoGlobal: "wfastDemoData3", levelCount: 150, name: gameVersionName[2], info: proInfo },
+	{ id:4, globalName: "revengeData",  script: "lodeRunner.v.revenge.js",      demoScript: "lodeRunner.wData.4.js", demoGlobal: "wfastDemoData4", levelCount: 17,  name: gameVersionName[3], info: revengeInfo },
+	{ id:5, globalName: "fanBookData",  script: "lodeRunner.v.fanBookMod.js",   demoScript: "lodeRunner.wData.5.js", demoGlobal: "wfastDemoData5", levelCount: 66,  name: gameVersionName[4], info: fanBookInfo },
+	{ id:2, globalName: "championData", script: "lodeRunner.v.championship.js", demoScript: "lodeRunner.wData.2.js", demoGlobal: "wfastDemoData2", levelCount: 51,  name: gameVersionName[1], info: championInfo }
 ];
+
+function findPlayVersionInfo(id)
+{
+	for (var i = 0; i < playVersionInfo.length; i++) {
+		if (playVersionInfo[i].id == id) return playVersionInfo[i];
+	}
+	return null;
+}
+
+function isGlobalDefined(name)
+{
+	return (typeof window[name] !== "undefined");
+}
+
+/**
+ * Ensure level pack + demo pack for playData id are loaded, then callback.
+ * Classic level pack is already in the HTML critical path.
+ */
+function ensurePlayVersionLoaded(id, callback)
+{
+	if (id == PLAY_DATA_USERDEF || id < 1) {
+		if (callback) callback();
+		return;
+	}
+	var info = findPlayVersionInfo(id);
+	if (!info) {
+		error("ensurePlayVersionLoaded: unknown playData id=" + id);
+		if (callback) callback();
+		return;
+	}
+	var need = [];
+	if (info.script && !isGlobalDefined(info.globalName)) need.push(info.script);
+	if (info.demoScript && !isGlobalDefined(info.demoGlobal)) need.push(info.demoScript);
+	loadScriptsParallel(need, callback);
+}
 
 //var customItemInfo = { id:999, name:" Custom Levels " };
 var customItemIdx = -1;
@@ -1637,7 +1673,7 @@ function initMenuVariable()
 	for(var i = 0; i < playVersionInfo.length; i++) {
 		//ex: { name: "Classic Lode Runner (150 Levels) ", activeFun: subGameMenu },
 		gameVersionMenuList.push( 
-			{ name: playVersionInfo[i].name + " (" + playVersionInfo[i].verData.length + " Levels) ", 
+			{ name: playVersionInfo[i].name + " (" + playVersionInfo[i].levelCount + " Levels) ", 
 			  activeFun: subGameMenu 
 			}
 		);
@@ -1646,23 +1682,26 @@ function initMenuVariable()
 	var customItemName = getCustomItemInfo(1);
 	gameVersionMenuList.push({name: customItemName, activeFun: subEditMenu});
 	customItemIdx = gameVersionMenuList.length-1;
+
+	// classic pack is sync-loaded from HTML
+	markScriptLoaded("lodeRunner.v.classic.js");
 }
 
 function getPlayVerData(id) 
 {
-	for(var i = 0; i < playVersionInfo.length; i++) {
-		if(playVersionInfo[i].id == id) return playVersionInfo[i].verData;
+	var info = findPlayVersionInfo(id);
+	if (info && isGlobalDefined(info.globalName)) {
+		return window[info.globalName];
 	}
 	
-	error("Error: versionData can not find, id = " + id );
-	return playVersionInfo[0].verData;
+	error("Error: versionData not loaded, id = " + id );
+	return classicData;
 }
 
 function getPlayVerInfo(id) 
 {
-	for(var i = 0; i < playVersionInfo.length; i++) {
-		if(playVersionInfo[i].id == id) return playVersionInfo[i].info;
-	}
+	var info = findPlayVersionInfo(id);
+	if (info) return info.info;
 	
 	error("Error: version info can not find, id = " + id );
 	return playVersionInfo[0].info;
@@ -1670,7 +1709,7 @@ function getPlayVerInfo(id)
 
 function defaultLevelData()
 {
-	return playVersionInfo[0].verData;
+	return classicData;
 }
 
 function menuIdToPlayData(menuId)
@@ -1813,13 +1852,10 @@ function subGameMenu(id, callbackFun)
 
 	playData = menuIdToPlayData(gameVersionMenuList[0].activeItem);
 	
-	//================================================
-	// get demo data for current playData from server
-	//------------------------------------------------
-	if(demoPlayData != playData) initDemoData();
-	//================================================
-	
-	classicPlay(id, callbackFun); //set as classic mode
+	ensurePlayVersionLoaded(playData, function () {
+		if (demoPlayData != playData) initDemoData();
+		classicPlay(id, callbackFun); //set as classic mode
+	});
 }
 
 function subEditMenu(id, callbackFun)	
@@ -1831,53 +1867,60 @@ function subEditMenu(id, callbackFun)
 
 function classicPlay(id, callbackFun)
 {
-	if(callbackFun != null) callbackFun();
-	if(playMode == PLAY_EDIT) canvasReSize();
-	playMode = PLAY_CLASSIC;
+	ensurePlayVersionLoaded(playData, function () {
+		if(callbackFun != null) callbackFun();
+		if(playMode == PLAY_EDIT) canvasReSize();
+		playMode = PLAY_CLASSIC;
 
-	soundStop(soundDig);
-	soundStop(soundFall);
-	disableStageClickEvent();
-	document.onkeydown = handleKeyDown;
-	setLastPlayMode();
-	selectIconObj.disable(1);
-	demoIconObj.disable(1);
-	pasteIconObj.disable();
-	initShowDataMsg();
-	startGame();
+		soundStop(soundDig);
+		soundStop(soundFall);
+		disableStageClickEvent();
+		document.onkeydown = handleKeyDown;
+		setLastPlayMode();
+		selectIconObj.disable(1);
+		demoIconObj.disable(1);
+		pasteIconObj.disable();
+		initShowDataMsg();
+		startGame();
+	});
 }
 
 function modernPlay(id, callbackFun)
 {
-	if(callbackFun != null) callbackFun();
-	if(playMode == PLAY_EDIT) canvasReSize();
-	playMode = PLAY_MODERN;
+	ensurePlayVersionLoaded(playData, function () {
+		if(callbackFun != null) callbackFun();
+		if(playMode == PLAY_EDIT) canvasReSize();
+		playMode = PLAY_MODERN;
 	
-	soundStop(soundDig);
-	soundStop(soundFall);
-	disableStageClickEvent();
-	document.onkeydown = handleKeyDown;
-	pasteIconObj.disable();
-	setLastPlayMode();
-	initShowDataMsg();
-	startGame();
+		soundStop(soundDig);
+		soundStop(soundFall);
+		disableStageClickEvent();
+		document.onkeydown = handleKeyDown;
+		pasteIconObj.disable();
+		setLastPlayMode();
+		initShowDataMsg();
+		startGame();
+	});
 }
 
 function demoPlay(id, callbackFun)
 {
-	if(callbackFun != null) callbackFun();
-	if(playMode == PLAY_EDIT) canvasReSize();
+	ensurePlayVersionLoaded(playData, function () {
+		if (demoPlayData != playData) initDemoData();
+		if(callbackFun != null) callbackFun();
+		if(playMode == PLAY_EDIT) canvasReSize();
 	
-	playMode = PLAY_DEMO;
+		playMode = PLAY_DEMO;
 	
-	soundStop(soundDig);
-	soundStop(soundFall);
-	demoSoundOff = 1; //always sound off when start demo 
-	anyKeyStopDemo();
-	initShowDataMsg();
-	demoIconObj.disable(1);
-	pasteIconObj.disable();
-	startGame();
+		soundStop(soundDig);
+		soundStop(soundFall);
+		demoSoundOff = 1; //always sound off when start demo 
+		anyKeyStopDemo();
+		initShowDataMsg();
+		demoIconObj.disable(1);
+		pasteIconObj.disable();
+		startGame();
+	});
 }
 
 function editPlay(id, callbackFun)

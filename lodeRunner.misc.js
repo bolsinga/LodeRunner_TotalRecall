@@ -270,29 +270,16 @@ function  rangeRandom(minValue, maxValue, seedValue)
 }
 
 //======================================
-// get demo data by playData (wData.js)
+// get demo data by playData (lazy wData packs)
 //======================================
 function getDemoData(playData) 
 {
-	wDemoData = [];	
-	switch(playData) {
-	case 1:
-		if(	typeof wfastDemoData1 !== "undefined" ) wDemoData = wfastDemoData1;
-		break;
-	case 2:
-		if(	typeof wfastDemoData2 !== "undefined" ) wDemoData = wfastDemoData2;
-		break;
-	case 3:
-		if(	typeof wfastDemoData3 !== "undefined" ) wDemoData = wfastDemoData3;
-		break;
-	case 4:
-		if(	typeof wfastDemoData4 !== "undefined" ) wDemoData = wfastDemoData4;
-		break;
-	case 5:
-		if(	typeof wfastDemoData5 !== "undefined" ) wDemoData = wfastDemoData5;
-		break;
+	wDemoData = [];
+	var info = findPlayVersionInfo(playData);
+	if (info && typeof window[info.demoGlobal] !== "undefined") {
+		wDemoData = window[info.demoGlobal];
 	}
-	for(var i = 0; i < wDemoData.length; i++) { //temp
+	for(var i = 0; i < wDemoData.length; i++) {
 		playerDemoData[wDemoData[i].level-1] = wDemoData[i]; 
 	}
 }

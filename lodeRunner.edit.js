@@ -536,7 +536,7 @@ function drawLoadButton()
 		for(var i = 0; i < playVersionInfo.length; i++) {
 			editGameVersionList.push( 
 			{ 
-				name: playVersionInfo[i].name + " (" + playVersionInfo[i].verData.length + " Levels) ", 
+				name: playVersionInfo[i].name + " (" + playVersionInfo[i].levelCount + " Levels) ", 
 				id :playVersionInfo[i].id,
 				activeFun:  loadSelectMenu
 			});
@@ -562,13 +562,12 @@ function drawLoadButton()
 	function loadSelectMenu(id, callbackFun)
 	{
 		loadPlayData = menuId2GameVersionId(id);
-		var titleName = playDataToTitleName(loadPlayData);
-		loadLevelData = getPlayVerData(loadPlayData);
-		
-		titleName = "Load From: " + titleName;
-		
-		selectDialog(titleName, checkBitmap, loadLevelData, 1, screenX1, screenY1, 
-				mainStage, tileScale, loadSelectLevel, null, restoreState)		
+		ensurePlayVersionLoaded(loadPlayData, function () {
+			var titleName = "Load From: " + playDataToTitleName(loadPlayData);
+			loadLevelData = getPlayVerData(loadPlayData);
+			selectDialog(titleName, checkBitmap, loadLevelData, 1, screenX1, screenY1, 
+					mainStage, tileScale, loadSelectLevel, null, restoreState);
+		});
 	}
 			
 	function loadExistLevel(yes)
