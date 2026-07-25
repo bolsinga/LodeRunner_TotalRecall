@@ -2850,7 +2850,7 @@ function restoreDialog(id, _callBackFun)
 		coverBackgroundObj.graphics.beginFill(COVER_BACKGROUND_COLOR).drawRect(0, 0, mainStage.canvas.width, mainStage.canvas.height).endFill();
 		coverBackgroundObj.alpha = 0.6;
 		mainStage.addChild(coverBackgroundObj); // mainStage
-		mainStage.update();
+		stagePresent();
 	}
 
 	function createInputFileElement()

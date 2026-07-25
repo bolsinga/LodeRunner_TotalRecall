@@ -54,34 +54,34 @@ function showTipsMsg(_tipsTxt, _stage, _scale, _tipsTxt1)
 	var TEXT_COLOR = "#FF2020";
 	var TEXT1_COLOR = "#FF2020";
 
-	var tipsText = new createjs.Text(_tipsTxt, "bold " +  TEXT_SIZE + "px Helvetica", TEXT_COLOR);
+	var tipsText = new CanvasText(_tipsTxt, "bold " +  TEXT_SIZE + "px Helvetica", TEXT_COLOR);
 	var screenX1 = _stage.canvas.width;
 	var screenY1 = _stage.canvas.height;
 
+	tipsText.textAlign = "center";
+	tipsText.setShadow("white", 3, 3, 2);
 	tipsText.x = (screenX1) / 2 | 0;
 	tipsText.y = screenY1/2 - tipsText.getBounds().height*5/4 | 0;
-	tipsText.shadow = new createjs.Shadow("white", 3, 3, 2);
-	tipsText.textAlign = "center";
-	
-	_stage.addChild(tipsText);
-	
+
+	canvasOverlay.add(tipsText);
+
 	tweenGet(tipsText).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
-		.call(function(){_stage.removeChild(tipsText);});
-		
+		.call(function(){canvasOverlay.remove(tipsText);});
+
 	if(_tipsTxt1 != null) {
-		// two tips 
-		var tipsText1 = new createjs.Text(_tipsTxt1, "bold " +  TEXT1_SIZE + "px Helvetica", TEXT1_COLOR);
-		
+		// two tips
+		var tipsText1 = new CanvasText(_tipsTxt1, "bold " +  TEXT1_SIZE + "px Helvetica", TEXT1_COLOR);
+
+		tipsText1.textAlign = "center";
+		tipsText1.setShadow("white", 3, 3, 2);
 		tipsText1.x = (screenX1) / 2 | 0;
 		tipsText1.y = screenY1/2 | 0;
-		tipsText1.shadow = new createjs.Shadow("white", 3, 3, 2);
-		tipsText1.textAlign = "center";
 
-		_stage.addChild(tipsText1);
-		
+		canvasOverlay.add(tipsText1);
+
 		tweenGet(tipsText1).set({alpha:1}).wait(50).to({scaleX:1.2, scaleY:1.2, alpha:0}, 3500)
-			.call(function(){_stage.removeChild(tipsText1);});
-		
+			.call(function(){canvasOverlay.remove(tipsText1);});
+
 	}
 }
 

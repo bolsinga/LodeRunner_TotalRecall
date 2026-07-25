@@ -350,7 +350,7 @@ function startEditInput()
 			if (cursorTileObj) cursorTileObj.alpha = 0;
 			if (editorActiveTileId >= 0) selectTileMouseOut(editorTile[editorActiveTileId]);
 			if (editorButtonMouseOverId >= 0) editorButtonMouseOut(editorButton[editorButtonMouseOverId]);
-			mainStage.update();
+			stagePresent();
 		},
 		enter: function () {
 			mouseInStage = 1;
@@ -1116,7 +1116,7 @@ function editWarningMsg(hidden)
 	} else {
 		mainStage.addChild(editWarningText);
 	}
-	mainStage.update();
+	stagePresent();
 }
 
 var copyLevelMap = null, copyLevelPassed = 0;
@@ -1324,7 +1324,7 @@ function editPointerAt(stageX, stageY)
 			if (prevActive !== editorActiveTileId || prevBtn !== editorButtonMouseOverId) dirty = 1;
 		}
 	}
-	if (dirty) mainStage.update();
+	if (dirty) stagePresent();
 }
 
 function levelMapIsEmpty(levelMap)

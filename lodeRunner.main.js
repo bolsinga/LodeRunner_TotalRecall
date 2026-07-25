@@ -145,7 +145,19 @@ function createStage()
 	loadingTxt.x = (canvas.width - loadingTxt.getBounds().width) / 2 | 0;
 	loadingTxt.y = (canvas.height - loadingTxt.getBounds().height) / 2 | 0;
 	mainStage.addChild(loadingTxt);
+	stagePresent();
+}
+
+//==========================================================================
+// single frame-present seam: stage repaint + owned overlay pass.
+// All repaints go through here so owned CanvasObjects (lodeRunner.canvasObj)
+// always paint on top of the stage; later the stage update inside becomes
+// the owned render loop and callers do not change.
+//==========================================================================
+function stagePresent()
+{
 	mainStage.update();
+	canvasOverlay.paint(canvas.getContext("2d"));
 }
 
 function setBackground()
@@ -170,12 +182,13 @@ function showCoverPage()
 	document.body.style.background = backgroundColor;
 	menuIconDisable(1);
 	clearIdleDemoTimer();
-	mainStage.removeAllChildren();	
+	mainStage.removeAllChildren();
+	canvasOverlay.clear(); //owned overlay follows the world teardown
 	mainStage.addChild(titleBackground); //colorful background
 	mainStage.addChild(coverBitmap);
 	mainStage.addChild(signetBitmap);
 	mainStage.addChild(remakeBitmap);
-	mainStage.update();	
+	stagePresent();
 	waitIdleDemo(3000);
 }
 
@@ -842,7 +855,8 @@ function playGame(deltaS)
 function showLevel(levelMap)
 {
 	mainStage.removeAllChildren();
-	
+	canvasOverlay.clear(); //owned overlay follows the world teardown
+
 	loadingTxt.text = "";
 	//loadingTxt.text = tileScale;  //for debug
 	mainStage.addChild(loadingTxt); //for debug
@@ -930,9 +944,9 @@ function showTipsText(text, time, text1)
 			tweenGet(tipsRect1,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
 			tweenGet(tipsText1,{override:true}).set({alpha:1}).to({alpha:0}, time);
 		}
-	}	
-	
-	mainStage.update();
+	}
+
+	stagePresent();
 }
 
 var dspTrapTile = 0;
@@ -1097,7 +1111,7 @@ function closingScreen(r)
 	addCycScreen();
 	cycScreen.graphics.beginFill("black").arc( cycX, cycY, r, 0, 2*Math.PI, true)
 	cycScreen.graphics.arc( cycX, cycY, cycMaxRadius, 0, 2*Math.PI, false);
-	mainStage.update();
+	stagePresent();
 	if(r > 0) {
 		r -= cycDiff;
 		if(r < cycDiff*2) r = 0;
@@ -1241,7 +1255,7 @@ function openingScreen(r)
 	addCycScreen();
 	cycScreen.graphics.beginFill("black").arc( cycX, cycY, r, 0, 2*Math.PI, true)
 	cycScreen.graphics.arc( cycX, cycY, cycMaxRadius, 0, 2*Math.PI, false);
-	mainStage.update();
+	stagePresent();
 	if(r < cycMaxRadius) {
 		r += cycDiff;
 		if(r > cycMaxRadius) r = cycMaxRadius;
@@ -1560,6 +1574,6 @@ function mainTick(event)
 	default:
 		return;	
 	}
-	
-	mainStage.update();
+
+	stagePresent();
 }

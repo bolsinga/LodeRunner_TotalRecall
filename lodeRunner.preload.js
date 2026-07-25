@@ -69,7 +69,7 @@ function showLoadingPage()
 		                   coverBitmap.getBounds().height*tileScale|0);
 		
 		mainStage.addChild(coverBitmap);	
-		mainStage.update();	
+		stagePresent();
 	}
 	
 	function addTitleBackground(width, height)
@@ -339,7 +339,7 @@ function preloadResource()
 		themeAssetsLoaded[curTheme] = 1;
 
 		percentTxt.text = "100%";
-		mainStage.update();
+		stagePresent();
 
 		createSoundInstance();
 		createBaseBitmapInstance(); //9/1/2016
@@ -354,7 +354,7 @@ function preloadResource()
 		mainStage.addChild(signetBitmap);
 		showRemakeBitmap();
 		mainStage.addChild(remakeBitmap);
-		mainStage.update();
+		stagePresent();
 	}
 	
 	//change title color to rainbow gradient color
