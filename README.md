@@ -106,14 +106,13 @@ A gamepad can be used as well (toggle with **Ctrl+J**).
 
 | Key / control | Action |
 |---------------|--------|
-| **Esc** | Pause / help (temporarily reveals side icons if chrome is hidden) |
+| **Esc** | Pause / help |
 | **?** icon | Help overlay |
 | **Ctrl+&minus;** / **Ctrl+=** | Slow down / speed up (Mac-friendly) |
 | **Ctrl+&larr;** / **Ctrl+&rarr;** | Slow down / speed up (also works, but clashes with macOS Spaces) |
 | **Ctrl+1** .. **Ctrl+5** | Pick a theme color slot |
 | **Ctrl+S** | Sound on/off |
 | **Ctrl+K** | Repeat-actions mode (APPLE-II vs NES key behavior) |
-| **Ctrl+B** | Show/hide side chrome |
 | **Ctrl+H** | Red-hat mode (guards that grab gold wear a red hat) |
 | **Ctrl+J** | Gamepad on/off |
 | **Ctrl+A** | Abort the current level |

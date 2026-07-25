@@ -15,8 +15,8 @@ themeColor[THEME_APPLE2] = [
 	null,      //original image color
 	"#60C0A0",
 	"#DD8D5D",
-	"#C080F0",
-	"#FF83BB",
+	"#BA9F55",
+	"#959CA5",
 ];
 
 themeColor[THEME_C64] = [
@@ -182,7 +182,6 @@ function themeColorChange(id)
 	themeDataReset(0); //don't need reset sound instance
 	
 	setThemeColor();
-	themeColorObj.activeColorChange();
 	
 	if(playMode == PLAY_EDIT) {
 		if(editLevelModified()) saveTestState();

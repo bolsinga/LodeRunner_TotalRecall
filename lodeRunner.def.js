@@ -53,7 +53,6 @@ var KEYCODE_BKSPACE = 8, //backspace
 	KEYCODE_COMMA  = 188, //',' 
 	
 	KEYCODE_A = 65, //'A'
-	KEYCODE_B = 66, //'B' - Ctrl+B toggles play chrome
 	KEYCODE_C = 67, //'C'
 	KEYCODE_D = 68, //'D'
 	KEYCODE_E = 69, //'E'

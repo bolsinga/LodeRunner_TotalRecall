@@ -1,0 +1,257 @@
+/*
+ * Lode Runner - settings overlay (Phase 1b DOM chrome).
+ * Scoped under .ls-dialog so it never collides with game page styles.
+ * Single committed visual world: phosphor CRT / arcade screen; palette from
+ * the real game art (brick red, steel-blue accent, gold highlight).
+ */
+:root {
+	--ls-panel:       #14141f;
+	--ls-panel-edge:  #26263a;
+	--ls-brick:       #b5533a;
+	--ls-brick-dim:   #7d3a29;
+	--ls-cyan:        #5f9ec3;
+	--ls-cyan-bright: #86bde0;
+	--ls-gold:        #e7c64a;
+	--ls-ink:         #d8d8e0;
+	--ls-ink-dim:     #8a8aa0;
+	--ls-ground:      #0a0a12;
+	--ls-radius:      3px;
+	--ls-font:        ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+	/* which edge the panel lives on: left. flip to translate(100%) + right for right */
+	--ls-slide-hidden: -100%;
+}
+
+/* toggle: a plain hamburger that opens the menu. A peer of the game, pinned
+   top-left. Closing is native (click outside / Esc), so there is no X state. */
+.ls-toggle {
+	box-sizing: border-box;
+	position: fixed; top: 12px; left: 12px; z-index: 50;
+	width: 40px; height: 40px;
+	display: grid; place-content: center; gap: 5px;
+	background: rgba(10,10,18,.72);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	cursor: pointer; font-family: var(--ls-font);
+	transition: border-color .15s, background .15s;
+}
+.ls-toggle span {
+	display: block; width: 20px; height: 2px;
+	background: var(--ls-ink); border-radius: 1px;
+	transition: background .15s;
+}
+.ls-toggle:hover { border-color: var(--ls-cyan); background: rgba(10,10,18,.92); }
+.ls-toggle:hover span { background: var(--ls-cyan-bright); }
+.ls-toggle:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* the native <dialog> as a left-edge slide-out. showModal() puts it in the top
+   layer (above everything, no z-index war) with a ::backdrop scrim (no overlay
+   div). Esc + focus-trap + click-outside are native. */
+dialog.ls-dialog {
+	box-sizing: border-box;
+	margin: 0 auto 0 0;               /* pin to the LEFT edge */
+	height: 100dvh; max-height: 100dvh;
+	width: min(340px, 86vw);
+	padding: 0; border: 0;
+	border-right: 2px solid var(--ls-panel-edge);
+	background: linear-gradient(180deg, var(--ls-panel) 0%, #101019 100%);
+	color: var(--ls-ink); font-family: var(--ls-font); overflow: hidden;
+	transform: translateX(var(--ls-slide-hidden));
+	transition: transform .28s cubic-bezier(.4,0,.2,1),
+	            overlay .28s allow-discrete, display .28s allow-discrete;
+}
+dialog.ls-dialog * { box-sizing: border-box; }
+dialog.ls-dialog[open] { transform: translateX(0); }
+@starting-style { dialog.ls-dialog[open] { transform: translateX(var(--ls-slide-hidden)); } }
+
+dialog.ls-dialog::backdrop {
+	background: rgba(6,6,12,.55);
+	opacity: 0;
+	transition: opacity .28s ease, overlay .28s allow-discrete, display .28s allow-discrete;
+}
+dialog.ls-dialog[open]::backdrop { opacity: 1; }
+@starting-style { dialog.ls-dialog[open]::backdrop { opacity: 0; } }
+
+/* the panel fills the dialog */
+.ls-panel {
+	display: flex; flex-direction: column; height: 100%; overflow: hidden;
+}
+
+.ls-dialog .ls-head {
+	display: flex; align-items: center; gap: 12px;
+	/* left padding clears the floating top-left hamburger/X toggle */
+	padding: 14px 18px 12px 58px;
+	border-bottom: 1px solid var(--ls-panel-edge);
+}
+.ls-dialog .ls-title {
+	margin: 0; flex: 1;
+	font-size: 13px; letter-spacing: .22em; text-transform: uppercase;
+	color: var(--ls-gold);
+	text-shadow: 0 0 10px rgba(231,198,74,.35);
+}
+.ls-dialog .ls-title b { color: var(--ls-brick); font-weight: inherit; }
+
+.ls-dialog .ls-back {
+	width: 34px; height: 34px; flex: none; padding: 0;
+	display: none; place-items: center;
+	background: transparent; color: var(--ls-ink-dim);
+	border: 1px solid transparent; border-radius: var(--ls-radius);
+	cursor: pointer; line-height: 1; font-size: 18px;
+	transition: color .15s, border-color .15s;
+}
+.ls-dialog .ls-back:hover { color: var(--ls-cyan-bright); border-color: var(--ls-panel-edge); }
+.ls-dialog .ls-back:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+.ls-dialog .ls-panel.help .ls-back,
+.ls-dialog .ls-panel.info .ls-back,
+.ls-dialog .ls-panel.mode .ls-back { display: grid; }
+
+.ls-dialog .ls-body {
+	flex: 1; min-height: 0; overflow-y: auto;
+	padding: 6px 18px 22px;
+	display: flex; flex-direction: column; gap: 2px;
+	scrollbar-width: thin; scrollbar-color: var(--ls-panel-edge) transparent;
+}
+
+/* sub-view swap */
+.ls-dialog .view-help, .ls-dialog .view-info, .ls-dialog .view-mode { display: none; }
+.ls-dialog .ls-panel.help .view-main,
+.ls-dialog .ls-panel.info .view-main,
+.ls-dialog .ls-panel.mode .view-main { display: none; }
+.ls-dialog .ls-panel.help .view-help { display: block; }
+.ls-dialog .ls-panel.info .view-info { display: block; }
+.ls-dialog .ls-panel.mode .view-mode { display: block; }
+
+.ls-dialog .group { padding: 14px 0; border-bottom: 1px solid #1e1e2c; }
+.ls-dialog .group:last-child { border-bottom: 0; }
+.ls-dialog .group-label {
+	margin: 0 0 12px;
+	font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--ls-ink-dim);
+}
+
+.ls-dialog .row {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 12px; min-height: 34px;
+}
+.ls-dialog .row + .row { margin-top: 8px; }
+.ls-dialog .row-name { font-size: 13px; color: var(--ls-ink); }
+.ls-dialog .row-name small { display: block; color: var(--ls-ink-dim); font-size: 11px; }
+
+/* segmented toggle */
+.ls-dialog .seg {
+	display: inline-flex; border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius); overflow: hidden; background: var(--ls-ground);
+}
+.ls-dialog .seg button {
+	font: inherit; font-size: 12px;
+	padding: 5px 11px; border: 0; cursor: pointer;
+	background: transparent; color: var(--ls-ink-dim);
+	transition: background .12s, color .12s;
+}
+.ls-dialog .seg button + button { border-left: 1px solid var(--ls-panel-edge); }
+.ls-dialog .seg button[aria-pressed="true"] {
+	background: var(--ls-brick); color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.4);
+}
+.ls-dialog .seg button:hover:not([aria-pressed="true"]) { color: var(--ls-ink); }
+.ls-dialog .seg button:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: -2px; }
+
+/* color swatches */
+.ls-dialog .swatches { display: inline-flex; gap: 8px; }
+.ls-dialog .swatch {
+	width: 26px; height: 26px; border-radius: var(--ls-radius);
+	border: 2px solid transparent; cursor: pointer; padding: 0; background-clip: padding-box;
+	transition: transform .1s, border-color .12s;
+}
+.ls-dialog .swatch:hover { transform: translateY(-2px); }
+.ls-dialog .swatch[aria-pressed="true"] { border-color: var(--ls-gold); box-shadow: 0 0 8px rgba(231,198,74,.5); }
+.ls-dialog .swatch:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* speed stepper */
+.ls-dialog .stepper {
+	display: inline-flex; align-items: stretch;
+	border: 1px solid var(--ls-panel-edge); border-radius: var(--ls-radius);
+	overflow: hidden; background: var(--ls-ground);
+}
+.ls-dialog .stepper button {
+	font: inherit; font-size: 15px; line-height: 1;
+	width: 30px; border: 0; cursor: pointer;
+	background: transparent; color: var(--ls-ink-dim);
+	transition: background .12s, color .12s;
+}
+.ls-dialog .stepper button:hover:not(:disabled) { background: var(--ls-brick); color: #fff; }
+.ls-dialog .stepper button:disabled { color: #3a3a4d; cursor: default; }
+.ls-dialog .stepper button:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: -2px; }
+.ls-dialog .stepper .val {
+	min-width: 92px; padding: 6px 4px;
+	border-left: 1px solid var(--ls-panel-edge); border-right: 1px solid var(--ls-panel-edge);
+	display: grid; place-items: center;
+	font-size: 11px; letter-spacing: .08em; color: var(--ls-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+/* version / mode pickers + info icon-button */
+.ls-dialog .pick {
+	font: inherit; font-size: 13px;
+	background: var(--ls-ground); color: var(--ls-ink);
+	border: 1px solid var(--ls-panel-edge); border-radius: var(--ls-radius);
+	padding: 6px 8px; cursor: pointer; max-width: 190px;
+}
+.ls-dialog .pick:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+.ls-dialog .pick-group { display: inline-flex; align-items: center; gap: 6px; }
+.ls-dialog .icon-btn {
+	width: 28px; height: 28px; flex: none; padding: 0;
+	display: grid; place-items: center;
+	background: var(--ls-ground); color: var(--ls-ink-dim);
+	border: 1px solid var(--ls-panel-edge); border-radius: var(--ls-radius);
+	cursor: pointer; font-size: 14px; line-height: 1;
+	transition: color .12s, border-color .12s;
+}
+.ls-dialog .icon-btn:hover { color: var(--ls-cyan-bright); border-color: var(--ls-cyan); }
+.ls-dialog .icon-btn:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+
+/* action button (Keys) */
+.ls-dialog .btn {
+	font: inherit; font-size: 13px;
+	padding: 9px 10px; cursor: pointer;
+	border: 1px solid var(--ls-panel-edge); border-radius: var(--ls-radius);
+	background: var(--ls-ground); color: var(--ls-ink);
+	letter-spacing: .04em;
+	transition: border-color .12s, color .12s, background .12s;
+}
+.ls-dialog .btn:hover { border-color: var(--ls-cyan); color: var(--ls-cyan-bright); }
+.ls-dialog .btn:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+
+/* sub-view content */
+.ls-dialog .help-h {
+	margin: 16px 0 6px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ls-gold);
+}
+.ls-dialog .help-h:first-child { margin-top: 6px; }
+.ls-dialog .keys {
+	display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; align-items: center;
+	font-size: 12px; color: var(--ls-ink-dim);
+}
+.ls-dialog .keys kbd {
+	font: inherit; font-size: 11px;
+	background: var(--ls-ground); border: 1px solid var(--ls-panel-edge);
+	border-radius: 2px; padding: 2px 7px; color: var(--ls-ink);
+	justify-self: start; white-space: nowrap;
+}
+.ls-dialog .rebind-note {
+	margin-top: 16px; padding: 10px 12px;
+	font-size: 11px; color: var(--ls-ink-dim); line-height: 1.5;
+	border: 1px dashed var(--ls-panel-edge); border-radius: var(--ls-radius);
+}
+.ls-dialog .rebind-note b { color: var(--ls-cyan); font-weight: 400; }
+.ls-dialog .about { margin-top: 18px; font-size: 12px; color: var(--ls-ink-dim); line-height: 1.6; }
+.ls-dialog .about a { color: var(--ls-cyan); }
+.ls-dialog .info-rows {
+	display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 12.5px; color: var(--ls-ink);
+}
+.ls-dialog .info-k { color: var(--ls-ink-dim); }
+.ls-dialog .stars { color: var(--ls-gold); letter-spacing: 2px; }
+.ls-dialog .mode-list { margin: 0; }
+.ls-dialog .mode-list dt { font-size: 12.5px; color: var(--ls-cyan); margin-top: 12px; letter-spacing: .04em; }
+.ls-dialog .mode-list dt:first-child { margin-top: 0; }
+.ls-dialog .mode-list dd { margin: 3px 0 0; font-size: 12px; color: var(--ls-ink-dim); line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+	.ls-dialog *, .ls-dialog *::before, .ls-dialog *::after { transition: none !important; }
+}

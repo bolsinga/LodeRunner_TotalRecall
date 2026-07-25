@@ -52,7 +52,7 @@ var playMode = PLAY_CLASSIC;
 var playData = 1; //classic lode runner
 var curTime = 0; //count from 0 to MAX_TIME_COUNT
 
-var backgroundColor = "#250535"; //background color
+var backgroundColor = "#000000"; //page background behind the board
 
 var playerName = "";
 
@@ -62,6 +62,8 @@ var dbName = "LodeRunner";
 
 function init()
 {
+	settingsPanel.init(); //settings menu is a page peer, built before the game boots
+
 	var screenSize = getScreenSize();
 	screenX1 = screenSize.x;
 	screenY1 = screenSize.y;
@@ -166,8 +168,7 @@ function setBackground()
 	var background = new createjs.Shape();
 	background.graphics.beginFill("#000000").drawRect(0, 0, canvas.width, canvas.height);
 	mainStage.addChild(background);
-	// Respect Ctrl+B chrome toggle during level iris / redraws
-	document.body.style.background = playChromeVisible ? backgroundColor : "#000000";
+	document.body.style.background = backgroundColor;
 }
 
 function showCoverPage()
@@ -178,7 +179,6 @@ function showCoverPage()
 		clearIdleDemoTimer();
 		return;
 	}
-	playChromeVisible = 1;
 	document.body.style.background = backgroundColor;
 	menuIconDisable(1);
 	clearIdleDemoTimer();
@@ -1138,59 +1138,20 @@ function closingScreen(r)
 
 function menuIconEnable()
 {
-	mainMenuIconObj.enable();
 	if(playMode == PLAY_MODERN || playMode == PLAY_DEMO) {
 		selectIconObj.enable();
 	}
 	if(playMode == PLAY_MODERN) demoIconObj.enable();
-	if(playMode != PLAY_EDIT) {
-		soundIconObj.enable();
-		soundIconObj.updateSoundImage();
-		repeatActionIconObj.enable();
-		themeColorObj.enable();
-	} else {
-		if(!editInNarrowScreen) themeColorObj.enable();
-	}
-	infoIconObj.enable();
-	helpIconObj.enable();
-	themeIconObj.enable();
 }
 
 function menuIconDisable(hidden)
 {
-	mainMenuIconObj.disable(hidden);
 	if(playMode == PLAY_MODERN) {
 		selectIconObj.disable(hidden);
 	}
 	demoIconObj.disable(hidden);
-	soundIconObj.disable(hidden);
-	infoIconObj.disable(hidden);
-	helpIconObj.disable(hidden);
-	repeatActionIconObj.disable(hidden);
-	themeIconObj.disable(hidden);
-	themeColorObj.disable(hidden);
 }
 
-// Play chrome = purple page frame + side control icons. Ctrl+B toggles.
-var playChromeVisible = 1;
-
-function setPlayChrome(visible)
-{
-	playChromeVisible = visible ? 1 : 0;
-	if (playChromeVisible) {
-		document.body.style.background = backgroundColor;
-		menuIconEnable();
-	} else {
-		document.body.style.background = "#000000";
-		menuIconDisable(1);
-	}
-}
-
-function togglePlayChrome()
-{
-	setPlayChrome(!playChromeVisible);
-	showTipsText(playChromeVisible ? "CHROME ON" : "CHROME OFF", 1500);
-}
 
 var showStartTipsMsg = 1;
 function initShowDataMsg(showMsg)
@@ -1246,7 +1207,6 @@ function initForPlay()
 {
 	menuIconEnable();
 	showDataMsg();
-	if (!playChromeVisible) setPlayChrome(0);
 }
 
 function openingScreen(r)

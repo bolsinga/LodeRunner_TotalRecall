@@ -49,9 +49,8 @@ function pressCtrlKey(code)
 		//if(gamepadIconObj) gamepadIconObj.updateGamepadImage();	
 		break;	
 	case KEYCODE_K: //CTRL-K : repeat actions On/Off
-		toggleRepeatAction();	
-		repeatActionIconObj.updateRepeatActionImage();	
-		break;	
+		toggleRepeatAction();
+		break;
 	case KEYCODE_R: //CTRL-R : abort game
 		runnerLife = 1;	
 		gameState = GAME_RUNNER_DEAD;	
@@ -62,18 +61,9 @@ function pressCtrlKey(code)
 //	case KEYCODE_Z: //CTRL-Z, toggle god mode
 //		toggleGodMode();
 //		break;	
-	case KEYCODE_S: //CTRL-S, toggle sound 
-		if( (soundOff ^= 1) == 1) {
-			soundStop(soundDig);
-			soundStop(soundFall);
-			showTipsText("SOUND OFF", 1500);
-		} else {
-			showTipsText("SOUND ON", 1500);
-		}
-		soundIconObj.updateSoundImage(); //toggle sound On/Off icon	
-		break;
-	case KEYCODE_B: //CTRL-B : toggle play chrome (black frame / side icons)
-		togglePlayChrome();
+	case KEYCODE_S: //CTRL-S, toggle sound
+		gameSettings.setSound(!gameSettings.get("sound"));
+		showTipsText(gameSettings.get("sound") ? "SOUND ON" : "SOUND OFF", 1500);
 		break;
 	case KEYCODE_DASH: //CTRL- '-' : speed down (Mac-friendly; Ctrl+arrows switch Spaces)
 	case KEYCODE_HYPHEN:
@@ -298,18 +288,14 @@ function gameResume()
 	gameState = lastGameState;
 	soundResume(soundFall);
 	soundResume(soundDig);
-	if (gameState == GAME_START || gameState == GAME_RUNNING) {
-		setPlayChrome(playChromeVisible);
-	}
 }
 
 function gamePause()
 {
-	lastGameState = gameState;	
+	lastGameState = gameState;
 	gameState = GAME_PAUSE;
 	soundPause(soundFall);
 	soundPause(soundDig);
-	// Temporarily show chrome for menu access (do not change playChromeVisible)
 	document.body.style.background = backgroundColor;
 	menuIconEnable();
 }

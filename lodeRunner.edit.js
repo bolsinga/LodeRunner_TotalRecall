@@ -64,12 +64,6 @@ function startEditMode()
 	
 	editInNarrowScreen = canvasEditReSize();
 	
-	soundIconObj.disable(1);
-	repeatActionIconObj.disable(1);
-	if(editInNarrowScreen) themeColorObj.disable(1);
-	//if(gamepadIconObj) gamepadIconObj.disable(1);
-	
-	
 	setEditSelectMenu();
 	
 	createBaseTile();

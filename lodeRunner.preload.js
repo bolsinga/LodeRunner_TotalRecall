@@ -18,15 +18,10 @@ var SIGNET_UNDER_Y = 30;
 //*********************
 var coverBitmap, titleBackground, remakeBitmap, signetBitmap;
 var helpObj, helpBitmap, editHelpBitmap;
-var mainMenuIconBitmap, mainMenuIconObj;
 var selectIconBitmap, selectIconObj;
 var demoIconBitmap, demoIconObj;
 var pasteIconBitmap, pasteIconObj; // paste icon
-var soundOnIconBitmap, soundOffIconBitmap, soundIconObj;
-var helpIconBitmap, helpIconObj;
-var infoObj, infoIconBitmap, infoIconObj;
-var repeatActionOnIconBitmap, repeatActionOffIconBitmap, repeatActionIconObj;
-var apple2IconBitmap, C64IconBitmap, themeIconObj, themeColorObj;
+var infoObj;
 var checkBitmap;
 var returnBitmap, select1Bitmap, nextBitmap;
 var openFolderBitmap; // for restore custom levels
@@ -204,7 +199,6 @@ function preloadResource()
 		{ src: "image/help.png"+noCache,    id: "help" },
 		{ src: "image/editHelp.png"+noCache,id: "editHelp" },
 		
-		{ src: "image/menu.png"+noCache,    id: "menu" },
 		{ src: "image/select.png"+noCache,  id: "select" },
 		{ src: "image/check.png"+noCache,   id: "check" }, //check icon for select menu
 		
@@ -222,19 +216,7 @@ function preloadResource()
 		{ src: "image/demo.png"+noCache,id: "demo" },
 
 		{ src: "image/paste.png"+noCache,id: "paste" }, //04/23/2021
-		
-		{ src: "image/soundOn.png"+noCache,  id: "soundOn" },
-		{ src: "image/soundOff.png"+noCache, id: "soundOff" },
-		
-		{ src: "image/infoIcon.png"+noCache, id: "infoIcon" },
-		{ src: "image/helpIcon.png"+noCache, id: "helpIcon" },
 
-		{ src: "image/repeatOn.png"+noCache,  id: "repeatOn" },
-		{ src: "image/repeatOff.png"+noCache, id: "repeatOff" },
-		
-		{ src: "image/apple2.png"+noCache,     id: "apple2" },
-		{ src: "image/commodore64.png"+noCache,id: "C64" },
-		
 		{ src: "image/flags32.png"+noCache,     id: "flag" },
 	
 		{ src: "sound/goldFinish.ogg"+noCache,  id:"goldFinish"},
@@ -408,9 +390,6 @@ function preloadResource()
 	
 	function createMenuBitmapIcon()
 	{
-		mainMenuIconBitmap = new createjs.Bitmap(preload.getResult("menu"));
-		mainMenuIconObj = new mainMenuIconClass(screenX1, screenY1, tileScale, mainMenuIconBitmap);
-		
 		selectIconBitmap = new  createjs.Bitmap(preload.getResult("select"));
 		selectIconObj = new selectIconClass(screenX1, screenY1, tileScale, selectIconBitmap); 
 		
@@ -420,26 +399,8 @@ function preloadResource()
 		pasteIconBitmap = new createjs.Bitmap(preload.getResult("paste")); //04/23/2021
 		pasteIconObj = new pasteIconClass(screenX1, screenY1, tileScale, pasteIconBitmap);
 
-		soundOnIconBitmap = new createjs.Bitmap(preload.getResult("soundOn")); //04/18/2015
-		soundOffIconBitmap = new createjs.Bitmap(preload.getResult("soundOff"));
-		soundIconObj = new soundIconClass(screenX1, screenY1, tileScale, soundOnIconBitmap, soundOffIconBitmap);
-		
-		infoIconBitmap = new createjs.Bitmap(preload.getResult("infoIcon")); //05/12/2015
-		infoIconObj = new infoIconClass(screenX1, screenY1, tileScale, infoIconBitmap);
 		infoObj = new infoMenuClass(mainStage, tileScale);
-		
-		helpIconBitmap = new createjs.Bitmap(preload.getResult("helpIcon")); //04/21/2015
-		helpIconObj = new helpIconClass(screenX1, screenY1, tileScale, helpIconBitmap);
 
-		repeatActionOnIconBitmap = new createjs.Bitmap(preload.getResult("repeatOn")); //05/17/2015
-		repeatActionOffIconBitmap = new createjs.Bitmap(preload.getResult("repeatOff"));
-		repeatActionIconObj = new repeatActionIconClass(screenX1, screenY1, tileScale, repeatActionOnIconBitmap, repeatActionOffIconBitmap);
-		
-		apple2IconBitmap = new createjs.Bitmap(preload.getResult("apple2")); //04/18/2015
-		C64IconBitmap = new createjs.Bitmap(preload.getResult("C64"));
-		themeIconObj = new themeIconClass(screenX1, screenY1, tileScale, apple2IconBitmap, C64IconBitmap);
-
-		themeColorObj = new colorSelectorClass(screenX1, screenY1, tileWScale);
 		checkBitmap = new  createjs.Bitmap(preload.getResult("check"));
 		
 		returnBitmap = new createjs.Bitmap(preload.getResult("return"));
