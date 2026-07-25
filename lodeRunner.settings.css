@@ -1,5 +1,5 @@
 /*
- * Lode Runner - settings overlay (Phase 1b DOM chrome).
+ * Lode Runner - settings overlay.
  * Scoped under .ls-dialog so it never collides with game page styles.
  * Single committed visual world: phosphor CRT / arcade screen; palette from
  * the real game art (brick red, steel-blue accent, gold highlight).

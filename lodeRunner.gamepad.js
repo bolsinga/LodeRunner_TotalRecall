@@ -196,7 +196,8 @@ function gamepadRequestState()
 				}
 				switch(buttonMethod) {
 				case 1: //repeat
-					if(document.onkeydown == handleKeyDown || document.onkeydown == anyKeyDown) {
+					var keyHandler = getKeyHandler();
+					if(keyHandler == handleKeyDown || keyHandler == anyKeyDown) {
 						if(curButtonState[i])sendKeyDown(keyCodeMapping[i], id); 
 						else if(lastButtonState[id][i]) sendKeyUp(keyCodeMapping[i], id);
 						break;
@@ -239,7 +240,7 @@ function sendKeyUp(twinKey, id)
 	
 	var event = {keyCode: key[0], ctrlKey: key[1], shiftKey: key[2]};
 	//console.log("sendKeyUp = %d",keyCode );
-	if(typeof document.onkeydown == "function" ) document.onkeyup(event);
+	sendGameKeyUp(event);
 	gamepadLastId = id;
 }
 
@@ -250,6 +251,6 @@ function sendKeyDown(twinKey, id)
 	
 	var event = {keyCode: key[0], ctrlKey: key[1], shiftKey: key[2]};
 	//console.log("sendKeyDown = %d",keyCode );
-	if(typeof document.onkeydown == "function" ) document.onkeydown(event);
+	sendGameKeyDown(event);
 	gamepadLastId = id;
 }

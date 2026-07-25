@@ -120,7 +120,7 @@ function selectIconClass( _screenX1, _screenY1, _scale, _bitmap)
 
 	function saveState()
 	{
-		saveStateObj = saveKeyHandler(noKeyDown);
+		saveStateObj = saveKeyHandler(null); // no game keys while the widget is up
 		gamePause();
 		if (playMode == PLAY_EDIT) {
 			stopEditInput();

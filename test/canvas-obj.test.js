@@ -39,13 +39,13 @@ describe("misc.js CreateJS peel (characterization)", () => {
 		}
 	});
 
-	it("hiscore.js dropped its createjs Stage/Sprite/Shape (Ticker facade stays until Phase 3)", () => {
+	it("hiscore.js dropped its createjs Stage/Sprite/Shape (Ticker facade stays)", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.hiscore.js"), "utf8");
 		assert.doesNotMatch(text, /createjs\.Stage/);
 		assert.doesNotMatch(text, /createjs\.Sprite/);
 		assert.doesNotMatch(text, /createjs\.Shape/);
 		assert.doesNotMatch(text, /createjs\.Shadow/);
-		// the only createjs left is the Ticker facade (Phase 3 target)
+		// the only createjs left is the Ticker facade
 		const refs = text.match(/createjs\.\w+/g) || [];
 		assert.ok(refs.every((r) => r === "createjs.Ticker"), `unexpected createjs refs: ${refs}`);
 		// no scoreStage / canvas2 / drawText render coupling remains

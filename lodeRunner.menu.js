@@ -1,18 +1,23 @@
+// A canvas-drawn dialog draws on the game's own surface, so it takes over that
+// surface's key handler while it is up and hands it back on close. This is
+// still routing within the game -- see setKeyHandler in lodeRunner.main.js.
+// (A DOM <dialog> needs none of this: it is a separate surface, and the game's
+// canvas stops receiving keys on its own while a modal is open.)
 function saveKeyHandler(newHandler)
 {
-	var keyHandler, clickState; 
-	
-	keyHandler = document.onkeydown;
+	var keyHandler, clickState;
+
+	keyHandler = getKeyHandler();
 	clickState = disableStageClickEvent();
-	document.onkeydown = newHandler;
-	
+	setKeyHandler(newHandler);
+
 	return { keyHandler: keyHandler, clickState:  clickState };
 }
 
 function restoreKeyHandler(stateObj)
 {
-	document.onkeydown = stateObj.keyHandler;
-	if(stateObj.clickState) enableStageClickEvent();	
+	setKeyHandler(stateObj.keyHandler);
+	if(stateObj.clickState) enableStageClickEvent();
 }
 
 function helpMenuClass(_stage, _bitmap, _editBitmap, _scale)
@@ -1664,7 +1669,7 @@ function classicPlay(id, callbackFun)
 			soundStop(soundDig);
 			soundStop(soundFall);
 			disableStageClickEvent();
-			document.onkeydown = handleKeyDown;
+			setKeyHandler(handleKeyDown);
 			setLastPlayMode();
 			selectIconObj.disable(1);
 			demoIconObj.disable(1);
@@ -1689,7 +1694,7 @@ function modernPlay(id, callbackFun)
 			soundStop(soundDig);
 			soundStop(soundFall);
 			disableStageClickEvent();
-			document.onkeydown = handleKeyDown;
+			setKeyHandler(handleKeyDown);
 			pasteIconObj.disable();
 			setLastPlayMode();
 			initShowDataMsg();
@@ -1734,7 +1739,7 @@ function editPlay(id, callbackFun)
 		if(callbackFun != null) callbackFun();
 
 		disableStageClickEvent();
-		document.onkeydown = handleKeyDown;
+		setKeyHandler(handleKeyDown);
 		setLastPlayMode();
 		//selectIconObj.disable(1);
 		demoIconObj.disable(1);
@@ -2235,7 +2240,7 @@ function yesNoDialog(_txtMsg, _yesBitmap, _noBitmap, _stage, _scale, _callBack)
 	
 	function saveKeyState()
 	{
-		saveStateObj = saveKeyHandler(noKeyDown);
+		saveStateObj = saveKeyHandler(null); // no game keys while this dialog is up
 	}
 	
 	function restoreKeyState()

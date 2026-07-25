@@ -214,8 +214,8 @@ CanvasGlyph.prototype.setAnim = function(frames, speed)
 	return this;
 };
 
-//advance the animation by one tick (kept tick-driven, not wall-clock, so the
-//blink cadence rides the same clock as today; Phase 3 changes only the caller)
+// advance the animation by one tick (tick-driven, not wall-clock, so the blink
+// cadence rides the game clock; a new loop would change only the caller)
 CanvasGlyph.prototype.advance = function()
 {
 	if(this.anim) this.frameElapsed += this.anim.speed;
@@ -301,11 +301,11 @@ var canvasOverlay = {
 	paint: function(ctx)
 	{
 		if(!this.objs.length) return;
-		//paint from a clean base state so objects never inherit a transform or
-		//alpha left on the shared 2D context by the stage's last draw.
-		//Objects currently author in buffer-pixel space, so identity is the base;
-		//when Phase 3 moves authoring to base units under a tileScale/DPR
-		//transform, this seam applies that transform instead of identity.
+		// paint from a clean base state so objects never inherit a transform or
+		// alpha left on the shared 2D context by the stage's last draw.
+		// Objects author in buffer-pixel space, so identity is the base; if
+		// authoring moves to base units under a tileScale/DPR transform, this
+		// seam applies that transform instead of identity.
 		ctx.save();
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 1;

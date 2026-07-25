@@ -70,6 +70,7 @@ function init()
 
 	canvasReSize();
 	createStage();
+	initGameInput(); // the canvas owns the game's keyboard input
 	setBackground();
 	initAutoDemoRnd(); //init auto demo random levels
 	
@@ -209,7 +210,7 @@ function waitIdleDemo(maxIdleTime)
 
 function anyKeyStopDemo()
 {
-	document.onkeydown = anyKeyDown; //any key press
+	setKeyHandler(anyKeyDown); // any key press
 	enableStageClickEvent();
 }
 
@@ -256,9 +257,59 @@ function disableStageClickEvent()
 	return rc;
 }
 
-function noKeyDown()
+//=============================================================================
+// Keyboard input lives on the canvas, not on document -- the game does not
+// listen outside its own surface. A modal <dialog> makes everything outside it
+// inert, so an open menu silences the game without anything having to block keys.
+//
+// setKeyHandler routes between the game's handlers as its state changes (play,
+// editor, attract mode, text entry). null means no handler for this state.
+//=============================================================================
+var gameKeyDownHandler = null, gameKeyUpHandler = null;
+
+function setKeyHandler(keyDown, keyUp)
 {
-	return false;
+	gameKeyDownHandler = keyDown || null;
+	if(arguments.length > 1) gameKeyUpHandler = keyUp || null;
+}
+
+function getKeyHandler()
+{
+	return gameKeyDownHandler;
+}
+
+// Synthetic keys (the gamepad maps buttons to key codes) use the same channel
+// as real ones, so they follow the same routing.
+function sendGameKeyDown(event)
+{
+	if(gameKeyDownHandler) gameKeyDownHandler(event);
+}
+
+function sendGameKeyUp(event)
+{
+	if(gameKeyUpHandler) gameKeyUpHandler(event);
+}
+
+// Focus the canvas so it receives keys -- at start, and whenever a dialog hands
+// control back.
+function focusGame()
+{
+	if(canvas) canvas.focus();
+}
+
+function initGameInput()
+{
+	// The handlers return false to mean "consumed" (so arrows only scroll the
+	// page when the game did not want them). addEventListener ignores return
+	// values, so honor that contract here.
+	canvas.addEventListener("keydown", function(event) {
+		if(gameKeyDownHandler && gameKeyDownHandler(event) === false) event.preventDefault();
+	});
+	canvas.addEventListener("keyup", function(event) {
+		if(gameKeyUpHandler && gameKeyUpHandler(event) === false) event.preventDefault();
+	});
+	canvas.addEventListener("mousedown", focusGame); // clicking the board refocuses it
+	focusGame();
 }
 
 function anyKeyDown()
@@ -310,8 +361,7 @@ function selectGame(showDataMsg)
 {
 	getLastPlayInfo();
 	playData2GameVersionMenuId();
-	document.onkeydown = handleKeyDown;
-	document.onkeyup = handleKeyUp;
+	setKeyHandler(handleKeyDown, handleKeyUp);
 	initShowDataMsg(showDataMsg);
 	startGame();	
 }
@@ -520,6 +570,14 @@ function moveSprite2Top()
 	
 	//move debug text to top
 	moveChild2Top(mainStage, loadingTxt); //for debug
+
+	// move on-board banners to top: rebuildMap re-adds every tile and addChild
+	// appends, so a banner up during a rebuild ends up buried. Rect before text.
+	// Null until the first banner, and a recolor can happen before that.
+	if(tipsRect  != null) moveChild2Top(mainStage, tipsRect);
+	if(tipsText  != null) moveChild2Top(mainStage, tipsText);
+	if(tipsRect1 != null) moveChild2Top(mainStage, tipsRect1);
+	if(tipsText1 != null) moveChild2Top(mainStage, tipsText1);
 }
 
 function buildGroundInfo()
@@ -1394,7 +1452,7 @@ function mainTick(event)
 			error("DEMO dead level=" + curLevel);
 				
 			disableStageClickEvent();
-			document.onkeydown = handleKeyDown;
+			setKeyHandler(handleKeyDown);
 			setTimeout(function() {playMode = PLAY_MODERN; startGame(); }, 500);
 			gameState = GAME_WAITING;	
 			break;	
@@ -1441,7 +1499,7 @@ function mainTick(event)
 		case PLAY_DEMO_ONCE:
 			soundPlay(soundEnding);
 			disableStageClickEvent();
-			document.onkeydown = handleKeyDown;
+			setKeyHandler(handleKeyDown);
 			setTimeout(function() {playMode = PLAY_MODERN; startGame(); }, 500);
 			gameState = GAME_WAITING;
 			break;

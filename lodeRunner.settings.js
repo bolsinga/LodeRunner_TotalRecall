@@ -1,11 +1,11 @@
 //=============================================================================
-// Settings model + DOM settings panel (Phase 1b chrome relocation).
+// Settings model + DOM settings panel.
 //
 // gameSettings is the single source of truth for user-facing settings (sound,
 // theme, color, speed, repeat, gamepad). It reads current game state and exposes
 // absolute setters that call the real game functions and notify listeners. The
-// DOM panel binds to it; the legacy icon widgets, while they still exist, route
-// through the same model so the two UIs never desync. See plan.md (Phase 1b).
+// DOM panel binds to it; the legacy icon widgets route through the same model so
+// the two UIs never desync.
 //=============================================================================
 
 var gameSettings = {
@@ -14,6 +14,10 @@ var gameSettings = {
 	//subscribe to any settings change; fn(key, value)
 	onChange: function(fn) { this._listeners.push(fn); },
 	_notify: function(key, value) {
+		// mainTick returns on GAME_PAUSE before it repaints, so a paused board
+		// never redraws itself. Present here and changes show live under the
+		// open menu: pick a color, watch the bricks change.
+		stagePresent();
 		for(var i = 0; i < this._listeners.length; i++) this._listeners[i](key, value);
 	},
 
@@ -132,8 +136,7 @@ var gameSettings = {
 
 //=============================================================================
 // DOM settings panel. Built from real game data; controls bind to gameSettings.
-// Slice 1: coexists with the legacy icon strip. Version/Mode are display-only
-// placeholders until Slice 3 wires the menu replacement.
+// Coexists with the legacy icon strip for now.
 //=============================================================================
 
 var settingsPanel = (function() {
@@ -290,7 +293,7 @@ var settingsPanel = (function() {
 	}
 
 	function infoView() {
-		//Slice 1: static Classic details; Slice 3 populates from playVersionInfo per selection.
+		// static Classic details; will populate from playVersionInfo per selection
 		return '<div class="view-info">' +
 			'<p class="help-h">Classic Lode Runner</p>' +
 			'<div class="info-rows">' +
@@ -316,16 +319,21 @@ var settingsPanel = (function() {
 	var TITLES = { main: "<b>LODE</b> RUNNER", help: "KEYS", info: "VERSION", mode: "MODES" };
 	var SUBVIEWS = ["help", "info", "mode"];
 
-	//The settings menu knows nothing about the game. It only opens and closes.
-	//The game (if it cares) watches the dialog's open/close and halts itself.
-	function setOpen(on) {
+	// The settings menu knows nothing about the game. It only opens and closes,
+	// and announces that it did. The game (if it cares) listens for those
+	// announcements and halts itself; see lodeRunner.game.js.
+	function announce(name) {
+		document.dispatchEvent(new CustomEvent(name));
+	}
+	function setMenuOpen(on) {
 		if(on) {
 			if(dialog.open) return;
 			syncFromModel();
 			setView("main");
 			dialog.showModal();               //top layer + ::backdrop scrim, native
+			announce("menu-open");
 		} else {
-			dialog.close();
+			dialog.close();                   // native "close" event -> menu-close
 		}
 	}
 	function setView(view) {
@@ -383,7 +391,7 @@ var settingsPanel = (function() {
 
 	//--- events ---
 	function wire() {
-		toggleBtn.onclick = function(){ setOpen(true); };
+		toggleBtn.onclick = function(){ setMenuOpen(true); };
 		dialog.querySelector(".ls-back").onclick = function(){ setView("main"); };
 		dialog.querySelector(".ls-keys").onclick = function(){ setView("help"); };
 		dialog.querySelector(".ls-info").onclick = function(){ setView("info"); };
@@ -391,15 +399,15 @@ var settingsPanel = (function() {
 
 		//navigation: choosing a mode/version launches gameplay, so close the menu
 		dialog.querySelector(".ls-mode").onchange = function(e){
-			setOpen(false);
+			setMenuOpen(false);
 			gameSettings.setMode(e.target.value);
 		};
 		dialog.querySelector(".ls-version").onchange = function(e){
-			setOpen(false);
+			setMenuOpen(false);
 			gameSettings.setVersion(+e.target.value);
 		};
 		dialog.querySelector(".ls-editor").onclick = function(){
-			setOpen(false);
+			setMenuOpen(false);
 			gameSettings.enterEditor();
 		};
 
@@ -427,12 +435,16 @@ var settingsPanel = (function() {
 		dialog.querySelector(".ls-speed-up").onclick   = function(){ gameSettings.setSpeed(gameSettings.get("speed") + 1); };
 
 		//click on the ::backdrop (i.e. the dialog itself, outside .ls-panel) closes
-		dialog.addEventListener("click", function(e){ if(e.target === dialog) setOpen(false); });
+		dialog.addEventListener("click", function(e){ if(e.target === dialog) setMenuOpen(false); });
 
 		//in a sub-view, Esc goes back to main instead of closing the whole dialog
 		dialog.addEventListener("cancel", function(e){
 			if(inSubView()) { e.preventDefault(); setView("main"); }
 		});
+
+		// the native close event is the one place every close path converges
+		// (Esc, backdrop click, .close()), so announce menu-close from here
+		dialog.addEventListener("close", function(){ announce("menu-close"); });
 
 		//keep controls live if game state changes a value while open
 		gameSettings.onChange(function(){ if(dialog.open) syncFromModel(); });

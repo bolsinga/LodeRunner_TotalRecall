@@ -26,7 +26,8 @@
 	
 	<link href="lodeRunner.ico"  rel="shortcut icon" >
 	
-	<style>#canvas { position:absolute; left:0; top:0; }</style>
+	<style>#canvas { position:absolute; left:0; top:0; }
+	       #canvas:focus { outline:none; } /* game surface, not a form control */</style>
 	<link rel="stylesheet" href="lodeRunner.settings.css">
 
 	<script type="text/javascript" src="./lib/easeljs-0.7.1.min.js"></script>
@@ -67,6 +68,7 @@
 	<script type="text/javascript" src="lodeRunner.levelThumb.js"></script>
 	<script type="text/javascript" src="lodeRunner.gamepad.js"></script>
 	<script type="text/javascript" src="lodeRunner.settings.js"></script>
+	<script type="text/javascript" src="lodeRunner.game.js"></script>
 	<script type="text/javascript" src="lodeRunner.main.js"></script>
 	<script type="text/javascript" src="lodeRunner.win.js"></script>
 	<script type="text/javascript" src="lodeRunner.shareCodec.js"></script>
@@ -74,7 +76,10 @@
 </head>
 <body onload="init();">	
 <div class="canvas">
-	<canvas id="canvas" width="960" height="400"></canvas>
+	<!-- tabindex makes the canvas focusable so it can own the game's keyboard
+	     input directly. Keys reach the game only while its own surface has
+	     focus, so an open modal dialog silences the game by construction. -->
+	<canvas id="canvas" width="960" height="400" tabindex="0"></canvas>
 </div>
 </body>	
 </html>

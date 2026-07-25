@@ -60,7 +60,7 @@ function startEditMode()
 	clearIdleDemoTimer();
 	stopPlayTicker();
 	mainStage.removeAllChildren();
-	document.onkeydown = editHandleKeyDown;
+	setKeyHandler(editHandleKeyDown);
 	
 	editInNarrowScreen = canvasEditReSize();
 	
@@ -577,14 +577,12 @@ function drawLoadButton()
 	
 	function saveState()
 	{
-		//saveStateObj = saveKeyHandler(noKeyDown);
 		gamePause();
 		stopEditInput();
 	}
-	
+
 	function restoreState()
 	{
-		//restoreKeyHandler(saveStateObj);
 		startEditInput();
 		gameResume();
 	}
@@ -754,7 +752,7 @@ function drawSaveButton()
 		setModernInfo();
 	
 		canvasReSize();
-		document.onkeydown = handleKeyDown;
+		setKeyHandler(handleKeyDown);
 		initShowDataMsg();
 		startGame();
 	}	
@@ -772,7 +770,7 @@ function startTestMode()
 	stopEditInput();
 	saveTestState();
 	canvasReSize();
-	document.onkeydown = handleKeyDown; //key press
+	setKeyHandler(handleKeyDown); //key press
 	selectIconObj.disable(1);
 	initShowDataMsg();
 	startGame();

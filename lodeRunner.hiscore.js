@@ -3,7 +3,7 @@ var inputNameState = 0;
 //=============================================================================
 // Owned score surface: a z-ordered list of CanvasObjects painted onto the game
 // canvas, replacing the CreateJS score Stage. No CreateJS Stage/Sprite/Shape;
-// the blink cursor still rides the CreateJS Ticker until the Phase 3 rAF loop.
+// the blink cursor still rides the CreateJS Ticker.
 //=============================================================================
 function ScoreSurface()
 {
@@ -204,20 +204,20 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	
 	function anyKeyHandler()
 	{
-		savedKeyDownHander = document.onkeydown;
-		document.onkeydown = function(event) {
-			if(!event){ event = window.event; } 
-		
+		savedKeyDownHander = getKeyHandler();
+		setKeyHandler(function(event) {
+			if(!event){ event = window.event; }
+
 			//if( event.keyCode == KEYCODE_ENTER) {
 				clearTimeout(timeOutHandler);
 				closeScoreTable();
 			//}
-		};
+		});
 	}
 
 	function restoreKeyDownHandler()
 	{
-		document.onkeydown = savedKeyDownHander;
+		setKeyHandler(savedKeyDownHander);
 	}			
 	
 	function inputHiScoreName(winner) 
@@ -260,8 +260,8 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 		
 		function changeKeyDownHandler()
 		{
-			savedKeyDownHander = document.onkeydown;
-			document.onkeydown = handleHiScoreName;
+			savedKeyDownHander = getKeyHandler();
+			setKeyHandler(handleHiScoreName);
 		}
 		
 		function inputFinish(async)
@@ -539,13 +539,13 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 	
 	function changeKeyDownHandler()
 	{
-		savedKeyDownHander = document.onkeydown;
-		document.onkeydown = handleStringInput;
+		savedKeyDownHander = getKeyHandler();
+		setKeyHandler(handleStringInput);
 	}
 	
 	function restoreKeyDownHandler()
 	{
-		document.onkeydown = savedKeyDownHander;
+		setKeyHandler(savedKeyDownHander);
 	}	
 
 	function nextChar(charValue, nextMode)
