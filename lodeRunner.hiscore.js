@@ -1,13 +1,58 @@
 var inputNameState = 0;
 
+//=============================================================================
+// Owned score surface: a z-ordered list of CanvasObjects painted onto the game
+// canvas, replacing the CreateJS score Stage. No CreateJS Stage/Sprite/Shape;
+// the blink cursor still rides the CreateJS Ticker until the Phase 3 rAF loop.
+//=============================================================================
+function ScoreSurface()
+{
+	this.objs = [];
+	this.ctx = canvas.getContext("2d");
+}
+ScoreSurface.prototype.add = function(obj) { this.objs.push(obj); return obj; };
+ScoreSurface.prototype.remove = function(obj)
+{
+	var i = this.objs.indexOf(obj);
+	if(i >= 0) this.objs.splice(i, 1);
+};
+ScoreSurface.prototype.moveToTop = function(obj)
+{
+	this.remove(obj);
+	this.objs.push(obj);
+};
+ScoreSurface.prototype.clear = function() { this.objs.length = 0; };
+ScoreSurface.prototype.present = function()
+{
+	var ctx = this.ctx;
+	ctx.save();
+	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
+	ctx.restore();
+};
+
+//owned glyph run over the shared text atlas; drop-in for hiscore's drawText use
+//(returns one CanvasGlyph, positioned; caller adds it to a surface/overlay)
+function makeGlyphText(x, y, str, numberType)
+{
+	var g = new CanvasGlyph(textAtlas);
+	g.setText(str, numberType);
+	g.x = x;
+	g.y = y;
+	g.scaleX = g.scaleY = tileScale;
+	return g;
+}
+
 function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 {
 	var hiScoreInfo;
-	var canvas2, scoreStage;
+	var surface;
 	var titleText;
 	var recordId = -1;
 	var savedKeyDownHander;
 	var timeOutHandler = null;
+	var scoreTicker = null;
 
 	init();
 	
@@ -28,11 +73,10 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			return; //no score info don't need display 
 		}
 			
-		createCanvas2();
-		createScoreStage();
+		surface = new ScoreSurface();
 		setScoreBackground();
 		drawHiScoreList();
-		scoreStage.update();
+		surface.present();
 		if(recordId >= 0) {
 			var winner = 0;
 			if('w' in _curScoreInfo) winner = 1;
@@ -46,7 +90,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	
 	function closeScoreTable()
 	{
-		removeCanvas2();
+		removeScoreScreen();
 		restoreKeyDownHandler();
 		if(_callbackFun) _callbackFun();
 	}
@@ -98,42 +142,19 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 		return addId;
 	}
 	
-	function createCanvas2()
+	function removeScoreScreen()
 	{
-		canvas2 = document.createElement('canvas');
-		canvas2.id     = "canvas2";
-		canvas2.width  = canvasX;
-		canvas2.height = canvasY;
-	
-		//Set canvas top left position
-		var left = ((screenX1 - canvasX)/2|0),
-			top  = ((screenY1 - canvasY)/2|0);
-		canvas2.style.left = (left>0?left:0) + "px";
-		canvas2.style.top =  (top>0?top:0) + "px";
-		canvas2.style.position = "absolute";
-		document.body.appendChild(canvas2);
-	}	
-	
-	function createScoreStage() 
-	{
-		scoreStage = new createjs.Stage(canvas);
-	}	
-	
-	function removeCanvas2()
-	{
-		createjs.Ticker.removeEventListener("tick", scoreStage); //no-op unless name entry attached it
-		scoreStage.removeAllChildren();
-		scoreStage.update();
-		document.body.removeChild(canvas2);
+		if(scoreTicker) { createjs.Ticker.removeEventListener("tick", scoreTicker); scoreTicker = null; }
+		surface.clear();
+		//repaint the world underneath the (now empty) score surface
+		stagePresent();
 	}
-	
+
 	function setScoreBackground()
 	{
-		//set background color
-		var background = new createjs.Shape();
-		background.graphics.beginFill("black").drawRect(0, 0, canvas2.width, canvas2.height);
-		scoreStage.addChild(background);
-	}	
+		//full-screen black backdrop
+		surface.add(new CanvasShape().fillRect("black", 0, 0, canvas.width, canvas.height));
+	}
 	
 	function getNameStartPos(nameLength, itemId) 
 	{
@@ -147,34 +168,36 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 	{
 		var title = playDataToTitleName(_playData);
 		var localHighScore = "LOCAL HIGH SCORES";
-		var barTile;
 
-		//title 
-		drawText((NO_OF_TILES_X-title.length)/2*tileWScale, 0*tileHScale, title, scoreStage);
-		drawText((NO_OF_TILES_X-localHighScore.length)/2*tileWScale, 1.5*tileHScale, localHighScore, scoreStage);
-		drawText(0.5*tileWScale, 3*tileHScale, "NO", scoreStage);
-		drawText(7.75*tileWScale, 3*tileHScale, "NAME", scoreStage);
-		drawText(15.75*tileWScale, 3*tileHScale, "LEVEL", scoreStage);
-		drawText(22*tileWScale, 3*tileHScale, "SCORE", scoreStage);
+		//title
+		surface.add(makeGlyphText((NO_OF_TILES_X-title.length)/2*tileWScale, 0*tileHScale, title));
+		surface.add(makeGlyphText((NO_OF_TILES_X-localHighScore.length)/2*tileWScale, 1.5*tileHScale, localHighScore));
+		surface.add(makeGlyphText(0.5*tileWScale, 3*tileHScale, "NO"));
+		surface.add(makeGlyphText(7.75*tileWScale, 3*tileHScale, "NAME"));
+		surface.add(makeGlyphText(15.75*tileWScale, 3*tileHScale, "LEVEL"));
+		surface.add(makeGlyphText(22*tileWScale, 3*tileHScale, "SCORE"));
 
-		//bar 
+		//bar
+		var groundImg = getThemeBitmapImage("ground");
 		for(var x = 0; x < NO_OF_TILES_X; x++) {
-			barTile = getThemeBitmap("ground");
-			barTile.setTransform(x * tileWScale, 4.5*tileHScale , tileScale, tileScale);
-			scoreStage.addChild(barTile); 
-		}		
-	
+			var barTile = new CanvasBitmap(groundImg);
+			barTile.x = x * tileWScale;
+			barTile.y = 4.5*tileHScale;
+			barTile.scaleX = barTile.scaleY = tileScale;
+			surface.add(barTile);
+		}
+
 		for(var i = 0; i < MAX_HISCORE_RECORD; i++) {
 			var pos = getNameStartPos(hiScoreInfo[i].n.length, i);
-			
-			drawText(0.25*tileWScale, pos.y, ("0"+(i+1)).slice(-2) + ".", scoreStage); //no
-			
+
+			surface.add(makeGlyphText(0.25*tileWScale, pos.y, ("0"+(i+1)).slice(-2) + ".")); //no
+
 			if(hiScoreInfo[i].s > 0) {
 				if(hiScoreInfo[i].n.length > 0) {
-					drawText(pos.x, pos.y, hiScoreInfo[i].n, scoreStage, "D"); //name
+					surface.add(makeGlyphText(pos.x, pos.y, hiScoreInfo[i].n, "D")); //name
 				}
-				drawText(16.75*tileWScale, pos.y, ("00"+hiScoreInfo[i].l).slice(-3), scoreStage); //level
-				drawText(21*tileWScale, pos.y, ("000000"+hiScoreInfo[i].s).slice(-7), scoreStage); //score
+				surface.add(makeGlyphText(16.75*tileWScale, pos.y, ("00"+hiScoreInfo[i].l).slice(-3))); //level
+				surface.add(makeGlyphText(21*tileWScale, pos.y, ("000000"+hiScoreInfo[i].s).slice(-7))); //score
 			}
 		}
 	}
@@ -212,17 +235,27 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			inputNameState = 1;
 			curPos = playerName.length;
 			name = playerName.split(""); //string to array;
-			nameText = []; //text object
-			
+			nameText = null; //owned glyph run
+
 			var pos = getNameStartPos(name.length, recordId);
-			cursor = new createjs.Sprite(textData, "FLASH");
-			cursor.setTransform(pos.x-tileWScale/2, pos.y , tileScale, tileScale);
-			scoreStage.addChild(cursor);
-			
+			cursor = new CanvasGlyph(textAtlas);
+			cursor.setAnim(GLYPH_FLASH.frames, GLYPH_FLASH.speed);
+			cursor.x = pos.x - tileWScale/2;
+			cursor.y = pos.y;
+			cursor.scaleX = cursor.scaleY = tileScale;
+			surface.add(cursor);
+
 			//copyPlayerName();
 			redrawName();
 			changeKeyDownHandler();
-			createjs.Ticker.addEventListener("tick", scoreStage);
+			//tick-driven cursor blink + repaint (same Ticker cadence as before)
+			scoreTicker = createjs.Ticker.addEventListener("tick", scoreTick);
+		}
+
+		function scoreTick()
+		{
+			cursor.advance();
+			surface.present();
 		}
 		
 		function changeKeyDownHandler()
@@ -253,34 +286,35 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 				setPlayerName(nameString);     
 			}
 
-			//remove cursor
-			scoreStage.removeChild(cursor);
-			scoreStage.update();
-			
-			createjs.Ticker.removeEventListener("tick", scoreStage);
+			//remove cursor + stop the blink ticker; freeze final frame
+			surface.remove(cursor);
+			if(scoreTicker) { createjs.Ticker.removeEventListener("tick", scoreTicker); scoreTicker = null; }
+			surface.present();
+
 			setTimeout( function() { closeScoreTable(); }, 1500);
-			
+
 			inputNameState = 0;
 		}
-		
+
 		function removeNameText()
 		{
-			for(var i = 0; i < nameText.length; i++) 
-			scoreStage.removeChild(nameText[i]);
+			if(nameText) surface.remove(nameText);
+			nameText = null;
 		}
 
 		function redrawName()
 		{
-			var pos = getNameStartPos(name.length, recordId); 
+			var pos = getNameStartPos(name.length, recordId);
 			removeNameText();
-			nameText = drawText(pos.x, pos.y, name.join(""), scoreStage, "D");
+			nameText = makeGlyphText(pos.x, pos.y, name.join(""), "D");
+			surface.add(nameText);
 
 			//change cursor position
 			if(name.length > 0) cursor.x = pos.x + curPos * tileWScale;
 			else cursor.x = pos.x - tileWScale/2;
 
-			//move cursor to top
-			moveChild2Top(scoreStage, cursor);
+			//keep cursor on top
+			surface.moveToTop(cursor);
 		}
 		
 		function nextChar(charValue, nextMode)
@@ -381,45 +415,46 @@ function inputPlayerName(_stage, _callbackFun)
 	var inputStartX = inputBoardX + constSize + 1;
 	var inputStartY = inputBoardY + 1;
 	
-	var background = new createjs.Shape();
-	var textBorder = new createjs.Shape();
-	var textBackground = new createjs.Shape();
-	
-	background.graphics.beginFill("black").drawRect(0, 0, _stage.canvas.width, _stage.canvas.height).endFill();
+	var background = new CanvasShape();
+	var textBorder = new CanvasShape();
+	var textBackground = new CanvasShape();
+
+	background.fillRect("black", 0, 0, _stage.canvas.width, _stage.canvas.height);
 	background.alpha = 0.2;
-	
+
 	var x = inputBoardX*tileWScale, y = inputBoardY*tileHScale;
 	var w = totalSizeX*tileWScale, h = totalSizeY*tileHScale;
 	var radius = (tileWScale/4)|0;
-	textBorder.graphics.beginFill("#f00").drawRoundRect(x, y, w, h, radius).endFill();
+	textBorder.fillRoundRect("#f00", x, y, w, h, radius);
 	textBorder.alpha = 0.6;
-	textBorder.shadow = new  createjs.Shadow("#111", tileWScale/4, tileHScale/4, 10);
-	
+	textBorder.setShadow("#111", tileWScale/4, tileHScale/4, 10);
+
 	x = (inputBoardX+0.5)*tileWScale; y = (inputBoardY+0.5)*tileHScale;
 	w = (totalSizeX-1)*tileWScale; h = (totalSizeY-1)*tileHScale;
 	textBackground.alpha = 0.5;
-	textBackground.graphics.beginFill("#111").drawRoundRect(x, y, w, h, radius/2).endFill();
-	
-	_stage.addChild(background, textBorder, textBackground);
-	
+	textBackground.fillRoundRect("#111", x, y, w, h, radius/2);
+
+	canvasOverlay.add(background);
+	canvasOverlay.add(textBorder);
+	canvasOverlay.add(textBackground);
+
 	x = (inputBoardX+1)*tileWScale; y = (inputBoardY+1)*tileHScale;
-	var constObj = drawText(x, y, constString, _stage, "D");
+	var constObj = makeGlyphText(x, y, constString, "D");
+	canvasOverlay.add(constObj);
 
 	x = inputStartX*tileWScale; y = inputStartY*tileHScale;
 	inputString(_stage, maxInputSize, x, y, playerName, inputComplete);
-	
-	function inputComplete(string) 
+
+	function inputComplete(string)
 	{
 		setPlayerName(string);
 		playerName = string;
-		
-		//remove const object
-		for(var i = 0; i < constObj.length; i++) 
-			_stage.removeChild(constObj[i]);
-		
-		//remove textBackground, textBorder & background
-		_stage.removeChild(textBackground, textBorder, background);
-		_stage.update();
+
+		canvasOverlay.remove(constObj);
+		canvasOverlay.remove(textBackground);
+		canvasOverlay.remove(textBorder);
+		canvasOverlay.remove(background);
+		stagePresent();
 		_callbackFun();
 	}
 }
@@ -457,36 +492,49 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 	function initInput()
 	{
 		inputNameState = 1;
-		
+
 		curPos = _defaultString.length; // cursor start position
 		inputText = _defaultString.split(""); //string to array
-		inputObj = []; //text object
-			
-		cursor = new createjs.Sprite(textData, "FLASH");
-		cursor.setTransform(_startX, _startY, tileScale, tileScale);
-		_stage.addChild(cursor);
-			
+		inputObj = null; //owned glyph run
+
+		cursor = new CanvasGlyph(textAtlas);
+		cursor.setAnim(GLYPH_FLASH.frames, GLYPH_FLASH.speed);
+		cursor.x = _startX;
+		cursor.y = _startY;
+		cursor.scaleX = cursor.scaleY = tileScale;
+		canvasOverlay.add(cursor);
+
 		drawString();
 		changeKeyDownHandler();
-		//hiScoreTicker = createjs.Ticker.on("tick", scoreStage);	
+		//tick-driven cursor blink + overlay repaint (same Ticker cadence as the score screen)
+		hiScoreTicker = createjs.Ticker.addEventListener("tick", inputTick);
 	}
-		
+
+	function inputTick()
+	{
+		cursor.advance();
+		stagePresent();
+	}
+
 	function drawString()
 	{
 		clearStringObj();
-		inputObj = drawText(_startX, _startY, inputText.join(""), _stage, "D");
+		inputObj = makeGlyphText(_startX, _startY, inputText.join(""), "D");
+		canvasOverlay.add(inputObj);
 
 		//change cursor position
 		cursor.x = _startX + curPos * tileWScale;
 
-		//move cursor to top
-		moveChild2Top(_stage, cursor);
-	}	
-	
+		//keep cursor on top, then repaint the overlay
+		canvasOverlay.remove(cursor);
+		canvasOverlay.add(cursor);
+		stagePresent();
+	}
+
 	function clearStringObj()
 	{
-		for(var i = 0; i < inputObj.length; i++) 
-			_stage.removeChild(inputObj[i]);
+		if(inputObj) canvasOverlay.remove(inputObj);
+		inputObj = null;
 	}
 	
 	function changeKeyDownHandler()
@@ -590,13 +638,14 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 		
 		restoreKeyDownHandler();
 
-		//remove cursor
+		//stop blink + remove cursor
+		if(hiScoreTicker) { createjs.Ticker.removeEventListener("tick", inputTick); hiScoreTicker = null; }
 		clearStringObj();
-		_stage.removeChild(cursor);
-		_stage.update();
+		canvasOverlay.remove(cursor);
+		stagePresent();
 
 		_callbackFun(inputText.join(""));
-		
+
 		inputNameState = 0;
 	}
 }

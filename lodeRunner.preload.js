@@ -122,6 +122,7 @@ var runnerData;
 var guardData = {}, redhatData = {};
 var holeData, holeObj = {};
 var textData;
+var textAtlas; //owned glyph atlas (lodeRunner.glyphFont.js) over the text image
 var countryFlagData;
 
 var soundFall, soundDig, soundPass, soundEnding;
@@ -606,6 +607,10 @@ function createPreloadSpriteSheet()
  			"D5": 55, "D6": 56, "D7": 57, "D8": 58, "D9": 59
 		}
 	});
+
+	//owned glyph atlas over the same recolored image (rebuilt with textData on
+	//theme/color change); used by CanvasGlyph text on the owned score screen
+	textAtlas = makeGlyphAtlas(getThemeBitmap("text").image, BASE_TILE_X, BASE_TILE_Y);
 }
 
 function createGuardObj(imageName)

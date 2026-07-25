@@ -28,6 +28,33 @@ describe("misc.js CreateJS peel (characterization)", () => {
 		}
 	});
 
+	it("glyphFont.js is createjs-free and wired into both HTML shells", () => {
+		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.glyphFont.js"), "utf8");
+		assert.doesNotMatch(text, /createjs\./);
+		assert.match(text, /function makeGlyphAtlas/);
+		assert.match(text, /function charToGlyphName/);
+		for (const shell of ["lodeRunner.html", "test/golden-browser.html"]) {
+			const html = fs.readFileSync(path.join(ROOT, shell), "utf8");
+			assert.match(html, /src="lodeRunner\.glyphFont\.js"/, shell);
+		}
+	});
+
+	it("hiscore.js dropped its createjs Stage/Sprite/Shape (Ticker facade stays until Phase 3)", () => {
+		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.hiscore.js"), "utf8");
+		assert.doesNotMatch(text, /createjs\.Stage/);
+		assert.doesNotMatch(text, /createjs\.Sprite/);
+		assert.doesNotMatch(text, /createjs\.Shape/);
+		assert.doesNotMatch(text, /createjs\.Shadow/);
+		// the only createjs left is the Ticker facade (Phase 3 target)
+		const refs = text.match(/createjs\.\w+/g) || [];
+		assert.ok(refs.every((r) => r === "createjs.Ticker"), `unexpected createjs refs: ${refs}`);
+		// no scoreStage / canvas2 / drawText render coupling remains
+		assert.doesNotMatch(text, /scoreStage/);
+		assert.doesNotMatch(text, /canvas2/);
+		assert.match(text, /ScoreSurface/);
+		assert.match(text, /CanvasGlyph/);
+	});
+
 	it("all repaints funnel through the stagePresent seam", () => {
 		// the one mainStage.update() left in source is inside stagePresent()
 		const files = fs
