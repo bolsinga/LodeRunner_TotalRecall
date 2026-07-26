@@ -1,7 +1,10 @@
 // AI version 4 (the only version this port targets) speed constants, from
 // lodeRunner.preload.js's spriteSpeed table (ver 3 & 4 row: xMoveBase=8, yMoveBase=9).
-private let runnerXMove = 8
-private let runnerYMove = 9
+// Not `private`: guard.js's xMove/yMove are the SAME shared module-level pair the
+// runner reads (confirmed in the phase-3a plan), so RunnerSimulation+Guard.swift
+// reuses these literally rather than declaring its own copies.
+let runnerXMove = 8
+let runnerYMove = 9
 
 // digHoleLeft/digHoleRight table length, lodeRunner.runner.js:456-457.
 private let digAnimationFrameCount = 11
@@ -39,18 +42,28 @@ public enum RunnerSimulationError: Error, Equatable, Sendable, CustomStringConve
     }
 }
 
-/// Ported from `lodeRunner.runner.js`, targeting AI version 4 only. Guard-existence
-/// gated logic (`checkCollision`, the guard-interrupt path in digging, the
-/// guard-head landing clamp) is deferred to a later phase — see the phase-2 plan for
-/// why each is a provable no-op with zero guards on the map.
+/// Ported from `lodeRunner.runner.js` and `lodeRunner.guard.js`, targeting AI
+/// version 4 only. Guard pathfinding (`scanFloor`/`scanDown`/`scanUp`) is deferred
+/// to a later phase — see the phase-3a plan for why `bestMove` falls back to
+/// `.stop` when a guard can't directly chase the runner.
 public struct RunnerSimulation: Equatable, Codable, Sendable {
-    public private(set) var slots: [[LevelSlot]]  // [x][y]
+    // `internal(set)`, not `private(set)`: RunnerSimulation+Guard.swift's
+    // extension needs write access too, and `private` in Swift is file-scoped —
+    // it wouldn't be visible there even though it's the same type.
+    public internal(set) var slots: [[LevelSlot]]  // [x][y]
     public private(set) var runner: Runner
     public private(set) var digState: DigState?
     public private(set) var fillStates: [FillState]
     public private(set) var goldRemaining: Int
     public private(set) var goldComplete: Bool
-    public private(set) var phase: RunnerPhase
+    public internal(set) var phase: RunnerPhase
+
+    public internal(set) var guards: [Guard]
+    var moveOffset: Int
+    var moveId: Int
+    public internal(set) var shakingGuards: [ShakeState]
+    public internal(set) var rebornGuards: [RebornState]
+    var columnPicker: ShuffledColumnPicker
 
     public init(level: LevelParseResult) throws {
         guard let spawn = level.runner else {
@@ -63,10 +76,17 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         goldRemaining = level.goldCount
         goldComplete = false
         phase = .playing
+
+        guards = level.guards.map { Guard(position: $0) }
+        moveOffset = 0
+        moveId = 0
+        shakingGuards = []
+        rebornGuards = []
+        columnPicker = ShuffledColumnPicker(columns: LevelGrid.tilesX)
     }
 
     /// Advance the simulation by exactly one tick. Ported from `playGame`'s ordering
-    /// in `lodeRunner.main.js:878-908` (minus every guard-related step).
+    /// in `lodeRunner.main.js:878-908`.
     public mutating func tick(_ requestedAction: RunnerAction) {
         guard phase == .playing else { return }
 
@@ -75,13 +95,19 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
             return
         }
 
-        if digState == nil {
+        if !isDigging() {
             moveRunner(requestedAction)
         } else {
             processDigHole()
         }
 
-        processFillHole()  // always runs, matching main.js's unconditional per-tick call
+        if phase != .dead {
+            moveGuard()
+        }
+
+        processGuardShake()
+        processFillHole()
+        processReborn()
     }
 
     // MARK: - moveRunner (lodeRunner.runner.js:8-115)
@@ -225,7 +251,9 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                 slots[x][y].current = curToken
                 y -= 1
                 yOffset = TileGeometry.tileHeight + yOffset
-                // guard-collision check deferred (runner.js:161)
+                if slots[x][y].current == .guard && guardAlive(at: GridPoint(x: x, y: y)) {
+                    phase = .dead
+                }
             }
         }
 
@@ -259,9 +287,16 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                 slots[x][y].current = curToken
                 y += 1
                 yOffset -= TileGeometry.tileHeight
-                // guard-collision check deferred (runner.js:198)
+                if slots[x][y].current == .guard && guardAlive(at: GridPoint(x: x, y: y)) {
+                    phase = .dead
+                }
             }
-            // guard-head landing clamp deferred (runner.js:205-209)
+
+            if y < TileGeometry.maxTileY, slots[x][y + 1].current == .guard,
+                let gid = guardIndex(at: GridPoint(x: x, y: y + 1)), yOffset > guards[gid].yOffset
+            {
+                yOffset = guards[gid].yOffset
+            }
         }
 
         if centerY == .down {
@@ -278,7 +313,9 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                 slots[x][y].current = curToken
                 x -= 1
                 xOffset = TileGeometry.tileWidth + xOffset
-                // guard-collision check deferred (runner.js:236)
+                if slots[x][y].current == .guard && guardAlive(at: GridPoint(x: x, y: y)) {
+                    phase = .dead
+                }
             }
         }
 
@@ -296,7 +333,9 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                 slots[x][y].current = curToken
                 x += 1
                 xOffset -= TileGeometry.tileWidth
-                // guard-collision check deferred (runner.js:256)
+                if slots[x][y].current == .guard && guardAlive(at: GridPoint(x: x, y: y)) {
+                    phase = .dead
+                }
             }
         }
 
@@ -319,17 +358,57 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                     && yOffset < TileGeometry.quarterTileHeight))
         {
             slots[x][y].base = .empty
-            goldRemaining -= 1
-            if goldRemaining <= 0 {
-                showHideLaddr()
-            }
+            decGold()
         }
 
-        // checkCollision deferred entirely (runner.js:374-422) — guard-existence
-        // gated, provably a no-op with zero guards on the map.
+        checkCollision(x, y)
+    }
+
+    // MARK: - Collision (lodeRunner.runner.js:374-422)
+
+    /// Proximity check, independent of and complementary to the inline
+    /// tile-crossing checks above: catches a guard already adjacent to the
+    /// runner even when neither party's movement this tick crossed a tile
+    /// boundary. Priority order (first match wins) is UP, DOWN, LEFT, RIGHT.
+    private mutating func checkCollision(_ runnerX: Int, _ runnerY: Int) {
+        var neighbor: GridPoint?
+        if runnerY > 0 && slots[runnerX][runnerY - 1].current == .guard {
+            neighbor = GridPoint(x: runnerX, y: runnerY - 1)
+        } else if runnerY < TileGeometry.maxTileY && slots[runnerX][runnerY + 1].current == .guard {
+            neighbor = GridPoint(x: runnerX, y: runnerY + 1)
+        } else if runnerX > 0 && slots[runnerX - 1][runnerY].current == .guard {
+            neighbor = GridPoint(x: runnerX - 1, y: runnerY)
+        } else if runnerX < TileGeometry.maxTileX && slots[runnerX + 1][runnerY].current == .guard {
+            neighbor = GridPoint(x: runnerX + 1, y: runnerY)
+        }
+
+        guard let neighbor, guardAlive(at: neighbor), let gid = guardIndex(at: neighbor) else { return }
+
+        let runnerPosX = runner.position.x * TileGeometry.tileWidth + runner.xOffset
+        let runnerPosY = runner.position.y * TileGeometry.tileHeight + runner.yOffset
+        let guardPosX = guards[gid].position.x * TileGeometry.tileWidth + guards[gid].xOffset
+        let guardPosY = guards[gid].position.y * TileGeometry.tileHeight + guards[gid].yOffset
+
+        let dw = abs(runnerPosX - guardPosX)
+        let dh = abs(runnerPosY - guardPosY)
+
+        if dw <= TileGeometry.quarterTileWidth * 3 && dh <= TileGeometry.quarterTileHeight * 3 {
+            phase = .dead
+        }
     }
 
     // MARK: - Gold / hidden ladders (lodeRunner.runner.js:326-372)
+
+    /// Shared by the runner's own gold pickup and a guard's gold-drop/hand-back
+    /// paths (`runner.js:327-336`). Not `private`: called from
+    /// `RunnerSimulation+Guard.swift` too — `private` is file-scoped in Swift,
+    /// and Swift extensions in other files can't see file-private members.
+    mutating func decGold() {
+        goldRemaining -= 1
+        if goldRemaining <= 0 {
+            showHideLaddr()
+        }
+    }
 
     private mutating func showHideLaddr() {
         for y in 0..<LevelGrid.tilesY {
@@ -343,7 +422,39 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         goldComplete = true
     }
 
-    // MARK: - Digging (lodeRunner.runner.js:425-731, minus the guard-interrupt path)
+    // MARK: - Digging (lodeRunner.runner.js:425-731)
+
+    /// Gates `tick()`'s dispatch between `moveRunner`/`processDigHole`, with a
+    /// guard-interrupt side effect (`runner.js:522-564`): if a guard has walked
+    /// into the digger's own row/column (not the brick cell — `digState.pos` is
+    /// the runner's row, per `DigState`'s doc comment), either abort the dig
+    /// instantly or, if it's progressed far enough, pre-empty the hole so this
+    /// tick falls through to `processDigHole` as usual.
+    private mutating func isDigging() -> Bool {
+        guard let state = digState else { return false }
+        guard slots[state.pos.x][state.pos.y].current == .guard,
+            let gid = guardIndex(at: state.pos)
+        else {
+            return true
+        }
+        if state.frameIndex < guardDigInterruptFrameLimit
+            && guards[gid].yOffset > -TileGeometry.quarterTileHeight
+        {
+            stopDigging()
+            return false
+        } else {
+            slots[state.pos.x][state.pos.y + 1].current = .empty  // "assume hole complete"
+            return true
+        }
+    }
+
+    /// Instant abort: no `FillState`/186-tick delay, unlike normal completion.
+    private mutating func stopDigging() {
+        guard let state = digState else { return }
+        let cell = GridPoint(x: state.pos.x, y: state.pos.y + 1)
+        slots[cell.x][cell.y].current = slots[cell.x][cell.y].base
+        digState = nil
+    }
 
     private func ok2Dig(_ action: RunnerAction) -> Bool {
         let x = runner.position.x
@@ -411,6 +522,18 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         let cell = state.position
         if slots[cell.x][cell.y].current == .runner {
             phase = .dead
+        } else if slots[cell.x][cell.y].current == .guard, let gid = guardIndex(at: cell) {
+            if guards[gid].action == .inHole {
+                removeFromShake(gid)
+            }
+            if guards[gid].hasGold > 0 {
+                decGold()
+                guards[gid] = Guard(
+                    position: guards[gid].position, xOffset: guards[gid].xOffset,
+                    yOffset: guards[gid].yOffset, action: guards[gid].action, hasGold: 0,
+                    holePos: guards[gid].holePos)
+            }
+            guardReborn(at: cell)
         }
         slots[cell.x][cell.y].current = .brick
     }
