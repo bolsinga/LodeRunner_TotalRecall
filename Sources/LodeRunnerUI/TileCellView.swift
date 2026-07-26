@@ -42,9 +42,11 @@ extension TileType {
     }
 }
 
-private struct AllTilesRow: View {
+private struct AllTilesGrid: View {
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+
     var body: some View {
-        HStack(spacing: 1) {
+        LazyVGrid(columns: columns, spacing: 8) {
             ForEach(
                 [
                     TileType.empty, .brick, .solid, .ladder, .bar, .trap, .hiddenLadder, .gold,
@@ -59,9 +61,9 @@ private struct AllTilesRow: View {
 }
 
 #Preview("Apple2") {
-    AllTilesRow().environment(\.tileTheme, .apple2)
+    AllTilesGrid().environment(\.tileTheme, .apple2)
 }
 
 #Preview("C64") {
-    AllTilesRow().environment(\.tileTheme, .c64)
+    AllTilesGrid().environment(\.tileTheme, .c64)
 }
