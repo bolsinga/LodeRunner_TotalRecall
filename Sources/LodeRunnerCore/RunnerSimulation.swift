@@ -16,15 +16,15 @@ private let fillFrameDurations = [166, 8, 8, 4]
 /// as-is (not renamed/normalized) to avoid introducing an off-by-one bug porting the
 /// several call sites that rely on this convention.
 public struct DigState: Equatable, Codable, Sendable {
-    public var pos: GridPoint
-    public var direction: RunnerAction  // .digLeft or .digRight
+    public let pos: GridPoint
+    public let direction: RunnerAction  // .digLeft or .digRight
     public var frameIndex: Int
 }
 
 /// A brick mid-refill. `position` is the absolute brick cell (already correct in the
 /// JS's `fillHoleObj` entries, no off-by-one convention here).
 public struct FillState: Equatable, Codable, Sendable {
-    public var position: GridPoint
+    public let position: GridPoint
     public var frameIndex: Int
     public var frameTime: Int
 }
