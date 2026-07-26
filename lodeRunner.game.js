@@ -44,5 +44,8 @@ var game = (function() {
 })();
 
 // The game subscribes; the menu fires into the void and never calls it directly.
-document.addEventListener("menu-open",  function() { game.suspend(false); });
+document.addEventListener("menu-open",  function() {
+	if(playMode == PLAY_AUTO || idleTimer) stopDemoAndPlay();
+	game.suspend(false);
+});
 document.addEventListener("menu-close", function() { game.suspend(true); });

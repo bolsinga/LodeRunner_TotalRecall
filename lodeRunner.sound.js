@@ -274,12 +274,50 @@ function resumeAudioContext()
 	try {
 		var ctx = getAudioContext();
 		_playEmptySound();
-		if (ctx.state === "suspended") {
-			ctx.resume();
-			console.log("Resume Web Audio context...");
-		}
+		if (ctx.state === "suspended") ctx.resume();
 	} catch (e) {
 		console.error("There was an error while trying to resume the Web Audio context...");
 		console.error(e);
 	}
+}
+
+//=============================================================================
+// One-time audio unlock.
+//
+// Browsers create the AudioContext suspended until the page sees a user
+// gesture. Rather than have every path that might follow a gesture remember to
+// unlock (which it will eventually forget to do), listen on the document and
+// unlock on whatever gesture arrives first.
+//
+// Keep listening until the context is actually running. Not every gesture
+// qualifies -- a bare modifier key (Ctrl on its own) is rejected -- and
+// unbinding on a rejected attempt would leave the game silent for good.
+//
+// The listeners do not consume the event -- they observe it and get out of the
+// way, so the click or key still reaches whatever it was aimed at.
+//
+// _playEmptySound stays: on iOS, resume() alone does not unlock Web Audio,
+// which is why every audio library plays a silent buffer on the first gesture.
+//=============================================================================
+var UNLOCK_EVENTS = ["pointerdown", "touchend", "keydown"];
+
+function initAudioUnlock()
+{
+	function stopListening() {
+		for (var i = 0; i < UNLOCK_EVENTS.length; i++)
+			document.removeEventListener(UNLOCK_EVENTS[i], unlock, true);
+	}
+	function unlock() {
+		resumeAudioContext();
+		var ctx = getAudioContext();
+		if (ctx.state === "running") { stopListening(); return; }
+		// resume() is async: unbind only once it has actually taken effect.
+		if (ctx.state === "suspended" && ctx.resume) {
+			ctx.resume().then(function() {
+				if (getAudioContext().state === "running") stopListening();
+			}, function() { /* rejected: keep listening for a real gesture */ });
+		}
+	}
+	for (var i = 0; i < UNLOCK_EVENTS.length; i++)
+		document.addEventListener(UNLOCK_EVENTS[i], unlock, true);
 }

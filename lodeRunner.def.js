@@ -58,6 +58,7 @@ var KEYCODE_BKSPACE = 8, //backspace
 	KEYCODE_E = 69, //'E'
 	KEYCODE_G = 71, //'G'	
 	KEYCODE_H = 72, //'H'
+	KEYCODE_M = 77, //'M'
 	KEYCODE_Q = 81, //'Q'
 	KEYCODE_R = 82, //'R'
 	KEYCODE_S = 83, //'S'

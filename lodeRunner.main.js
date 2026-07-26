@@ -70,7 +70,8 @@ function init()
 
 	canvasReSize();
 	createStage();
-	initGameInput(); // the canvas owns the game's keyboard input
+	initGameInput();   // the canvas owns the game's keyboard input
+	initAudioUnlock(); // unlock audio on the first gesture, wherever it lands
 	setBackground();
 	initAutoDemoRnd(); //init auto demo random levels
 	
@@ -221,12 +222,10 @@ function stopDemoAndPlay()
 	clearIdleDemoTimer();
 	disableStageClickEvent();
 
-	soundStop(soundFall);		
+	soundStop(soundFall);
 	stopAllSpriteObj();
-	
-	resumeAudioContext(); //05/15/2018, chrome 66 default mute autoplay, need resume it
-	
-	if(playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) selectIconObj.disable(1); 
+
+	if(playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) selectIconObj.disable(1);
 	if(playMode == PLAY_DEMO_ONCE) showStartMsg = 0;
 	////genUserLevel(MAX_EDIT_LEVEL); //for debug only
 	////getEditLevelInfo(); //load edit levels

@@ -50,7 +50,7 @@ dialog.ls-dialog {
 	box-sizing: border-box;
 	margin: 0 auto 0 0;               /* pin to the LEFT edge */
 	height: 100dvh; max-height: 100dvh;
-	width: min(340px, 86vw);
+	width: min(400px, 90vw);
 	padding: 0; border: 0;
 	border-right: 2px solid var(--ls-panel-edge);
 	background: linear-gradient(180deg, var(--ls-panel) 0%, #101019 100%);
@@ -196,6 +196,41 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 }
 .ls-dialog .pick:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
 .ls-dialog .pick-group { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Anchor the option list below the control instead of letting the OS draw it
+   on top. Chrome only for now; ignored elsewhere. */
+@supports (appearance: base-select) {
+	.ls-dialog .pick { appearance: base-select; }
+	.ls-dialog .pick::picker-icon { color: var(--ls-ink-dim); transition: transform .2s; }
+	.ls-dialog .pick:open::picker-icon { transform: rotate(180deg); }
+	.ls-dialog .pick::picker(select) {
+		appearance: base-select;
+		margin-top: 4px; padding: 4px;
+		background: var(--ls-panel);
+		border: 1px solid var(--ls-panel-edge);
+		border-radius: var(--ls-radius);
+		box-shadow: 0 12px 32px rgba(0,0,0,.6);
+		opacity: 0; transform: translateY(-4px);
+		transition: opacity .16s, transform .16s,
+		            overlay .16s allow-discrete, display .16s allow-discrete;
+	}
+	.ls-dialog .pick:open::picker(select) { opacity: 1; transform: translateY(0); }
+	@starting-style {
+		.ls-dialog .pick:open::picker(select) { opacity: 0; transform: translateY(-4px); }
+	}
+	.ls-dialog .pick option {
+		padding: 7px 10px; border-radius: 2px;
+		color: var(--ls-ink); background: transparent;
+		white-space: nowrap;
+	}
+	.ls-dialog .pick option:hover { background: rgba(95,158,195,.18); color: var(--ls-cyan-bright); }
+	.ls-dialog .pick option:checked { color: var(--ls-gold); }
+	.ls-dialog .pick option::checkmark { display: none; }
+	.ls-dialog .pick option:focus-visible { outline: none; }
+	/* base-select sizes to the selected text, not the longest option, so the
+	   190px cap would wrap it -- let the closed control size itself instead. */
+	.ls-dialog .pick { max-width: none; white-space: nowrap; }
+}
 .ls-dialog .icon-btn {
 	width: 28px; height: 28px; flex: none; padding: 0;
 	display: grid; place-items: center;
@@ -216,8 +251,12 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	letter-spacing: .04em;
 	transition: border-color .12s, color .12s, background .12s;
 }
-.ls-dialog .btn:hover { border-color: var(--ls-cyan); color: var(--ls-cyan-bright); }
+.ls-dialog .btn:hover:not(:disabled) { border-color: var(--ls-cyan); color: var(--ls-cyan-bright); }
 .ls-dialog .btn:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+.ls-dialog .btn:disabled {
+	color: #3a3a4d; border-color: #1e1e2c;
+	background: transparent; cursor: default;
+}
 
 /* sub-view content */
 .ls-dialog .help-h {

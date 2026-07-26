@@ -48,7 +48,6 @@ var gameSettings = {
 		if(cur === want) return;
 		if(inDemo) demoSoundOff = want; else soundOff = want;
 		if(want) { soundStop(soundDig); soundStop(soundFall); } //muting: cut looping sfx
-		else resumeAudioContext();                              //unmuting: user gesture unlock
 		this._notify("sound", on);
 	},
 
@@ -131,6 +130,22 @@ var gameSettings = {
 	enterEditor: function() {
 		editEdit(0, null);
 		this._notify("mode", PLAY_EDIT);
+	},
+
+	//open the level picker for the current mode. Training/Demo only -- Challenge
+	//starts at level 1 and progresses, so there is nothing to pick.
+	chooseLevel: function() {
+		var self = this;
+		levelSelect.open({
+			current: curLevel,
+			onPick: function(level) {
+				soundStop(soundDig); soundStop(soundFall);
+				curLevel = level;
+				if(playMode == PLAY_DEMO) setDemoInfo(); else setModernInfo();
+				startGame();
+				self._notify("level", level);
+			}
+		});
 	}
 };
 
@@ -174,6 +189,10 @@ var settingsPanel = (function() {
 		toggleBtn = el("button", "ls-toggle");
 		toggleBtn.setAttribute("aria-label", "Settings");
 		toggleBtn.innerHTML = "<span></span><span></span><span></span>";
+		// The toggle never holds focus. Clicking it focuses it, and closing the
+		// dialog hands focus back to it -- either way the game would be left with
+		// a focused button eating the keys meant for the board.
+		toggleBtn.addEventListener("focus", function(){ focusGame(); });
 
 		dialog = document.createElement("dialog");
 		dialog.className = "ls-dialog";
@@ -200,6 +219,9 @@ var settingsPanel = (function() {
 		var versionOpts = "";
 		for(var i = 0; i < playVersionInfo.length; i++)
 			versionOpts += '<option value="' + playVersionInfo[i].id + '">' + playVersionInfo[i].name.trim() + '</option>';
+		//Custom Levels is a selectable version too -- the editor switches to it, so
+		//without an option here the dropdown goes blank and strands the user.
+		versionOpts += '<option value="' + PLAY_DATA_USERDEF + '">' + playDataNameUserDef + '</option>';
 		//mode dropdown = Challenge / Training / Demo (Edit is the separate Level Editor item)
 		var MODE_KEYS = ["challenge", "training", "demo"];
 		var modeOpts = "";
@@ -231,7 +253,7 @@ var settingsPanel = (function() {
 				'</div>' +
 				//Level: gated by mode (Training/Demo only); the rich picker is deferred
 				'<div class="row"><span class="row-name">Level<small>Training / Demo</small></span>' +
-					'<button class="btn ls-level" disabled title="Level selection is coming soon">Choose&hellip;</button>' +
+					'<button class="btn ls-level">Choose&hellip;</button>' +
 				'</div>' +
 				'<div class="row"><span class="row-name">Level Editor</span>' +
 					'<button class="btn ls-editor">Open</button>' +
@@ -362,17 +384,36 @@ var settingsPanel = (function() {
 		renderSpeed();
 		syncNav();
 	}
-	//reflect the loaded version + play mode; Level is enabled only in Training/Demo
+	// Set a <select> to a value, but never leave it blank. Assigning a value with
+	// no matching <option> silently sets selectedIndex = -1 and the control shows
+	// nothing -- so it would lie about the game's state instead of reporting it.
+	// Fall back to the first option and report what actually took.
+	function selectValue(sel, value) {
+		sel.value = String(value);
+		if(sel.selectedIndex < 0) {
+			debug("settings: no option for '" + value + "' in ." + sel.className + ", falling back");
+			sel.selectedIndex = 0;
+		}
+		return sel.value;
+	}
+
+	// Reflect the loaded version + play mode. This reads live game state on every
+	// open, so it reports whatever the game is actually doing -- including a state
+	// something else put it in.
 	function syncNav() {
-		var version = gameSettings.get("version");
 		var vsel = dialog.querySelector(".ls-version");
-		if(version != null) vsel.value = String(version);
-		//map current playMode to a mode-dropdown key (edit/other stay on their nearest)
+		selectValue(vsel, gameSettings.get("version"));
+
+		// map current playMode to a mode-dropdown key (edit/other stay on their nearest)
 		var mode = gameSettings.get("mode");
-		var key = (mode === PLAY_MODERN) ? "training" : (mode === PLAY_DEMO || mode === PLAY_DEMO_ONCE) ? "demo" : "challenge";
-		dialog.querySelector(".ls-mode").value = key;
-		//Level picker: available in Training/Demo only (matches legacy selectIcon gating)
-		dialog.querySelector(".ls-level").disabled = !(mode === PLAY_MODERN || mode === PLAY_DEMO);
+		var key = (mode === PLAY_MODERN) ? "training"
+		        : (mode === PLAY_DEMO || mode === PLAY_DEMO_ONCE) ? "demo"
+		        : "challenge";
+		key = selectValue(dialog.querySelector(".ls-mode"), key);
+
+		// Level picker follows what the dropdown ACTUALLY shows, not what we asked
+		// for, so the control and its gating can never disagree.
+		dialog.querySelector(".ls-level").disabled = (key !== "training" && key !== "demo");
 	}
 	//swatch backgrounds follow the active theme's true brick colors
 	//(Apple II and C64 differ; "original" is the sampled brick color)
@@ -410,6 +451,10 @@ var settingsPanel = (function() {
 			setMenuOpen(false);
 			gameSettings.enterEditor();
 		};
+		dialog.querySelector(".ls-level").onclick = function(){
+			setMenuOpen(false);
+			gameSettings.chooseLevel();
+		};
 
 		dialog.querySelector(".ls-theme").onclick = function(e){
 			var b = e.target.closest("button"); if(!b) return;
@@ -445,6 +490,15 @@ var settingsPanel = (function() {
 		// the native close event is the one place every close path converges
 		// (Esc, backdrop click, .close()), so announce menu-close from here
 		dialog.addEventListener("close", function(){ announce("menu-close"); });
+
+		// Ctrl+M toggles the menu. On the document, not the canvas: the shortcut
+		// belongs to the menu rather than to gameplay, and one handler owning
+		// both halves means it works whether the game or the dialog has focus.
+		document.addEventListener("keydown", function(e){
+			if(!e.ctrlKey || e.keyCode !== KEYCODE_M) return;
+			e.preventDefault();
+			setMenuOpen(!dialog.open);
+		}, true);
 
 		//keep controls live if game state changes a value while open
 		gameSettings.onChange(function(){ if(dialog.open) syncFromModel(); });

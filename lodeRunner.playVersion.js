@@ -47,6 +47,17 @@ function ensurePlayVersionLoaded(id, callback)
 	loadScriptsParallel(need, callback);
 }
 
+/** Are this version's level and demo packs already in memory? */
+function isPlayVersionLoaded(id)
+{
+	if (id == PLAY_DATA_USERDEF || id < 1) return true;   // custom levels are local
+	var info = findPlayVersionInfo(id);
+	if (!info) return false;
+	if (info.script && !isGlobalDefined(info.globalName)) return false;
+	if (info.demoScript && !isGlobalDefined(info.demoGlobal)) return false;
+	return true;
+}
+
 function getPlayVerData(id) 
 {
 	var info = findPlayVersionInfo(id);
