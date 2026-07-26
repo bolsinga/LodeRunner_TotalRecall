@@ -43,9 +43,7 @@ public enum RunnerSimulationError: Error, Equatable, Sendable, CustomStringConve
 }
 
 /// Ported from `lodeRunner.runner.js` and `lodeRunner.guard.js`, targeting AI
-/// version 4 only. Guard pathfinding (`scanFloor`/`scanDown`/`scanUp`) is deferred
-/// to a later phase — see the phase-3a plan for why `bestMove` falls back to
-/// `.stop` when a guard can't directly chase the runner.
+/// version 4 only.
 public struct RunnerSimulation: Equatable, Codable, Sendable {
     // `internal(set)`, not `private(set)`: RunnerSimulation+Guard.swift's
     // extension needs write access too, and `private` in Swift is file-scoped —
@@ -57,6 +55,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     public private(set) var goldRemaining: Int
     public private(set) var goldComplete: Bool
     public internal(set) var phase: RunnerPhase
+    public internal(set) var score: Int
 
     public internal(set) var guards: [Guard]
     var moveOffset: Int
@@ -76,6 +75,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         goldRemaining = level.goldCount
         goldComplete = false
         phase = .playing
+        score = 0
 
         guards = level.guards.map { Guard(position: $0) }
         moveOffset = 0
@@ -348,7 +348,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
 
         slots[x][y].current = .runner
 
-        // Gold pickup (runner.js:301-307) — the left/right check is deliberately
+        // Gold pickup (runner.js:301-314) — the left/right check is deliberately
         // asymmetric (only 0 <= xOffset < quarterTileWidth, no negative-offset
         // counterpart for approaching from the right); preserve as written.
         if slots[x][y].base == .gold
@@ -359,6 +359,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         {
             slots[x][y].base = .empty
             decGold()
+            addScore(250)
         }
 
         checkCollision(x, y)
@@ -408,6 +409,11 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         if goldRemaining <= 0 {
             showHideLaddr()
         }
+    }
+
+    // SCORE_* constants, lodeRunner.def.js:80-82.
+    mutating func addScore(_ points: Int) {
+        score += points
     }
 
     private mutating func showHideLaddr() {
@@ -534,6 +540,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                     holePos: guards[gid].holePos)
             }
             guardReborn(at: cell)
+            addScore(75)  // SCORE_GUARD_DEAD, runner.js:670-671.
         }
         slots[cell.x][cell.y].current = .brick
     }

@@ -257,9 +257,11 @@ func guardFallsIntoHoleAndClimbsOut() throws {
             enteredHole = true
             break
         }
+        #expect(sim.score == 0)  // SCORE_IN_HOLE only fires once landed.
     }
     #expect(enteredHole)
     #expect(sim.guards[0].position == GridPoint(x: 4, y: 11))
+    #expect(sim.score == 75)
 
     // Once the guard climbs back out, it lands on the runner's own row (y=10)
     // right next to it, and — since the runner just sits still (.stop) — the
@@ -276,6 +278,57 @@ func guardFallsIntoHoleAndClimbsOut() throws {
         }
     }
     #expect(climbedOut)
+    #expect(sim.shakingGuards.isEmpty)
+    #expect(sim.score == 75)  // unchanged by shaking/climbing out, only by landing.
+}
+
+@Test("a guard buried while still in the hole scores SCORE_GUARD_DEAD too")
+func guardBuriedWhileInHoleScoresTwice() throws {
+    // The guard starts far enough away that it lands in the hole late — late
+    // enough that the fill timer (fixed at ~198 ticks after the dig starts: 11
+    // dig + 186 fill) completes before the guard finishes shaking and climbing
+    // out (~85 ticks after landing: 66 shake + climb travel), so burial preempts
+    // the climb-out and scores SCORE_GUARD_DEAD on top of the SCORE_IN_HOLE it
+    // already earned on landing.
+    var stamps: [(x: Int, y: Int, ch: Character)] = [
+        (x: 25, y: 10, ch: "&"),
+        (x: 6, y: 10, ch: "0"),
+    ]
+    for x in 0..<LevelGrid.tilesX {
+        stamps.append((x: x, y: 11, ch: "#"))
+    }
+    stamps.append((x: 24, y: 12, ch: "#"))
+    let level = resolveLevelMap(makeLevel(stamps: stamps))
+    var sim = try RunnerSimulation(level: level)
+
+    sim.tick(.digLeft)
+    for _ in 0..<11 { sim.tick(.stop) }  // dig completes, hole opens at (24,11)
+
+    var enteredHole = false
+    var landedTick = 0
+    for tick in 1...250 {
+        sim.tick(.stop)
+        landedTick = tick
+        if sim.guards[0].action == .inHole {
+            enteredHole = true
+            break
+        }
+    }
+    #expect(enteredHole)
+    #expect(sim.score == 75)
+
+    var buried = false
+    for _ in 0..<250 {
+        sim.tick(.stop)
+        if sim.guards[0].action != .inHole {
+            // Either buried (fillComplete fired first) or it climbed out — tell
+            // them apart by whether it's still occupying the hole's cell.
+            buried = sim.slots[24][11].current == .brick
+            break
+        }
+    }
+    #expect(buried, "expected burial to preempt climb-out (landed at tick \(landedTick))")
+    #expect(sim.score == 150)
     #expect(sim.shakingGuards.isEmpty)
 }
 
@@ -329,6 +382,9 @@ func guardPicksUpAndDropsGold() throws {
     let pickedUp = sim.guards[0].hasGold
     for _ in 0..<200 { sim.tick(.stop) }
     #expect(sim.guards[0].hasGold != pickedUp)
+    // A guard's own gold pickup/carry/drop never scores — only the runner's own
+    // pickup (SCORE_GET_GOLD) and the two guard-death triggers do.
+    #expect(sim.score == 0)
 }
 
 @Test("runner colliding with a guard is fatal")
@@ -369,6 +425,7 @@ func codableRoundTripWithGuards() throws {
         if sim.guards[0].action == .inHole { break }
     }
     #expect(!sim.shakingGuards.isEmpty)
+    #expect(sim.score == 75)  // SCORE_IN_HOLE, landed this tick.
 
     let data = try JSONEncoder().encode(sim)
     let decoded = try JSONDecoder().decode(RunnerSimulation.self, from: data)
