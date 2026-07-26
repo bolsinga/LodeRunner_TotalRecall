@@ -470,9 +470,7 @@ extension RunnerSimulation {
     }
 
     mutating func removeFromShake(_ guardIndex: Int) {
-        guard let index = shakingGuards.firstIndex(where: { $0.guardIndex == guardIndex }) else {
-            preconditionFailure("removeFromShake: guard \(guardIndex) not in the shake queue")
-        }
+        guard let index = shakingGuards.firstIndex(where: { $0.guardIndex == guardIndex }) else { return }
         shakingGuards.remove(at: index)
     }
 
@@ -489,23 +487,24 @@ extension RunnerSimulation {
     // MARK: - Reborn/respawn (guard.js:845-970)
 
     mutating func guardReborn(at cell: GridPoint) {
-        guard let id = guardIndex(at: cell) else {
-            preconditionFailure("guardReborn: no guard at \(cell)")
-        }
+        guard let id = guardIndex(at: cell) else { return }
 
         var bornY = 1
         var bornX = columnPicker.next()
         let rndStart = bornX
 
-        while slots[bornX][bornY].current != .empty || slots[bornX][bornY].base == .gold
-            || slots[bornX][bornY].base == .brick
+        // Bounds-check bornY before every slots access (short-circuiting `&&`) rather
+        // than trusting there's always a valid row, the way the JS source's `assert` does.
+        while bornY <= TileGeometry.maxTileY
+            && (slots[bornX][bornY].current != .empty || slots[bornX][bornY].base == .gold
+                || slots[bornX][bornY].base == .brick)
         {
             bornX = columnPicker.next()
             if bornX == rndStart {
                 bornY += 1
             }
-            precondition(bornY <= TileGeometry.maxTileY, "guardReborn: born row too large")
         }
+        guard bornY <= TileGeometry.maxTileY else { return }
 
         slots[bornX][bornY].current = .guard
         let guardState = guards[id]
