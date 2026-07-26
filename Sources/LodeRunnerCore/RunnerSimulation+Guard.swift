@@ -458,7 +458,7 @@ extension RunnerSimulation {
                             action: s.action, hasGold: 0, holePos: s.holePos)
                     }
                     enqueueShake(id)
-                    addScore(75)  // SCORE_IN_HOLE, guard.js:253-254 — only once landed.
+                    addScore(Score.inHole)  // guard.js:253-254 — only once landed.
                 }
             }
         }

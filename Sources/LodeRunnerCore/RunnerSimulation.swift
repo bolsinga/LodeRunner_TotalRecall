@@ -14,6 +14,14 @@ private let digAnimationFrameCount = 11
 // burial-death can trigger. Total fill duration: 166+8+8+4 = 186 ticks.
 private let fillFrameDurations = [166, 8, 8, 4]
 
+// SCORE_* constants, lodeRunner.def.js:80-82. Not `private`: scored from both this
+// file and RunnerSimulation+Guard.swift, and `private` is file-scoped in Swift.
+enum Score {
+    static let getGold = 250
+    static let inHole = 75
+    static let guardDead = 75
+}
+
 /// A brick mid-dig. `pos` matches the JS's `holeObj.pos`: the RUNNER's row, not the
 /// brick's — the brick actually being dug is at `(pos.x, pos.y + 1)`. Kept literally
 /// as-is (not renamed/normalized) to avoid introducing an off-by-one bug porting the
@@ -359,7 +367,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         {
             slots[x][y].base = .empty
             decGold()
-            addScore(250)
+            addScore(Score.getGold)
         }
 
         checkCollision(x, y)
@@ -540,7 +548,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                     holePos: guards[gid].holePos)
             }
             guardReborn(at: cell)
-            addScore(75)  // SCORE_GUARD_DEAD, runner.js:670-671.
+            addScore(Score.guardDead)  // runner.js:670-671.
         }
         slots[cell.x][cell.y].current = .brick
     }
