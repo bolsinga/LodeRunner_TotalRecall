@@ -21,5 +21,13 @@ let package = Package(
             ]
         ),
         .testTarget(name: "lr-leveltoolTests", dependencies: ["lr-leveltool"]),
+        .executableTarget(
+            name: "lr-runnertool",
+            dependencies: [
+                "LodeRunnerCore",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]
+        ),
+        .testTarget(name: "lr-runnertoolTests", dependencies: ["lr-runnertool"]),
     ]
 )
