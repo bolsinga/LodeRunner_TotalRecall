@@ -3,165 +3,168 @@ import Testing
 
 @testable import LodeRunnerCore
 
-/// Build a blank 28x16 level, then stamp entities/terrain at [x,y] positions, matching
-/// the other test files' `makeLevel` helper. Always fills the bottom row with bricks
-/// so the string looks valid.
-private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
-    var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-    for stamp in stamps {
-        cells[stamp.y * LevelGrid.tilesX + stamp.x] = stamp.ch
+@Suite
+struct GameSessionTests {
+    /// Build a blank 28x16 level, then stamp entities/terrain at [x,y] positions, matching
+    /// the other test files' `makeLevel` helper. Always fills the bottom row with bricks
+    /// so the string looks valid.
+    private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
+        var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
+        for stamp in stamps {
+            cells[stamp.y * LevelGrid.tilesX + stamp.x] = stamp.ch
+        }
+        for x in 0..<LevelGrid.tilesX {
+            let index = (LevelGrid.tilesY - 1) * LevelGrid.tilesX + x
+            if cells[index] == " " {
+                cells[index] = "#"
+            }
+        }
+        return String(cells)
     }
-    for x in 0..<LevelGrid.tilesX {
-        let index = (LevelGrid.tilesY - 1) * LevelGrid.tilesX + x
-        if cells[index] == " " {
-            cells[index] = "#"
+
+    /// Same shape as `RunnerSimulationTests.reachingTopWithAllGoldWins` (walk right
+    /// onto gold, then climb a ladder to row 0), shifted by `offsetX` so distinct
+    /// levels are distinguishable by spawn position. `completeActions` is the exact
+    /// already-verified sequence that finishes it: 8 ticks right reaches the gold and
+    /// the ladder's base, 5 ticks up reaches row 0 centered, and one more tick (any
+    /// action) is needed for the finish-check — which runs at the *start* of the next
+    /// tick against the position the previous tick left — to actually fire.
+    private func completableLevel(offsetX: Int) -> LevelParseResult {
+        resolveLevelMap(
+            makeLevel(stamps: [
+                (x: offsetX + 3, y: 1, ch: "&"),
+                (x: offsetX + 4, y: 1, ch: "$"),
+                (x: offsetX + 5, y: 0, ch: "H"),
+                (x: offsetX + 5, y: 1, ch: "H"),
+                (x: offsetX + 3, y: 2, ch: "#"),
+                (x: offsetX + 4, y: 2, ch: "#"),
+            ]))
+    }
+
+    private let completeActions: [RunnerAction] =
+        Array(repeating: .right, count: 8) + Array(repeating: .up, count: 5) + [.stop]
+
+    private func completeCurrentLevel(_ session: inout GameSession) throws {
+        for action in completeActions {
+            try session.tick(action)
         }
     }
-    return String(cells)
-}
 
-/// Same shape as `RunnerSimulationTests.reachingTopWithAllGoldWins` (walk right
-/// onto gold, then climb a ladder to row 0), shifted by `offsetX` so distinct
-/// levels are distinguishable by spawn position. `completeActions` is the exact
-/// already-verified sequence that finishes it: 8 ticks right reaches the gold and
-/// the ladder's base, 5 ticks up reaches row 0 centered, and one more tick (any
-/// action) is needed for the finish-check — which runs at the *start* of the next
-/// tick against the position the previous tick left — to actually fire.
-private func completableLevel(offsetX: Int) -> LevelParseResult {
-    resolveLevelMap(
-        makeLevel(stamps: [
-            (x: offsetX + 3, y: 1, ch: "&"),
-            (x: offsetX + 4, y: 1, ch: "$"),
-            (x: offsetX + 5, y: 0, ch: "H"),
-            (x: offsetX + 5, y: 1, ch: "H"),
-            (x: offsetX + 3, y: 2, ch: "#"),
-            (x: offsetX + 4, y: 2, ch: "#"),
-        ]))
-}
+    @Test("init: starting lives/score/level/phase, and empty levels throws")
+    func initialState() throws {
+        let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, ch: "&")]))
+        let session = try GameSession(levels: [level])
 
-private let completeActions: [RunnerAction] =
-    Array(repeating: .right, count: 8) + Array(repeating: .up, count: 5) + [.stop]
+        #expect(session.lives == 5)
+        #expect(session.score == 0)
+        #expect(session.currentLevelIndex == 0)
+        #expect(session.passedLevelCount == 0)
+        #expect(session.phase == .playing)
+        #expect(session.simulation.runner.position == GridPoint(x: 5, y: 14))
 
-private func completeCurrentLevel(_ session: inout GameSession) throws {
-    for action in completeActions {
-        try session.tick(action)
+        #expect(throws: GameSessionError.noLevels) {
+            try GameSession(levels: [])
+        }
     }
-}
 
-@Test("init: starting lives/score/level/phase, and empty levels throws")
-func initialState() throws {
-    let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, ch: "&")]))
-    let session = try GameSession(levels: [level])
+    @Test("death with lives remaining retries the same level fresh")
+    func deathWithLivesRemainingRetries() throws {
+        let deathLevel = resolveLevelMap(
+            makeLevel(stamps: [
+                (x: 5, y: 14, ch: "&"),
+                (x: 6, y: 14, ch: "0"),
+            ]))
+        var session = try GameSession(levels: [deathLevel])
 
-    #expect(session.lives == 5)
-    #expect(session.score == 0)
-    #expect(session.currentLevelIndex == 0)
-    #expect(session.passedLevelCount == 0)
-    #expect(session.phase == .playing)
-    #expect(session.simulation.runner.position == GridPoint(x: 5, y: 14))
+        for _ in 0..<10 {
+            try session.tick(.right)
+            if session.lives < 5 { break }
+        }
 
-    #expect(throws: GameSessionError.noLevels) {
-        try GameSession(levels: [])
+        #expect(session.lives == 4)
+        #expect(session.score == 0)
+        #expect(session.phase == .playing)
+        #expect(session.currentLevelIndex == 0)
+        #expect(session.simulation.phase == .playing)
+        #expect(session.simulation.runner.position == GridPoint(x: 5, y: 14))
+        #expect(session.simulation.runner.xOffset == 0)
+        #expect(session.simulation.runner.yOffset == 0)
     }
-}
 
-@Test("death with lives remaining retries the same level fresh")
-func deathWithLivesRemainingRetries() throws {
-    let deathLevel = resolveLevelMap(
-        makeLevel(stamps: [
-            (x: 5, y: 14, ch: "&"),
-            (x: 6, y: 14, ch: "0"),
-        ]))
-    var session = try GameSession(levels: [deathLevel])
+    @Test("death at the last life ends the session")
+    func deathAtLastLifeEndsSession() throws {
+        let deathLevel = resolveLevelMap(
+            makeLevel(stamps: [
+                (x: 5, y: 14, ch: "&"),
+                (x: 6, y: 14, ch: "0"),
+            ]))
+        var session = try GameSession(levels: [deathLevel])
 
-    for _ in 0..<10 {
+        for _ in 0..<200 {
+            try session.tick(.right)
+            if session.phase != .playing { break }
+        }
+        #expect(session.phase == .gameOver)
+        #expect(session.lives == 0)
+
+        let frozen = session
         try session.tick(.right)
-        if session.lives < 5 { break }
+        #expect(session == frozen)
     }
 
-    #expect(session.lives == 4)
-    #expect(session.score == 0)
-    #expect(session.phase == .playing)
-    #expect(session.currentLevelIndex == 0)
-    #expect(session.simulation.phase == .playing)
-    #expect(session.simulation.runner.position == GridPoint(x: 5, y: 14))
-    #expect(session.simulation.runner.xOffset == 0)
-    #expect(session.simulation.runner.yOffset == 0)
-}
+    @Test("level complete advances to the next level and scores the completion bonus")
+    func levelCompleteAdvancesAndScores() throws {
+        var session = try GameSession(levels: [
+            completableLevel(offsetX: 0),
+            completableLevel(offsetX: 10),
+        ])
 
-@Test("death at the last life ends the session")
-func deathAtLastLifeEndsSession() throws {
-    let deathLevel = resolveLevelMap(
-        makeLevel(stamps: [
-            (x: 5, y: 14, ch: "&"),
-            (x: 6, y: 14, ch: "0"),
-        ]))
-    var session = try GameSession(levels: [deathLevel])
+        try completeCurrentLevel(&session)
 
-    for _ in 0..<200 {
-        try session.tick(.right)
-        if session.phase != .playing { break }
+        #expect(session.score == 1750)  // 250 (gold pickup) + 1500 (completion bonus).
+        #expect(session.lives == 6)
+        #expect(session.passedLevelCount == 1)
+        #expect(session.currentLevelIndex == 1)
+        #expect(session.phase == .playing)
+        #expect(session.simulation.runner.position == GridPoint(x: 13, y: 1))
     }
-    #expect(session.phase == .gameOver)
-    #expect(session.lives == 0)
 
-    let frozen = session
-    try session.tick(.right)
-    #expect(session == frozen)
-}
+    @Test("lives cap at 100")
+    func livesCapAt100() throws {
+        var session = try GameSession(levels: Array(repeating: completableLevel(offsetX: 0), count: 150))
 
-@Test("level complete advances to the next level and scores the completion bonus")
-func levelCompleteAdvancesAndScores() throws {
-    var session = try GameSession(levels: [
-        completableLevel(offsetX: 0),
-        completableLevel(offsetX: 10),
-    ])
+        for _ in 0..<120 { try completeCurrentLevel(&session) }
 
-    try completeCurrentLevel(&session)
+        #expect(session.lives == 100)
+        #expect(session.phase == .playing)
+        #expect(session.passedLevelCount == 120)
+    }
 
-    #expect(session.score == 1750)  // 250 (gold pickup) + 1500 (completion bonus).
-    #expect(session.lives == 6)
-    #expect(session.passedLevelCount == 1)
-    #expect(session.currentLevelIndex == 1)
-    #expect(session.phase == .playing)
-    #expect(session.simulation.runner.position == GridPoint(x: 13, y: 1))
-}
+    @Test("winning: completing the only level wraps and wins immediately")
+    func completingOnlyLevelWins() throws {
+        var session = try GameSession(levels: [completableLevel(offsetX: 0)])
 
-@Test("lives cap at 100")
-func livesCapAt100() throws {
-    var session = try GameSession(levels: Array(repeating: completableLevel(offsetX: 0), count: 150))
+        try completeCurrentLevel(&session)
 
-    for _ in 0..<120 { try completeCurrentLevel(&session) }
+        #expect(session.phase == .won)
+        #expect(session.currentLevelIndex == 0)
+        #expect(session.passedLevelCount == 1)
 
-    #expect(session.lives == 100)
-    #expect(session.phase == .playing)
-    #expect(session.passedLevelCount == 120)
-}
+        let frozen = session
+        try session.tick(.stop)
+        #expect(session == frozen)
+    }
 
-@Test("winning: completing the only level wraps and wins immediately")
-func completingOnlyLevelWins() throws {
-    var session = try GameSession(levels: [completableLevel(offsetX: 0)])
+    @Test("GameSession round-trips through JSON")
+    func codableRoundTrip() throws {
+        var session = try GameSession(levels: [
+            completableLevel(offsetX: 0),
+            completableLevel(offsetX: 10),
+        ])
+        try completeCurrentLevel(&session)
 
-    try completeCurrentLevel(&session)
-
-    #expect(session.phase == .won)
-    #expect(session.currentLevelIndex == 0)
-    #expect(session.passedLevelCount == 1)
-
-    let frozen = session
-    try session.tick(.stop)
-    #expect(session == frozen)
-}
-
-@Test("GameSession round-trips through JSON")
-func gameSessionCodableRoundTrip() throws {
-    var session = try GameSession(levels: [
-        completableLevel(offsetX: 0),
-        completableLevel(offsetX: 10),
-    ])
-    try completeCurrentLevel(&session)
-
-    let data = try JSONEncoder().encode(session)
-    let decoded = try JSONDecoder().decode(GameSession.self, from: data)
-    #expect(decoded == session)
+        let data = try JSONEncoder().encode(session)
+        let decoded = try JSONDecoder().decode(GameSession.self, from: data)
+        #expect(decoded == session)
+    }
 }
