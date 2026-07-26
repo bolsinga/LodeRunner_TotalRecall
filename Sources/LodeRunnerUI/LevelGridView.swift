@@ -60,6 +60,8 @@ private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
         ]))
     LevelGridView(tiles: level.slots.map { $0.map(\.current) })
         .environment(\.tileTheme, .apple2)
+        .background(Color.gray.opacity(0.2))
+        .border(Color.gray)
 }
 
 #Preview("C64") {
@@ -71,4 +73,6 @@ private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
         ]))
     LevelGridView(tiles: level.slots.map { $0.map(\.current) })
         .environment(\.tileTheme, .c64)
+        .background(Color.gray.opacity(0.2))
+        .border(Color.gray)
 }
