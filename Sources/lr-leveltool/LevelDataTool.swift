@@ -3,7 +3,7 @@ import Foundation
 import LodeRunnerCore
 
 @main
-struct LevelDataTool: ParsableCommand {
+struct LevelDataTool: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "lr-leveltool",
         abstract: "Extracts Lode Runner level packs from the project's .js sources into Codable JSON."
@@ -15,28 +15,40 @@ struct LevelDataTool: ParsableCommand {
     @Option(help: "Directory to write generated <pack>.json files into.")
     var outputDir: String
 
-    func run() throws {
+    func run() async throws {
         try FileManager.default.createDirectory(atPath: outputDir, withIntermediateDirectories: true)
 
-        for pack in LevelPack.all {
-            let path = "\(sourceDir)/\(pack.fileName)"
-            let js = try String(contentsOfFile: path, encoding: .utf8)
-            let rawLevels = try JSLevelExtractor.extractLevels(from: js, variableName: pack.variableName)
+        let sourceDir = self.sourceDir
+        let outputDir = self.outputDir
 
-            guard rawLevels.count == pack.expectedLevelCount else {
-                throw ValidationError(
-                    "\(pack.fileName): expected \(pack.expectedLevelCount) levels, got \(rawLevels.count)")
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for pack in LevelPack.all {
+                group.addTask {
+                    try Self.process(pack, sourceDir: sourceDir, outputDir: outputDir)
+                }
             }
-
-            let parsed = rawLevels.map(resolveLevelMap)
-
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(parsed)
-
-            let outputPath = "\(outputDir)/\(pack.outputName).json"
-            try data.write(to: URL(fileURLWithPath: outputPath))
-            print("wrote \(outputPath) (\(parsed.count) levels)")
+            try await group.waitForAll()
         }
+    }
+
+    private static func process(_ pack: LevelPack, sourceDir: String, outputDir: String) throws {
+        let path = "\(sourceDir)/\(pack.fileName)"
+        let js = try String(contentsOfFile: path, encoding: .utf8)
+        let rawLevels = try JSLevelExtractor.extractLevels(from: js, variableName: pack.variableName)
+
+        guard rawLevels.count == pack.expectedLevelCount else {
+            throw ValidationError(
+                "\(pack.fileName): expected \(pack.expectedLevelCount) levels, got \(rawLevels.count)")
+        }
+
+        let parsed = rawLevels.map(resolveLevelMap)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(parsed)
+
+        let outputPath = "\(outputDir)/\(pack.outputName).json"
+        try data.write(to: URL(fileURLWithPath: outputPath))
+        print("wrote \(outputPath) (\(parsed.count) levels)")
     }
 }
