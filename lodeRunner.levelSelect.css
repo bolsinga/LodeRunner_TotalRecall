@@ -1,0 +1,176 @@
+/*
+ * Lode Runner - level selector.
+ * Shares the settings overlay's palette (--ls-* on :root); scoped under
+ * .lv-dialog. A large centered dialog, not a slide-out: the grid needs width.
+ */
+
+dialog.lv-dialog {
+	box-sizing: border-box;
+	width: min(1000px, 92vw);
+	max-height: 88dvh;
+	padding: 0; border: 0;
+	border-radius: var(--ls-radius);
+	background: linear-gradient(180deg, var(--ls-panel) 0%, #101019 100%);
+	border: 1px solid var(--ls-panel-edge);
+	color: var(--ls-ink); font-family: var(--ls-font);
+	overflow: hidden;
+	opacity: 0; transform: scale(.98);
+	transition: opacity .18s ease, transform .18s ease,
+	            overlay .18s allow-discrete, display .18s allow-discrete;
+}
+dialog.lv-dialog[open] { opacity: 1; transform: scale(1); }
+@starting-style { dialog.lv-dialog[open] { opacity: 0; transform: scale(.98); } }
+
+dialog.lv-dialog::backdrop {
+	background: rgba(4,4,10,.72);
+	backdrop-filter: blur(2px);
+}
+
+.lv-panel { display: flex; flex-direction: column; max-height: 88dvh; }
+
+.lv-head {
+	flex: 0 0 auto;
+	display: flex; align-items: center; justify-content: space-between;
+	padding: 14px 18px 10px;
+	border-bottom: 1px solid var(--ls-panel-edge);
+}
+/* the version picker IS the title: styled as a heading, not a form control */
+.lv-version {
+	flex: 0 0 auto; max-width: 100%;
+	appearance: none; -webkit-appearance: none;
+	background: transparent; border: 1px solid transparent;
+	border-radius: var(--ls-radius);
+	padding: 4px 26px 4px 6px; margin-left: -6px;
+	font-family: var(--ls-font); font-size: 15px; font-weight: 700;
+	letter-spacing: .1em; text-transform: uppercase;
+	color: var(--ls-ink); cursor: pointer;
+	/* chevron, so it reads as changeable rather than as plain text */
+	background-image: linear-gradient(45deg, transparent 50%, var(--ls-ink-dim) 50%),
+	                  linear-gradient(135deg, var(--ls-ink-dim) 50%, transparent 50%);
+	background-position: right 12px center, right 7px center;
+	background-size: 5px 5px, 5px 5px;
+	background-repeat: no-repeat;
+	transition: border-color .15s, color .15s;
+}
+.lv-version:hover { border-color: var(--ls-panel-edge); color: var(--ls-cyan-bright); }
+.lv-version:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
+.lv-version option {
+	background: var(--ls-panel); color: var(--ls-ink);
+	font-size: 13px; letter-spacing: normal; text-transform: none;
+}
+
+/* Opt the picker out of the OS popup, which draws the list ON TOP of the
+   control. base-select anchors it below and makes it stylable. Chrome only for
+   now; elsewhere this is ignored and the native popup is used. */
+@supports (appearance: base-select) {
+	.lv-version {
+		appearance: base-select;
+		padding-right: 10px;
+		background-image: none;       /* ::picker-icon replaces the drawn chevron */
+	}
+	.lv-version::picker-icon { color: var(--ls-ink-dim); transition: transform .2s; }
+	.lv-version:open::picker-icon { transform: rotate(180deg); }
+	.lv-version::picker(select) {
+		appearance: base-select;
+		margin-top: 6px; padding: 4px;
+		background: var(--ls-panel);
+		border: 1px solid var(--ls-panel-edge);
+		border-radius: var(--ls-radius);
+		box-shadow: 0 12px 32px rgba(0,0,0,.6);
+		opacity: 0; transform: translateY(-4px);
+		transition: opacity .16s, transform .16s,
+		            overlay .16s allow-discrete, display .16s allow-discrete;
+	}
+	.lv-version:open::picker(select) { opacity: 1; transform: translateY(0); }
+	@starting-style {
+		.lv-version:open::picker(select) { opacity: 0; transform: translateY(-4px); }
+	}
+	.lv-version {
+		white-space: nowrap;          /* the title is one line, never wrapped */
+	}
+	.lv-version option {
+		padding: 7px 10px; border-radius: 2px; font-weight: 400;
+		color: var(--ls-ink); background: transparent;
+		white-space: nowrap;
+	}
+	.lv-version option:hover { background: rgba(95,158,195,.18); color: var(--ls-cyan-bright); }
+	.lv-version option:checked { color: var(--ls-gold); }
+	.lv-version option::checkmark { display: none; }
+	.lv-version option:focus-visible { outline: none; }
+}
+.lv-close {
+	background: none; border: 0; cursor: pointer;
+	color: var(--ls-ink-dim); font-size: 22px; line-height: 1;
+	padding: 0 4px; font-family: var(--ls-font);
+	transition: color .15s;
+}
+.lv-close:hover { color: var(--ls-brick); }
+.lv-close:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* the grid scrolls natively -- this is what replaces the hand-rolled slider */
+.lv-grid {
+	flex: 1 1 auto; min-height: 0;
+	overflow-y: auto; scrollbar-width: thin;
+	display: grid; gap: 12px;
+	grid-template-columns: repeat(4, 1fr);
+	padding: 16px 18px 18px;
+	background: var(--ls-ground);
+}
+
+.lv-empty {
+	grid-column: 1 / -1;
+	margin: 0; padding: 28px 4px;
+	color: var(--ls-ink-dim); font-size: 12px; text-align: center;
+}
+
+.lv-cell {
+	position: relative;
+	display: block; padding: 6px; cursor: pointer;
+	background: rgba(20,20,31,.6);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	font-family: var(--ls-font);
+	transition: border-color .12s, background .12s, transform .12s;
+}
+.lv-cell:hover {
+	border-color: var(--ls-cyan);
+	background: rgba(38,38,58,.6);
+	transform: translateY(-1px);
+}
+.lv-cell:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+.lv-cell.current { border-color: var(--ls-gold); }
+
+.lv-thumb {
+	display: block; width: 100%; height: auto;
+	image-rendering: pixelated;      /* keep the tile art crisp when scaled */
+	background: #000;
+	border-radius: 2px;
+}
+
+/* placeholder cells while the version's pack loads */
+.lv-skeleton { cursor: default; }
+.lv-skeleton:hover { border-color: var(--ls-panel-edge); background: rgba(20,20,31,.6); transform: none; }
+.lv-skeleton .lv-num { color: var(--ls-ink-dim); }
+.lv-thumb-blank {
+	display: block; width: 100%;
+	aspect-ratio: 28 / 16;           /* the board's tile ratio, so nothing shifts */
+	background: #07070d;
+	border-radius: 2px;
+	animation: lv-pulse 1.4s ease-in-out infinite;
+}
+@keyframes lv-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* caption strip above the art: level number left, score right. Nothing overlays
+   the thumbnail, and the numbers line up in columns down the grid. A score is
+   itself the record of completion, so there is no separate check mark. */
+.lv-cap {
+	display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+	padding: 1px 3px 5px;
+	font-size: 15px; font-weight: 700; line-height: 1.2;
+}
+.lv-num { color: var(--ls-ink); }
+.lv-score {
+	font-size: 13px; color: var(--ls-gold);
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lv-cell.current .lv-num { color: var(--ls-gold); }
