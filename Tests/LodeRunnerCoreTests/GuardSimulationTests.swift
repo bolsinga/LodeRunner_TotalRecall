@@ -97,6 +97,14 @@ func guardOnGuardHeadDoesNotFall() throws {
             (x: 5, y: 9, ch: "0"),
             (x: 5, y: 10, ch: "0"),
             (x: 5, y: 11, ch: "#"),
+            // Box both guards in laterally so neither wanders off via scanFloor
+            // pathfinding while looking for an unreachable runner — the forced-fall
+            // check under test (resting on another guard's head) is otherwise
+            // unaffected by these walls.
+            (x: 4, y: 9, ch: "#"),
+            (x: 6, y: 9, ch: "#"),
+            (x: 4, y: 10, ch: "#"),
+            (x: 6, y: 10, ch: "#"),
         ]))
     var sim = try RunnerSimulation(level: level)
 
@@ -124,8 +132,14 @@ func chaseAdjacentGuardCatchesRunner() throws {
     #expect(sim.phase == .dead)
 }
 
-@Test("same-floor chase fails across a floor gap, guard stays put")
+@Test("same-floor chase fails across a floor gap, but scanFloor still finds the gap")
 func chaseFailsAcrossFloorGap() throws {
+    // Same setup as before pathfinding existed, where the guard stayed frozen at
+    // .stop forever. Now that scanFloor is wired in, the trap column is a real
+    // scanDown candidate (falling through it eventually lands the guard on the
+    // runner's row), so the guard heads toward the gap instead — an intentional
+    // behavior change from the phase-3a stub, not a regression. Only the
+    // immediate decision is checked here rather than the multi-tile fall-through.
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 15, y: 14, ch: "&"),
@@ -134,12 +148,83 @@ func chaseFailsAcrossFloorGap() throws {
         ]))
     var sim = try RunnerSimulation(level: level)
 
+    sim.tick(.stop)  // tick 1 (odd, only 1 guard): the guard's first active move.
+
+    #expect(sim.guards[0].action == .right)
+}
+
+@Test("a guard boxed in on all four sides with no ladder returns .stop")
+func scanFloorFindsNothingWhenBoxedIn() throws {
+    let level = resolveLevelMap(
+        makeLevel(stamps: [
+            (x: 20, y: 14, ch: "&"),
+            (x: 10, y: 10, ch: "0"),
+            (x: 9, y: 10, ch: "#"),
+            (x: 11, y: 10, ch: "#"),
+            (x: 10, y: 9, ch: "#"),
+            (x: 10, y: 11, ch: "#"),
+        ]))
+    var sim = try RunnerSimulation(level: level)
+
     for _ in 0..<10 { sim.tick(.stop) }
 
-    #expect(sim.guards[0].position == GridPoint(x: 10, y: 14))
+    #expect(sim.guards[0].position == GridPoint(x: 10, y: 10))
     #expect(sim.guards[0].xOffset == 0)
     #expect(sim.guards[0].yOffset == 0)
     #expect(sim.guards[0].action == .stop)
+}
+
+@Test("pathfinding: a guard descends a ladder to the runner's floor, then catches it")
+func scanFloorDescendsLadderThenCatchesRunner() throws {
+    // Guard starts two rows above the runner, with a ladder between them (column
+    // 12) reachable by walking along the guard's own floor. scanFloor should
+    // guide the guard to the ladder, then down it, then phase 3a's already-tested
+    // same-floor chase finishes the catch.
+    let level = resolveLevelMap(
+        makeLevel(stamps: [
+            (x: 15, y: 12, ch: "&"),
+            (x: 10, y: 10, ch: "0"),
+            (x: 12, y: 10, ch: "H"),
+            (x: 12, y: 11, ch: "H"),
+            (x: 12, y: 12, ch: "H"),
+            (x: 10, y: 11, ch: "#"),  // footing under the guard's start
+            (x: 11, y: 11, ch: "#"),  // footing along the walk to the ladder
+            (x: 12, y: 13, ch: "#"),  // anchors the ladder's bottom at row 12
+            (x: 13, y: 13, ch: "#"),  // footing for the row-12 chase, once there
+            (x: 14, y: 13, ch: "#"),
+            (x: 15, y: 13, ch: "#"),  // footing under the runner
+        ]))
+    var sim = try RunnerSimulation(level: level)
+
+    var reachedLadder = false
+    for _ in 0..<200 {
+        sim.tick(.stop)
+        if sim.guards[0].position == GridPoint(x: 12, y: 10) {
+            reachedLadder = true
+            break
+        }
+    }
+    #expect(reachedLadder)
+
+    var reachedRunnerFloor = false
+    for _ in 0..<200 {
+        sim.tick(.stop)
+        if sim.guards[0].position.y == 12 {
+            reachedRunnerFloor = true
+            break
+        }
+    }
+    #expect(reachedRunnerFloor)
+
+    var caught = false
+    for _ in 0..<200 {
+        sim.tick(.stop)
+        if sim.phase == .dead {
+            caught = true
+            break
+        }
+    }
+    #expect(caught)
 }
 
 @Test("a guard chasing across a freshly-dug hole falls in, shakes, and climbs back out")

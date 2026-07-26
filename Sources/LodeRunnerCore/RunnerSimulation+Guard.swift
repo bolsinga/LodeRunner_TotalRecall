@@ -159,8 +159,154 @@ extension RunnerSimulation {
             }
         }
 
-        // scanFloor deferred — pathfinding follow-up phase (see plan's "Scope").
-        return .stop
+        return scanFloor(for: id)
+    }
+
+    // MARK: - scanFloor / scanDown / scanUp (guard.js:631-823)
+
+    /// When a guard can't chase the runner directly on its own floor, scan every
+    /// column on that floor with real footing and, from each, try a single
+    /// ladder-climb or a single fall to see if it lands on the runner's row. The
+    /// closest such landing (by a simple distance/rating heuristic) wins, falling
+    /// back to `.stop` if nothing beats the worst-rating sentinel. This considers
+    /// only one vertical hop from the current floor — not real pathfinding — which
+    /// is a faithful limitation of the original, not a shortcut taken here.
+    private func scanFloor(for id: Int) -> GuardAction {
+        let startX = guards[id].position.x
+        let startY = guards[id].position.y
+        let runnerY = runner.position.y
+
+        var bestRating = 255
+        var bestPath: GuardAction = .stop
+
+        func firmFooting(_ base: TileType) -> Bool {
+            base == .brick || base == .solid || base == .ladder
+        }
+
+        // Left/right floor extent (guard.js:646-677): walk until a wall (brick/solid
+        // current tile), or — past the last column with real footing below — extend
+        // exactly one tile further ("go on anyway") before stopping.
+        var x = startX
+        while x > 0 {
+            let curToken = slots[x - 1][startY].current
+            if curToken == .brick || curToken == .solid { break }
+            let hasFooting =
+                curToken == .ladder || curToken == .bar || startY >= TileGeometry.maxTileY
+                || firmFooting(slots[x - 1][startY + 1].base)
+            x -= 1
+            if !hasFooting { break }
+        }
+        let leftEnd = x
+
+        x = startX
+        while x < TileGeometry.maxTileX {
+            let curToken = slots[x + 1][startY].current
+            if curToken == .brick || curToken == .solid { break }
+            let hasFooting =
+                curToken == .ladder || curToken == .bar || startY >= TileGeometry.maxTileY
+                || firmFooting(slots[x + 1][startY + 1].base)
+            x += 1
+            if !hasFooting { break }
+        }
+        let rightEnd = x
+
+        // guard.js:719-774 — "BUG from original book? (changed by Simon)": the
+        // source keeps a commented-out `runnerX - x` alternate rating next to the
+        // Math.abs version that actually runs. Nothing to resolve; the active line
+        // is what's ported.
+        func scanDown(_ x: Int, _ curPath: GuardAction) {
+            var y = startY
+            while y < TileGeometry.maxTileY {
+                let nextBelow = slots[x][y + 1].base
+                if nextBelow == .brick || nextBelow == .solid { break }
+                if slots[x][y].base != .empty && slots[x][y].base != .hiddenLadder {
+                    if x > 0 {
+                        let leftBelow = slots[x - 1][y + 1].base
+                        if (leftBelow == .brick || leftBelow == .ladder || leftBelow == .solid
+                            || slots[x - 1][y].base == .bar) && y >= runnerY
+                        {
+                            break
+                        }
+                    }
+                    if x < TileGeometry.maxTileX {
+                        let rightBelow = slots[x + 1][y + 1].base
+                        if (rightBelow == .brick || rightBelow == .ladder || rightBelow == .solid
+                            || slots[x + 1][y].base == .bar) && y >= runnerY
+                        {
+                            break
+                        }
+                    }
+                }
+                y += 1
+            }
+            let curRating =
+                y == runnerY
+                    ? abs(startX - x) : y > runnerY ? y - runnerY + 200 : runnerY - y + 100
+            if curRating < bestRating {
+                bestRating = curRating
+                bestPath = curPath
+            }
+        }
+
+        func scanUp(_ x: Int, _ curPath: GuardAction) {
+            var y = startY
+            while y > 0 && slots[x][y].base == .ladder {
+                y -= 1
+                if x > 0 {
+                    let leftBelow = slots[x - 1][y + 1].base
+                    if (leftBelow == .brick || leftBelow == .solid || leftBelow == .ladder
+                        || slots[x - 1][y].base == .bar) && y <= runnerY
+                    {
+                        break
+                    }
+                }
+                if x < TileGeometry.maxTileX {
+                    let rightBelow = slots[x + 1][y + 1].base
+                    if (rightBelow == .brick || rightBelow == .solid || rightBelow == .ladder
+                        || slots[x + 1][y].base == .bar) && y <= runnerY
+                    {
+                        break
+                    }
+                }
+            }
+            let curRating =
+                y == runnerY
+                    ? abs(startX - x) : y > runnerY ? y - runnerY + 200 : runnerY - y + 100
+            if curRating < bestRating {
+                bestRating = curRating
+                bestPath = curPath
+            }
+        }
+
+        x = startX
+        if startY < TileGeometry.maxTileY, !firmFooting(slots[x][startY + 1].base) {
+            scanDown(x, .down)
+        }
+        if slots[x][startY].base == .ladder {
+            scanUp(x, .up)
+        }
+
+        var curPath: GuardAction = .left
+        x = leftEnd
+        while true {
+            if x == startX {
+                if curPath == .left && rightEnd != startX {
+                    curPath = .right
+                    x = rightEnd
+                } else {
+                    break
+                }
+            }
+            if startY < TileGeometry.maxTileY, !firmFooting(slots[x][startY + 1].base) {
+                scanDown(x, curPath)
+            }
+            if slots[x][startY].base == .ladder {
+                scanUp(x, curPath)
+            }
+            x += curPath == .left ? 1 : -1
+        }
+
+        return bestPath
     }
 
     // MARK: - guardMoveStep (guard.js:56-373)
