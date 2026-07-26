@@ -1,10 +1,9 @@
 import ArgumentParser
 import LodeRunnerCore
 
-@main
-struct SessionTool: ParsableCommand {
+struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lr-sessiontool",
+        commandName: "session",
         abstract: """
             Drives a GameSession from an ad-hoc level (repeated to form the session's \
             level list) and action sequence, for debugging/verifying lives, level \
@@ -13,7 +12,7 @@ struct SessionTool: ParsableCommand {
         discussion: """
             Example: an adjacent guard kills the runner, retrying the same level.
 
-              lr-sessiontool \\
+              lr session \\
                 --stamp 5,14,& --stamp 6,14,0 \\
                 --actions "right*5"
             """

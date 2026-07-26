@@ -1,6 +1,6 @@
 import Testing
 
-@testable import lr_leveltool
+@testable import lr
 
 @Suite
 struct JSLevelExtractorTests {

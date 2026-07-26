@@ -14,27 +14,12 @@ let package = Package(
         .target(name: "LodeRunnerCore"),
         .testTarget(name: "LodeRunnerCoreTests", dependencies: ["LodeRunnerCore"]),
         .executableTarget(
-            name: "lr-leveltool",
+            name: "lr",
             dependencies: [
                 "LodeRunnerCore",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        .testTarget(name: "lr-leveltoolTests", dependencies: ["lr-leveltool"]),
-        .executableTarget(
-            name: "lr-runnertool",
-            dependencies: [
-                "LodeRunnerCore",
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-            ]
-        ),
-        .testTarget(name: "lr-runnertoolTests", dependencies: ["lr-runnertool"]),
-        .executableTarget(
-            name: "lr-sessiontool",
-            dependencies: [
-                "LodeRunnerCore",
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-            ]
-        ),
+        .testTarget(name: "lrTests", dependencies: ["lr"]),
     ]
 )

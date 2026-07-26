@@ -1,7 +1,7 @@
 import LodeRunnerCore
 import Testing
 
-@testable import lr_runnertool
+@testable import lr
 
 @Suite
 struct ParsingTests {
