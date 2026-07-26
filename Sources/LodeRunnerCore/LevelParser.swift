@@ -88,15 +88,17 @@ public func parseLevelMap(_ levelMap: String) -> LevelParseResult {
 }
 
 private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelParseResult {
-    precondition(
-        levelMap.count == LevelGrid.tileCount,
-        "levelMap must be exactly \(LevelGrid.tileCount) characters, got \(levelMap.count)")
-
     let chars = Array(levelMap)
 
+    // A shorter-than-expected levelMap reads as implicitly space-padded (empty tiles); a
+    // longer one is truncated — both read safely rather than trapping on malformed input.
+    func char(at index: Int) -> Character {
+        index < chars.count ? chars[index] : " "
+    }
+
     // Pass 1: count all '0' characters (mirrors resolveLevelMap's first loop).
-    var mapGuardCount = chars.reduce(into: 0) { count, char in
-        if char == "0" { count += 1 }
+    var mapGuardCount = (0..<LevelGrid.tileCount).reduce(into: 0) { count, index in
+        if char(at: index) == "0" { count += 1 }
     }
     let rawGuardCount = mapGuardCount
 
@@ -119,7 +121,7 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
     var index = 0
     for y in 0..<LevelGrid.tilesY {
         for x in 0..<LevelGrid.tilesX {
-            let (base, current) = parseLevelChar(chars[index])
+            let (base, current) = parseLevelChar(char(at: index))
             index += 1
             var resolvedCurrent = current
 
@@ -148,8 +150,6 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
             slots[x][y] = LevelSlot(base: base, current: resolvedCurrent)
         }
     }
-
-    assert(mapGuardCount == 0, "mapGuardCount design error")
 
     return LevelParseResult(
         slots: slots,
