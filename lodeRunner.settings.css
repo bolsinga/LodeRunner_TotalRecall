@@ -9,8 +9,13 @@
 	--ls-panel-edge:  #26263a;
 	--ls-brick:       #b5533a;
 	--ls-brick-dim:   #7d3a29;
-	--ls-cyan:        #5f9ec3;
-	--ls-cyan-bright: #86bde0;
+	/* interaction accent: hover, focus rings, links. Set by the Accent control
+	   (see setAccent); these values are the gold default and must match
+	   ACCENTS.gold, or the panel paints a different color before the saved
+	   choice loads. --ls-cyan is the legacy name, kept so the 20-odd existing
+	   usages did not all have to churn. */
+	--ls-cyan:        #c8a63c;
+	--ls-cyan-bright: #e7c64a;
 	--ls-gold:        #e7c64a;
 	--ls-ink:         #d8d8e0;
 	--ls-ink-dim:     #8a8aa0;
@@ -42,6 +47,46 @@
 .ls-toggle:hover { border-color: var(--ls-cyan); background: rgba(10,10,18,.92); }
 .ls-toggle:hover span { background: var(--ls-cyan-bright); }
 .ls-toggle:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* board icons: the in-play controls, pinned top-right to balance the hamburger
+   top-left. Same chip shape and hover language as the toggle, so the two
+   corners read as one system. Watch-demo sits left of choose-level: you pick a
+   level on the right, then watch it on the left. */
+.bi-bar {
+	position: fixed; top: 12px; right: 32px; z-index: 50;
+	display: flex; gap: 8px;
+}
+.bi-bar[hidden] { display: none; }
+.bi-btn {
+	box-sizing: border-box;
+	width: 40px; height: 40px; padding: 0;
+	display: grid; place-content: center;
+	background: rgba(10,10,18,.72);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	cursor: pointer;
+	transition: border-color .15s, background .15s, opacity .15s;
+}
+.bi-btn svg { display: block; width: 1.65rem; height: 1.5rem; }
+.bi-btn .bi-stroke {
+	fill: none; stroke: var(--ls-ink); stroke-width: 2;
+	stroke-linecap: square; stroke-linejoin: miter;
+	transition: stroke .15s;
+}
+.bi-btn .bi-fill { fill: var(--ls-ink); transition: fill .15s; }
+
+.bi-btn:hover:not(:disabled) { border-color: var(--ls-cyan); background: rgba(10,10,18,.92); }
+.bi-btn:hover:not(:disabled) .bi-stroke { stroke: var(--ls-cyan-bright); }
+.bi-btn:hover:not(:disabled) .bi-fill { fill: var(--ls-cyan-bright); }
+.bi-btn:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* disabled is dimmed and inert -- used for choose-level while a demo plays.
+   The play button never dims: it swaps to a stop square instead, because it
+   stays the way out of the demo. */
+.bi-btn:disabled { opacity: .3; cursor: default; }
+
+/* the stop state is live, not passive -- brick red marks it as the exit */
+.bi-play.bi-stopping .bi-fill { fill: var(--ls-brick); }
 
 /* the native <dialog> as a left-edge slide-out. showModal() puts it in the top
    layer (above everything, no z-index war) with a ::backdrop scrim (no overlay
@@ -100,9 +145,7 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 }
 .ls-dialog .ls-back:hover { color: var(--ls-cyan-bright); border-color: var(--ls-panel-edge); }
 .ls-dialog .ls-back:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 1px; }
-.ls-dialog .ls-panel.help .ls-back,
-.ls-dialog .ls-panel.info .ls-back,
-.ls-dialog .ls-panel.mode .ls-back { display: grid; }
+.ls-dialog .ls-panel.help .ls-back { display: grid; }
 
 .ls-dialog .ls-body {
 	flex: 1; min-height: 0; overflow-y: auto;
@@ -112,13 +155,26 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 }
 
 /* sub-view swap */
-.ls-dialog .view-help, .ls-dialog .view-info, .ls-dialog .view-mode { display: none; }
+.ls-dialog .view-help, .ls-dialog .view-info { display: none; }
 .ls-dialog .ls-panel.help .view-main,
-.ls-dialog .ls-panel.info .view-main,
-.ls-dialog .ls-panel.mode .view-main { display: none; }
+.ls-dialog .ls-panel.info .view-main { display: none; }
 .ls-dialog .ls-panel.help .view-help { display: block; }
 .ls-dialog .ls-panel.info .view-info { display: block; }
-.ls-dialog .ls-panel.mode .view-mode { display: block; }
+.ls-dialog .ls-panel.info .ls-back { display: grid; }
+
+/* the fallback version view reuses the hover card's row styling; its title
+   sits two points above the rows, as in the hover card */
+.ls-dialog .view-info .help-h {
+	font-size: 1rem; letter-spacing: .12em; margin-bottom: 0.8em;
+}
+.ls-dialog .view-info .vi-rows {
+	display: grid; grid-template-columns: auto 1fr; gap: 0.42em 1.15em;
+	font-size: 0.875rem; line-height: 1.6;
+}
+.ls-dialog .view-info .vi-k { color: var(--ls-ink-dim); }
+.ls-dialog .view-info .vi-v { color: var(--ls-ink); }
+.ls-dialog .view-info .vi-link { color: var(--ls-cyan); text-decoration: underline; }
+.ls-dialog .view-info .vi-link:hover { color: var(--ls-cyan-bright); }
 
 .ls-dialog .group { padding: 14px 0; border-bottom: 1px solid #1e1e2c; }
 .ls-dialog .group:last-child { border-bottom: 0; }
@@ -163,6 +219,12 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 .ls-dialog .swatch:hover { transform: translateY(-2px); }
 .ls-dialog .swatch[aria-pressed="true"] { border-color: var(--ls-gold); box-shadow: 0 0 8px rgba(231,198,74,.5); }
 .ls-dialog .swatch:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* accent swatches carry their own color, so the selected ring cannot be the
+   accent itself (it would vanish against the swatch it marks) -- use ink */
+.ls-dialog .accents .swatch[aria-pressed="true"] {
+	border-color: var(--ls-ink); box-shadow: 0 0 8px rgba(216,216,224,.45);
+}
 
 /* speed stepper */
 .ls-dialog .stepper {
@@ -230,7 +292,68 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	/* base-select sizes to the selected text, not the longest option, so the
 	   190px cap would wrap it -- let the closed control size itself instead. */
 	.ls-dialog .pick { max-width: none; white-space: nowrap; }
+
+	/* --- per-version info marker, in the open list only -------------------
+	   Each option carries its version's record. <selectedcontent> is a clone
+	   of the selected option drawn inside the closed button; without it the
+	   browser flattens that option to raw text and the whole card spills into
+	   the control, so the marker is stripped from the clone instead. */
+	.ls-dialog .ls-version option { display: flex; align-items: center; gap: 8px; }
+	.ls-dialog .ls-version .vi-count { color: var(--ls-ink-dim); }
+	/* the clone drawn in the closed control keeps only the name: the marker has
+	   nothing to hover there, and the count just makes the control wide */
+	.ls-dialog .ls-version selectedcontent .vi,
+	.ls-dialog .ls-version selectedcontent .vi-card,
+	.ls-dialog .ls-version selectedcontent .vi-count { display: none; }
+
+	/* the marker is its own containing block: a shared anchor-name would park
+	   every card on one row, so each card positions against its own marker */
+	.ls-dialog .ls-version .vi {
+		flex: none; position: relative;
+		width: 15px; height: 15px; display: grid; place-items: center;
+		border: 1px solid var(--ls-panel-edge); border-radius: 50%;
+		font-size: 9px; line-height: 1; color: var(--ls-ink-dim);
+	}
+	.ls-dialog .ls-version .vi:hover { color: var(--ls-cyan-bright); border-color: var(--ls-cyan); }
+
 }
+
+/* Version info card. A popover, so it renders in the top layer: the dialog,
+   its panel, and the scrolling body are all overflow:hidden and would clip an
+   ordinary absolute box at the 400px panel edge. Positioned by JS against the
+   hovered marker (see settingsPanel showVersionCard).
+   Not scoped under .ls-dialog -- a top-layer popover is no longer a descendant
+   of the panel. Sized to its longest line and never wrapped: the panel hugs
+   the left edge, so there is room to the right and a wrapped record is harder
+   to scan than a wide one. */
+.vi-card {
+	/* geometry in em so the card scales with its own type: change the font
+	   size and the padding, gaps, and minimum width follow */
+	font-family: var(--ls-font);
+	font-size: 0.875rem; line-height: 1.6; color: var(--ls-ink);
+	/* --vi-room is the space left of the viewport edge, set when the card is
+	   placed; without it a fixed cap would crop the longest value (a URL) */
+	position: fixed; margin: 0; inset: auto;
+	min-width: 22em; width: max-content;
+	max-width: var(--vi-room, 46vw);
+	text-align: left; white-space: nowrap;
+	background: #191926; border: 1px solid var(--ls-panel-edge);
+	border-left: 2px solid var(--ls-cyan);
+	/* extra room on the right so the longest value never crowds the edge */
+	border-radius: var(--ls-radius); padding: 1em 3em 1.6em 1.15em;
+	box-shadow: 0 0.5em 1.5em rgba(0,0,0,.55);
+}
+.vi-card .vi-h {
+	display: block; margin-bottom: 0.8em;
+	font-size: 1.07em; letter-spacing: .12em; text-transform: uppercase;
+	color: var(--ls-gold);
+}
+.vi-card .vi-rows { display: grid; grid-template-columns: auto 1fr; gap: 0.42em 1.15em; }
+.vi-card .vi-k { color: var(--ls-ink-dim); }
+.vi-card .vi-v { color: var(--ls-ink); }
+.vi-card .vi-link { color: var(--ls-cyan); text-decoration: underline; }
+.vi-card .vi-link:hover { color: var(--ls-cyan-bright); }
+.vi-card .vi-link:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
 .ls-dialog .icon-btn {
 	width: 28px; height: 28px; flex: none; padding: 0;
 	display: grid; place-items: center;
@@ -258,6 +381,53 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	background: transparent; cursor: default;
 }
 
+/* destructive action: brick, not the accent, so it never reads as the ordinary
+   thing to click. Armed state fills in -- the second click is the real one. */
+.ls-dialog .btn.danger { color: var(--ls-brick); border-color: var(--ls-brick-dim); }
+.ls-dialog .btn.danger:hover:not(:disabled) {
+	border-color: var(--ls-brick); color: #d9694c; background: rgba(181,83,58,.1);
+}
+.ls-dialog .btn.danger:focus-visible { outline-color: var(--ls-brick); }
+.ls-dialog .btn.danger[data-armed="1"] {
+	background: var(--ls-brick); border-color: var(--ls-brick); color: #fff;
+}
+/* clear-storage confirmation: expands in place, listing what goes. Nothing is
+   destroyed until Erase, so the checkboxes are the confirmation. */
+.ls-dialog .clear-panel {
+	margin-top: 10px; padding: 12px;
+	border: 1px solid var(--ls-brick-dim); border-radius: var(--ls-radius);
+	background: rgba(181,83,58,.06);
+	animation: clear-open .16s ease-out;
+}
+.ls-dialog .clear-panel[hidden] { display: none; }
+@keyframes clear-open {
+	from { opacity: 0; transform: translateY(-4px); }
+	to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.ls-dialog .clear-panel { animation: none; }
+}
+.ls-dialog .clear-item {
+	display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
+	align-items: baseline; padding: 6px 0; cursor: pointer;
+}
+.ls-dialog .clear-item input { accent-color: var(--ls-brick); cursor: pointer; margin: 0; }
+.ls-dialog .clear-name { font-size: 0.78rem; color: var(--ls-ink); }
+.ls-dialog .clear-name small {
+	display: block; color: var(--ls-ink-dim); font-size: 10.5px;
+}
+.ls-dialog .clear-count {
+	font-size: 11px; color: var(--ls-ink-dim); font-variant-numeric: tabular-nums;
+}
+.ls-dialog .clear-count.none { opacity: .5; font-style: italic; }
+.ls-dialog .clear-actions {
+	display: flex; gap: 8px; margin-top: 10px;
+}
+.ls-dialog .clear-actions .btn { flex: 1; }
+.ls-dialog .clear-note {
+	margin: 8px 0 0; font-size: 11px; color: var(--ls-ink-dim); min-height: 1em;
+}
+
 /* sub-view content */
 .ls-dialog .help-h {
 	margin: 16px 0 6px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ls-gold);
@@ -279,17 +449,6 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	border: 1px dashed var(--ls-panel-edge); border-radius: var(--ls-radius);
 }
 .ls-dialog .rebind-note b { color: var(--ls-cyan); font-weight: 400; }
-.ls-dialog .about { margin-top: 18px; font-size: 12px; color: var(--ls-ink-dim); line-height: 1.6; }
-.ls-dialog .about a { color: var(--ls-cyan); }
-.ls-dialog .info-rows {
-	display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 12.5px; color: var(--ls-ink);
-}
-.ls-dialog .info-k { color: var(--ls-ink-dim); }
-.ls-dialog .stars { color: var(--ls-gold); letter-spacing: 2px; }
-.ls-dialog .mode-list { margin: 0; }
-.ls-dialog .mode-list dt { font-size: 12.5px; color: var(--ls-cyan); margin-top: 12px; letter-spacing: .04em; }
-.ls-dialog .mode-list dt:first-child { margin-top: 0; }
-.ls-dialog .mode-list dd { margin: 3px 0 0; font-size: 12px; color: var(--ls-ink-dim); line-height: 1.5; }
 
 @media (prefers-reduced-motion: reduce) {
 	.ls-dialog *, .ls-dialog *::before, .ls-dialog *::after { transition: none !important; }

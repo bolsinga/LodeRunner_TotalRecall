@@ -18,8 +18,6 @@ var SIGNET_UNDER_Y = 30;
 //*********************
 var coverBitmap, titleBackground, remakeBitmap, signetBitmap;
 var helpObj, helpBitmap, editHelpBitmap;
-var selectIconBitmap, selectIconObj;
-var demoIconBitmap, demoIconObj;
 var pasteIconBitmap, pasteIconObj; // paste icon
 var infoObj;
 var checkBitmap;
@@ -199,7 +197,6 @@ function preloadResource()
 		{ src: "image/help.png"+noCache,    id: "help" },
 		{ src: "image/editHelp.png"+noCache,id: "editHelp" },
 		
-		{ src: "image/select.png"+noCache,  id: "select" },
 		{ src: "image/check.png"+noCache,   id: "check" }, //check icon for select menu
 		
 		{ src: "image/return.png"+noCache,  id: "return" },
@@ -213,7 +210,6 @@ function preloadResource()
 		{ src: "image/yes.png"+noCache,     id: "yes" },
 		{ src: "image/no.png"+noCache,      id: "no" },
 
-		{ src: "image/demo.png"+noCache,id: "demo" },
 
 		{ src: "image/paste.png"+noCache,id: "paste" }, //04/23/2021
 
@@ -390,12 +386,6 @@ function preloadResource()
 	
 	function createMenuBitmapIcon()
 	{
-		selectIconBitmap = new  createjs.Bitmap(preload.getResult("select"));
-		selectIconObj = new selectIconClass(screenX1, screenY1, tileScale, selectIconBitmap); 
-		
-		demoIconBitmap = new createjs.Bitmap(preload.getResult("demo")); //04/18/2015
-		demoIconObj = new demoIconClass(screenX1, screenY1, tileScale, demoIconBitmap);
-		
 		pasteIconBitmap = new createjs.Bitmap(preload.getResult("paste")); //04/23/2021
 		pasteIconObj = new pasteIconClass(screenX1, screenY1, tileScale, pasteIconBitmap);
 

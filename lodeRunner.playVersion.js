@@ -94,6 +94,51 @@ function menuIdToPlayData(menuId)
 }
 
 var playDataNameUserDef = "Custom Levels";
+
+// "(1 Level)" / "(150 Levels)". Custom levels report whatever exists right now,
+// so a count of 0 gets nothing rather than "(0 Levels)".
+function playVersionCountText(count)
+{
+	if(!count) return "";
+	return "(" + count + (count === 1 ? " Level)" : " Levels)");
+}
+
+
+// Level count for a playData id: shipped versions declare it, custom levels are
+// however many the user has built.
+function playVersionLevelCount(id)
+{
+	if(id == PLAY_DATA_USERDEF) return (typeof editLevels === "number" && editLevels > 0) ? editLevels : 0;
+	var v = findPlayVersionInfo(id);
+	return v ? v.levelCount : 0;
+}
+
+// The per-version record (release year, platform, publisher, ...) as
+// [key, value, url] triples. The source arrays are display rows for the old
+// canvas info dialog -- "Release year : 1983, 1984" -- so split each on its
+// first colon. TEXT_LINK rows carry a real url, kept so the value can be a
+// link rather than dead text.
+function playVersionFacts(id)
+{
+	var v = findPlayVersionInfo(id);
+	if(!v || !v.info) return [];
+
+	var facts = [];
+	for(var i = 0; i < v.info.length; i++) {
+		var row = v.info[i];
+		if(row.type == 'TITLE') continue;
+
+		if(row.type == 'TEXT_LINK') {
+			facts.push([row.text.replace(/\s*:\s*$/, "").trim(), row.textLink, row.url]);
+			continue;
+		}
+		var text = row.contain;
+		var at = text.indexOf(':');
+		if(at < 0) facts.push(["", text.trim()]);
+		else facts.push([text.slice(0, at).trim(), text.slice(at + 1).trim()]);
+	}
+	return facts;
+}
 function playDataToTitleName(verId)
 {
 	if(verId == PLAY_DATA_USERDEF) return playDataNameUserDef;

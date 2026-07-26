@@ -80,11 +80,6 @@ function initPlayDemo()
 	demoTickCount = 0;
 	playTickTimer = 0; //modern mode time counter
 	gameState = GAME_RUNNING;
-	
-	if(playMode == PLAY_DEMO_ONCE) {
-		demoIconObj.disable(1);
-		selectIconObj.disable(1);
-	}
 }
 
 function playDemo()

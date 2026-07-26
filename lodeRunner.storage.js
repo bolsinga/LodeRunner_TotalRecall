@@ -119,23 +119,23 @@ function getModernInfo()
 	
 	switch(true) {
 	case (playData >= 1 && playData <= maxPlayId):
-		infoJSON = getStorage(STORAGE_MODERN_INFO+playData); 
+		infoJSON = getStorage(STORAGE_MODERN_INFO+playData);
 		levelData = getPlayVerData(playData);
 		break;
 	case (playData == PLAY_DATA_USERDEF):
 		if(editLevels > 0) {
-			infoJSON = getStorage(STORAGE_USER_INFO); 
+			infoJSON = getStorage(STORAGE_MODERN_INFO+playData);
 			levelData = editLevelData;
 		} else { //no any user created level !
 			playData = 1;
 			playData2GameVersionMenuId();
-			infoJSON = getStorage(STORAGE_MODERN_INFO+1); 
+			infoJSON = getStorage(STORAGE_MODERN_INFO+1);
 			levelData = getPlayVerData(playData);
 		}
-		break;	
-	default:		
+		break;
+	default:
 		error("design error, value =" + playData );
-		playData = 1;	
+		playData = 1;
 		break;
 	}
 	
@@ -157,51 +157,22 @@ function setModernInfo()
 	var infoObj = { l:curLevel};
 	var infoJSON = JSON.stringify(infoObj);
 	
-	switch(true) {
-	case (playData >= 1 && playData <= maxPlayId):		
-		setStorage(STORAGE_MODERN_INFO + playData, infoJSON); 
-		break;
-	case (playData == PLAY_DATA_USERDEF):
-		setStorage(STORAGE_USER_INFO, infoJSON); //user created
-		break;
-	default:
-		error("design error, value =" + playData );
-		break;	
-	}
+	setStorage(STORAGE_MODERN_INFO + playData, infoJSON);
 }
 
 function clearModernInfo()
 {
-	switch(true) {
-	case (playData >= 1 && playData <= maxPlayId):		
-		clearStorage(STORAGE_MODERN_INFO+playData);	
-		break;
-	case (playData == PLAY_DATA_USERDEF):
-		clearStorage(STORAGE_USER_INFO);	
-		break;
-	default:
-		error("design error, value =" + playData );
-		break;	
-	}	
+	clearStorage(STORAGE_MODERN_INFO+playData);
 }
 
 function getModernScoreInfo()
 {
 	var infoJSON, levelSize;
 
-	switch(true) {
-	case (playData >= 1 && playData <= maxPlayId):		
-		infoJSON = getStorage(STORAGE_MODERN_SCORE_INFO+playData); 
-		levelSize = levelData.length;
-		break;
-	case (playData == PLAY_DATA_USERDEF):
-		infoJSON = getStorage(STORAGE_USER_SCORE_INFO);  //user created
-		levelSize = MAX_EDIT_LEVEL;	
-		break;
-	default:
-		error("design error, value =" + playData );
-		break;	
-	}	
+	infoJSON = getStorage(STORAGE_MODERN_SCORE_INFO+playData);
+	//custom levels size the table by capacity, not by how many exist today, so
+	//the saved table stays valid as levels are added
+	levelSize = (playData == PLAY_DATA_USERDEF) ? MAX_EDIT_LEVEL : levelData.length;
 	
 	if(infoJSON) {
 		modernScoreInfo = JSON.parse(infoJSON);
@@ -217,17 +188,7 @@ function setModernScoreInfo()
 {
 	var infoJSON = JSON.stringify(modernScoreInfo);
 	
-	switch(true) {
-	case (playData >= 1 && playData <= maxPlayId):		
-		setStorage(STORAGE_MODERN_SCORE_INFO+playData, infoJSON); 
-		break;
-	case (playData == PLAY_DATA_USERDEF):
-		setStorage(STORAGE_USER_SCORE_INFO, infoJSON); 
-		break;
-	default:
-		error("design error, value =" + playData );
-		break;	
-	}
+	setStorage(STORAGE_MODERN_SCORE_INFO+playData, infoJSON);
 }
 
 function getFirstPlayInfo()
@@ -263,7 +224,7 @@ function delEditLevel(level)
 	clearStorage(STORAGE_USER_LEVEL+("00"+(delId)).slice(-3));
 	if(--editLevels <= 0) {
 		clearEditLevelInfo(); //no edit levels
-		clearStorage(STORAGE_USER_SCORE_INFO); //clear user score info
+		clearStorage(STORAGE_MODERN_SCORE_INFO+PLAY_DATA_USERDEF);
 		initEditLevelInfo();
 	} else {
 		setEditLevelInfo();
