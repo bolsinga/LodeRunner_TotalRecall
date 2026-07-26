@@ -42,23 +42,6 @@ struct LevelParserTests {
 
     // MARK: - resolveLevelMap culling (ported from test/level-map-culling.test.js)
 
-    /// Build a blank 28x16 level, then stamp entities at [x,y] positions, matching the JS
-    /// test helper `makeLevel`. Always fills the bottom row with bricks so the string looks
-    /// valid; culling logic itself doesn't care about geometry.
-    private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
-        var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-        for stamp in stamps {
-            cells[stamp.y * LevelGrid.tilesX + stamp.x] = stamp.ch
-        }
-        for x in 0..<LevelGrid.tilesX {
-            let index = (LevelGrid.tilesY - 1) * LevelGrid.tilesX + x
-            if cells[index] == " " {
-                cells[index] = "#"
-            }
-        }
-        return String(cells)
-    }
-
     @Test("keeps all guards when raw count == maxGuardCount (5)")
     func keepsAllGuardsAtLimit() {
         var stamps: [(x: Int, y: Int, ch: Character)] = (0..<5).map { (x: $0, y: 0, ch: "0") }
