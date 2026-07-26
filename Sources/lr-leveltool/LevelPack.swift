@@ -1,7 +1,7 @@
 /// Registry of the level-pack `.js` files shipped in this repo, mirroring the `PACKS`
 /// table in `test/level-integrity.test.js` so the tool and the JS tests agree on what
 /// "correct" looks like.
-struct LevelPack {
+struct LevelPack: Sendable {
     let fileName: String
     let variableName: String
     let outputName: String
