@@ -20,15 +20,23 @@ private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
     return String(cells)
 }
 
+@Test("a level with no runner spawn throws noRunnerSpawn")
+func noRunnerSpawnThrows() {
+    let level = resolveLevelMap(makeLevel(stamps: []))
+    #expect(throws: RunnerSimulationError.noRunnerSpawn) {
+        try RunnerSimulation(level: level)
+    }
+}
+
 @Test("initial state matches the level's runner spawn")
-func initialStateMatchesSpawn() {
+func initialStateMatchesSpawn() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 10, ch: "&"),
             (x: 8, y: 10, ch: "$"),
             (x: 9, y: 10, ch: "$"),
         ]))
-    let sim = RunnerSimulation(level: level)
+    let sim = try RunnerSimulation(level: level)
 
     #expect(sim.runner.position == GridPoint(x: 5, y: 10))
     #expect(sim.runner.xOffset == 0)
@@ -43,9 +51,9 @@ func initialStateMatchesSpawn() {
 }
 
 @Test("walking right on open floor: 3 ticks crosses one tile boundary")
-func walkingRightCrossesTileBoundary() {
+func walkingRightCrossesTileBoundary() throws {
     let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, ch: "&")]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     sim.tick(.right)
     #expect(sim.runner.xOffset == 8)
@@ -63,13 +71,13 @@ func walkingRightCrossesTileBoundary() {
 }
 
 @Test("blocked by a wall: offset stays clamped at 0, action resolves to .stop")
-func blockedByWallStaysClamped() {
+func blockedByWallStaysClamped() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 14, ch: "&"),
             (x: 6, y: 14, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     for _ in 0..<3 {
         sim.tick(.right)
@@ -80,13 +88,13 @@ func blockedByWallStaysClamped() {
 }
 
 @Test("falling: lands on solid ground one tile below")
-func fallingLandsOnFloor() {
+func fallingLandsOnFloor() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 10, ch: "&"),
             (x: 5, y: 12, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     for _ in 0..<5 {
         sim.tick(.stop)
@@ -101,7 +109,7 @@ func fallingLandsOnFloor() {
 }
 
 @Test("walking onto a ladder column, then climbing up one tile")
-func walkOntoLadderThenClimb() {
+func walkOntoLadderThenClimb() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 4, y: 10, ch: "&"),
@@ -114,7 +122,7 @@ func walkOntoLadderThenClimb() {
             (x: 5, y: 10, ch: "H"),
             (x: 5, y: 11, ch: "H"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     for _ in 0..<3 { sim.tick(.right) }
     #expect(sim.runner.position == GridPoint(x: 5, y: 10))
@@ -131,13 +139,13 @@ func walkOntoLadderThenClimb() {
 }
 
 @Test("falling onto a bar transitions to hanging, then drop-through on down")
-func barHangAndDrop() {
+func barHangAndDrop() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 8, ch: "&"),
             (x: 5, y: 9, ch: "-"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     for _ in 0..<5 { sim.tick(.stop) }
     #expect(sim.runner.position == GridPoint(x: 5, y: 9))
@@ -151,14 +159,14 @@ func barHangAndDrop() {
 }
 
 @Test("picking up the last gold sets goldComplete and reveals hidden ladders")
-func goldPickupRevealsHiddenLadders() {
+func goldPickupRevealsHiddenLadders() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 14, ch: "&"),
             (x: 6, y: 14, ch: "$"),
             (x: 10, y: 5, ch: "S"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
     #expect(sim.goldRemaining == 1)
 
     for _ in 0..<5 { sim.tick(.right) }
@@ -171,7 +179,7 @@ func goldPickupRevealsHiddenLadders() {
 }
 
 @Test("reaching row 0 centered with all gold collected wins")
-func reachingTopWithAllGoldWins() {
+func reachingTopWithAllGoldWins() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 3, y: 1, ch: "&"),
@@ -181,7 +189,7 @@ func reachingTopWithAllGoldWins() {
             (x: 3, y: 2, ch: "#"),
             (x: 4, y: 2, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     for _ in 0..<8 { sim.tick(.right) }
     #expect(sim.goldComplete == true)
@@ -197,14 +205,14 @@ func reachingTopWithAllGoldWins() {
 }
 
 @Test("digging: completes after 11 ticks, hole refills after 186 more")
-func diggingHappyPath() {
+func diggingHappyPath() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 10, ch: "&"),
             (x: 4, y: 11, ch: "#"),
             (x: 5, y: 11, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     sim.tick(.digLeft)
     #expect(sim.digState != nil)
@@ -224,7 +232,7 @@ func diggingHappyPath() {
 }
 
 @Test("digging + burial: standing in a hole when it refills is fatal")
-func diggingBurialDeath() {
+func diggingBurialDeath() throws {
     let level = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 10, ch: "&"),
@@ -232,7 +240,7 @@ func diggingBurialDeath() {
             (x: 5, y: 11, ch: "#"),
             (x: 4, y: 12, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
 
     sim.tick(.digLeft)
     for _ in 0..<11 { sim.tick(.stop) }  // dig completes
@@ -245,14 +253,14 @@ func diggingBurialDeath() {
 }
 
 @Test("ok2Dig rejects a non-brick target, an occupied column, and a gold-based target")
-func ok2DigRejections() {
+func ok2DigRejections() throws {
     // (a) diagonal target isn't a brick (it's empty)
     let notBrick = resolveLevelMap(
         makeLevel(stamps: [
             (x: 5, y: 10, ch: "&"),
             (x: 5, y: 11, ch: "#"),
         ]))
-    var sim1 = RunnerSimulation(level: notBrick)
+    var sim1 = try RunnerSimulation(level: notBrick)
     sim1.tick(.digLeft)
     #expect(sim1.digState == nil)
     #expect(sim1.runner.action == .stop)
@@ -265,7 +273,7 @@ func ok2DigRejections() {
             (x: 4, y: 11, ch: "#"),
             (x: 5, y: 11, ch: "#"),
         ]))
-    var sim2 = RunnerSimulation(level: occupied)
+    var sim2 = try RunnerSimulation(level: occupied)
     sim2.tick(.digLeft)
     #expect(sim2.digState == nil)
 
@@ -277,7 +285,7 @@ func ok2DigRejections() {
             (x: 4, y: 11, ch: "#"),
             (x: 5, y: 11, ch: "#"),
         ]))
-    var sim3 = RunnerSimulation(level: goldTarget)
+    var sim3 = try RunnerSimulation(level: goldTarget)
     sim3.tick(.digLeft)
     #expect(sim3.digState == nil)
 }
@@ -290,7 +298,7 @@ func codableRoundTrip() throws {
             (x: 4, y: 11, ch: "#"),
             (x: 5, y: 11, ch: "#"),
         ]))
-    var sim = RunnerSimulation(level: level)
+    var sim = try RunnerSimulation(level: level)
     sim.tick(.digLeft)
     for _ in 0..<5 { sim.tick(.stop) }
 

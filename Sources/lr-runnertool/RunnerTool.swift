@@ -34,12 +34,7 @@ struct RunnerTool: ParsableCommand {
     func run() throws {
         let parsedStamps = try stamps.map(parseStamp)
         let level = resolveLevelMap(buildLevelString(stamps: parsedStamps))
-
-        guard level.runner != nil else {
-            throw ValidationError("no runner ('&') stamp provided")
-        }
-
-        var simulation = RunnerSimulation(level: level)
+        var simulation = try RunnerSimulation(level: level)
         if !quiet {
             print(describe(simulation, tick: 0))
         }

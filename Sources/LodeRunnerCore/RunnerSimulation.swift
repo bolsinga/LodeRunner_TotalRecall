@@ -29,6 +29,16 @@ public struct FillState: Equatable, Codable, Sendable {
     public var frameTime: Int
 }
 
+public enum RunnerSimulationError: Error, Equatable, Sendable, CustomStringConvertible {
+    case noRunnerSpawn
+
+    public var description: String {
+        switch self {
+        case .noRunnerSpawn: return "level has no runner spawn"
+        }
+    }
+}
+
 /// Ported from `lodeRunner.runner.js`, targeting AI version 4 only. Guard-existence
 /// gated logic (`checkCollision`, the guard-interrupt path in digging, the
 /// guard-head landing clamp) is deferred to a later phase — see the phase-2 plan for
@@ -42,10 +52,12 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     public private(set) var goldComplete: Bool
     public private(set) var phase: RunnerPhase
 
-    public init(level: LevelParseResult) {
-        precondition(level.runner != nil, "level has no runner spawn")
+    public init(level: LevelParseResult) throws {
+        guard let spawn = level.runner else {
+            throw RunnerSimulationError.noRunnerSpawn
+        }
         slots = level.slots
-        runner = Runner(position: level.runner!, xOffset: 0, yOffset: 0, action: .stop)
+        runner = Runner(position: spawn, xOffset: 0, yOffset: 0, action: .stop)
         digState = nil
         fillStates = []
         goldRemaining = level.goldCount
@@ -361,9 +373,10 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     }
 
     private mutating func processDigHole() {
-        guard digState != nil else { return }
-        digState!.frameIndex += 1
-        if digState!.frameIndex >= digAnimationFrameCount {
+        guard var state = digState else { return }
+        state.frameIndex += 1
+        digState = state
+        if state.frameIndex >= digAnimationFrameCount {
             digComplete()
         }
     }

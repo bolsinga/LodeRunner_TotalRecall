@@ -8,11 +8,12 @@ struct StampParseError: Error, CustomStringConvertible {
 /// Parse one `--stamp` value ("x,y,ch"), e.g. "5,10,&".
 func parseStamp(_ raw: String) throws -> (x: Int, y: Int, ch: Character) {
     let parts = raw.split(separator: ",", maxSplits: 2, omittingEmptySubsequences: false)
-    guard parts.count == 3, let x = Int(parts[0]), let y = Int(parts[1]), parts[2].count == 1
+    guard parts.count == 3, let x = Int(parts[0]), let y = Int(parts[1]), parts[2].count == 1,
+        let ch = parts[2].first
     else {
         throw StampParseError(raw: raw)
     }
-    return (x: x, y: y, ch: parts[2].first!)
+    return (x: x, y: y, ch: ch)
 }
 
 /// Build a blank 28x16 level string from a set of stamps. Unlike the test helper this
