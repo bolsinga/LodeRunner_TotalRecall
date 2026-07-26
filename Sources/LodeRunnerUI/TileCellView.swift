@@ -42,20 +42,26 @@ extension TileType {
     }
 }
 
-#Preview {
-    let tiles: [TileType] = [
-        .empty, .brick, .solid, .ladder, .bar, .trap, .hiddenLadder, .gold, .guard, .runner,
-    ]
-    VStack(alignment: .leading, spacing: 8) {
-        ForEach(Theme.allCases, id: \.self) { theme in
-            Text(theme.rawValue).font(.headline)
-            HStack(spacing: 1) {
-                ForEach(tiles, id: \.self) { tile in
-                    TileCellView(tile)
-                }
+private struct AllTilesRow: View {
+    var body: some View {
+        HStack(spacing: 1) {
+            ForEach(
+                [
+                    TileType.empty, .brick, .solid, .ladder, .bar, .trap, .hiddenLadder, .gold,
+                    .guard, .runner,
+                ], id: \.self
+            ) { tile in
+                TileCellView(tile)
             }
-            .environment(\.tileTheme, theme)
         }
+        .padding()
     }
-    .padding()
+}
+
+#Preview("Apple2") {
+    AllTilesRow().environment(\.tileTheme, .apple2)
+}
+
+#Preview("C64") {
+    AllTilesRow().environment(\.tileTheme, .c64)
 }
