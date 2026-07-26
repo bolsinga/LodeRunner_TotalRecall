@@ -305,10 +305,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
             if xOffset > 0 { xOffset = 0 }
         }
 
-        runner.position = GridPoint(x: x, y: y)
-        runner.xOffset = xOffset
-        runner.yOffset = yOffset
-        runner.action = resolvedAction
+        runner = Runner(position: GridPoint(x: x, y: y), xOffset: xOffset, yOffset: yOffset, action: resolvedAction)
 
         slots[x][y].current = .runner
 

@@ -19,10 +19,10 @@ public enum RunnerPhase: Equatable, Codable, Sendable {
 /// The runner's position and current action, ported from `runner.pos`/`runner.action`
 /// in `lodeRunner.runner.js` (sprite/shape fields dropped — display-only).
 public struct Runner: Equatable, Codable, Sendable {
-    public var position: GridPoint
-    public var xOffset: Int
-    public var yOffset: Int
-    public var action: RunnerAction
+    public let position: GridPoint
+    public let xOffset: Int
+    public let yOffset: Int
+    public let action: RunnerAction
 
     public init(position: GridPoint, xOffset: Int, yOffset: Int, action: RunnerAction) {
         self.position = position
