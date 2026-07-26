@@ -1,10 +1,9 @@
 import ArgumentParser
 import LodeRunnerCore
 
-@main
-struct RunnerTool: ParsableCommand {
+struct RunnerCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lr-runnertool",
+        commandName: "runner",
         abstract: """
             Drives a RunnerSimulation from an ad-hoc level and action sequence, for \
             debugging/verifying the runner movement + digging port.
@@ -12,7 +11,7 @@ struct RunnerTool: ParsableCommand {
         discussion: """
             Example: a runner walking onto a ladder and climbing one tile up.
 
-              lr-runnertool \\
+              lr runner \\
                 --stamp 4,10,& --stamp 4,11,# \\
                 --stamp 5,9,H --stamp 5,10,H --stamp 5,11,H \\
                 --actions "right*3,up*3" --ascii

@@ -2,10 +2,9 @@ import ArgumentParser
 import Foundation
 import LodeRunnerCore
 
-@main
-struct LevelDataTool: AsyncParsableCommand {
+struct LevelCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lr-leveltool",
+        commandName: "level",
         abstract: "Extracts Lode Runner level packs from the project's .js sources into Codable JSON."
     )
 
