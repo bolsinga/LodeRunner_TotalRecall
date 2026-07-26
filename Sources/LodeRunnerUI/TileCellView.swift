@@ -54,6 +54,8 @@ private struct AllTilesGrid: View {
                 ], id: \.self
             ) { tile in
                 TileCellView(tile)
+                    .background(Color.gray.opacity(0.2))
+                    .border(Color.gray)
             }
         }
         .padding()
