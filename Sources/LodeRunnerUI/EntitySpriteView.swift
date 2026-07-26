@@ -145,7 +145,7 @@ private struct EntitySpritePreview: View {
         let fallingGuard = Guard(
             position: GridPoint(x: 6, y: 5), xOffset: 0, yOffset: 20, action: .fall)
 
-        ScrollView([.horizontal, .vertical]) {
+        FittedBoardView {
             ZStack(alignment: .topLeading) {
                 LevelGridView(tiles: level.slots.map { $0.map(\.current) })
                 RunnerSpriteView(
@@ -158,16 +158,16 @@ private struct EntitySpritePreview: View {
                     guardState: fallingGuard, facing: .left,
                     baseTile: level.slots[6][5].base)
             }
-            .background(Color.gray.opacity(0.2))
-            .border(Color.gray)
         }
+        .background(Color.gray.opacity(0.2))
+        .border(Color.gray)
     }
 }
 
-#Preview("Entities — Apple2") {
+#Preview("Entities — Apple2", traits: .landscapeLeft) {
     EntitySpritePreview().environment(\.tileTheme, .apple2)
 }
 
-#Preview("Entities — C64") {
+#Preview("Entities — C64", traits: .landscapeLeft) {
     EntitySpritePreview().environment(\.tileTheme, .c64)
 }
