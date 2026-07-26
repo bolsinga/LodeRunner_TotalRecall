@@ -19,25 +19,25 @@ public struct TileCellView: View {
     }
 
     public var body: some View {
-        Image("\(theme.rawValue)/\(tile.asset.rawValue)", bundle: .module)
+        Image("\(theme.rawValue)/\(tile.assetName)", bundle: .module)
             .resizable()
             .frame(width: CGFloat(TileGeometry.tileWidth), height: CGFloat(TileGeometry.tileHeight))
     }
 }
 
 extension TileType {
-    fileprivate var asset: TileAsset {
+    fileprivate var assetName: String {
         switch self {
-        case .empty: .empty
-        case .brick: .brick
-        case .solid: .block
-        case .ladder: .ladder
-        case .bar: .rope
-        case .trap: .trap
-        case .hiddenLadder: .hladder
-        case .gold: .gold
-        case .guard: .guard1
-        case .runner: .runner1
+        case .empty: "empty"
+        case .brick: "brick"
+        case .solid: "block"
+        case .ladder: "ladder"
+        case .bar: "rope"
+        case .trap: "trap"
+        case .hiddenLadder: "hladder"
+        case .gold: "gold"
+        case .guard: "guard1"
+        case .runner: "runner1"
         }
     }
 }
