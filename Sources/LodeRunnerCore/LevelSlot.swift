@@ -1,20 +1,3 @@
-/// Descriptive classification of a level cell, ported from the JS's `kind` string field
-/// (`lodeRunner.levelParse.js`). Distinct from `TileType`: `kind` records what the cell
-/// *represents* (e.g. "gold", "guard") even after culling forces its `current` tile type
-/// back to `.empty`.
-public enum LevelSlotKind: String, Equatable, Codable, Sendable {
-    case empty
-    case brick
-    case solid
-    case ladder
-    case rope
-    case trap
-    case hladder
-    case gold
-    case `guard`
-    case runner
-}
-
 public struct GridPoint: Equatable, Hashable, Codable, Sendable {
     public var x: Int
     public var y: Int
@@ -36,14 +19,9 @@ public struct GridPoint: Equatable, Hashable, Codable, Sendable {
 public struct LevelSlot: Equatable, Codable, Sendable {
     public var base: TileType
     public var current: TileType
-    /// Single character, matching JS's `levelMap.charAt(index)`.
-    public var char: String
-    public var kind: LevelSlotKind
 
-    public init(base: TileType, current: TileType, char: String, kind: LevelSlotKind) {
+    public init(base: TileType, current: TileType) {
         self.base = base
         self.current = current
-        self.char = char
-        self.kind = kind
     }
 }

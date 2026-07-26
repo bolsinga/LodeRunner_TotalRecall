@@ -8,29 +8,27 @@ private struct LegalCharCase: Sendable {
     let char: Character
     let base: TileType
     let current: TileType
-    let kind: LevelSlotKind
 }
 
 @Test(
-    "parseLevelChar maps each legal tile char to documented base/current/kind",
+    "parseLevelChar maps each legal tile char to documented base/current",
     arguments: [
-        LegalCharCase(char: " ", base: .empty, current: .empty, kind: .empty),
-        LegalCharCase(char: "#", base: .brick, current: .brick, kind: .brick),
-        LegalCharCase(char: "@", base: .solid, current: .solid, kind: .solid),
-        LegalCharCase(char: "H", base: .ladder, current: .ladder, kind: .ladder),
-        LegalCharCase(char: "-", base: .bar, current: .bar, kind: .rope),
-        LegalCharCase(char: "X", base: .trap, current: .trap, kind: .trap),
-        LegalCharCase(char: "S", base: .hiddenLadder, current: .empty, kind: .hladder),
-        LegalCharCase(char: "$", base: .gold, current: .empty, kind: .gold),
-        LegalCharCase(char: "0", base: .empty, current: .guard, kind: .guard),
-        LegalCharCase(char: "&", base: .empty, current: .runner, kind: .runner),
+        LegalCharCase(char: " ", base: .empty, current: .empty),
+        LegalCharCase(char: "#", base: .brick, current: .brick),
+        LegalCharCase(char: "@", base: .solid, current: .solid),
+        LegalCharCase(char: "H", base: .ladder, current: .ladder),
+        LegalCharCase(char: "-", base: .bar, current: .bar),
+        LegalCharCase(char: "X", base: .trap, current: .trap),
+        LegalCharCase(char: "S", base: .hiddenLadder, current: .empty),
+        LegalCharCase(char: "$", base: .gold, current: .empty),
+        LegalCharCase(char: "0", base: .empty, current: .guard),
+        LegalCharCase(char: "&", base: .empty, current: .runner),
     ]
 )
 private func parseLevelCharMapsLegalChars(_ testCase: LegalCharCase) {
     let result = parseLevelChar(testCase.char)
     #expect(result.base == testCase.base)
     #expect(result.current == testCase.current)
-    #expect(result.kind == testCase.kind)
 }
 
 @Test("parseLevelChar falls back to empty for an unknown character")
@@ -38,7 +36,6 @@ func parseLevelCharUnknownFallsBack() {
     let result = parseLevelChar("?")
     #expect(result.base == .empty)
     #expect(result.current == .empty)
-    #expect(result.kind == .empty)
 }
 
 // MARK: - resolveLevelMap culling (ported from test/level-map-culling.test.js)
@@ -87,10 +84,8 @@ func cullsFirstExcessGuard() {
     #expect(result.guardCount == 5)
 
     let demoted = result.slots[0][0]
-    #expect(demoted.char == "0")
     #expect(demoted.base == .empty)
     #expect(demoted.current == .empty)
-    #expect(demoted.kind == .empty)
 
     #expect(result.guards == (1...5).map { GridPoint(x: $0, y: 0) })
     for point in result.guards {
@@ -112,10 +107,7 @@ func firstRunnerWins() {
     #expect(result.runner == GridPoint(x: 3, y: 2))
     #expect(result.slots[3][2].current == .runner)
 
-    let demoted = result.slots[7][5]
-    #expect(demoted.char == "&")
-    #expect(demoted.current == .empty)
-    #expect(demoted.kind == .empty)
+    #expect(result.slots[7][5].current == .empty)
 }
 
 @Test("culling order follows row-major scan (earlier row culled before later)")
@@ -183,11 +175,14 @@ private func sixGuardLevelsCullOne(_ testCase: SixGuardCase) {
 @Test("classic level 8: first culled guard position is stable")
 func classicLevel8FirstCulledGuardPosition() {
     let result = resolveLevelMap(classicLevel8)
+    // A culled guard is a '0' in the raw source whose resolved slot didn't make it into
+    // `result.guards` - `LevelSlot` itself no longer remembers the original character.
+    let sourceChars = Array(classicLevel8)
     var firstCulled: GridPoint?
     outer: for y in 0..<LevelGrid.tilesY {
         for x in 0..<LevelGrid.tilesX {
-            let slot = result.slots[x][y]
-            if slot.char == "0" && slot.current == .empty {
+            guard sourceChars[y * LevelGrid.tilesX + x] == "0" else { continue }
+            if !result.guards.contains(GridPoint(x: x, y: y)) {
                 firstCulled = GridPoint(x: x, y: y)
                 break outer
             }

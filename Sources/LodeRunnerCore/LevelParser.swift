@@ -41,31 +41,33 @@ public struct LevelParseResult: Equatable, Codable, Sendable {
     }
 }
 
-/// Map one level character to base/current tile types and its descriptive kind.
-/// Ported from `parseLevelChar` in `lodeRunner.levelParse.js:19-44`; unknown characters
-/// follow the original's default-to-empty fallback.
-public func parseLevelChar(_ char: Character) -> (base: TileType, current: TileType, kind: LevelSlotKind) {
+/// Map one level character to base/current tile types.
+/// Ported from `parseLevelChar` in `lodeRunner.levelParse.js:19-44` (dropping the JS's
+/// `kind` field: it's a deterministic function of `base`/`current` and adds no
+/// information a caller can't already get from those two). Unknown characters follow the
+/// original's default-to-empty fallback.
+public func parseLevelChar(_ char: Character) -> (base: TileType, current: TileType) {
     switch char {
     case "#":  // Normal Brick
-        return (.brick, .brick, .brick)
+        return (.brick, .brick)
     case "@":  // Solid Brick
-        return (.solid, .solid, .solid)
+        return (.solid, .solid)
     case "H":  // Ladder
-        return (.ladder, .ladder, .ladder)
+        return (.ladder, .ladder)
     case "-":  // Line of rope
-        return (.bar, .bar, .rope)
+        return (.bar, .bar)
     case "X":  // False brick
-        return (.trap, .trap, .trap)
+        return (.trap, .trap)
     case "S":  // Ladder appears at end of level
-        return (.hiddenLadder, .empty, .hladder)
+        return (.hiddenLadder, .empty)
     case "$":  // Gold chest
-        return (.gold, .empty, .gold)
+        return (.gold, .empty)
     case "0":  // Guard
-        return (.empty, .guard, .guard)
+        return (.empty, .guard)
     case "&":  // Player
-        return (.empty, .runner, .runner)
+        return (.empty, .runner)
     default:  // " " and any unknown character
-        return (.empty, .empty, .empty)
+        return (.empty, .empty)
     }
 }
 
@@ -101,7 +103,7 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
     // Pass 2: row-major (y outer, x inner) resolve, applying culling/demotion.
     var slots = Array(
         repeating: Array(
-            repeating: LevelSlot(base: .empty, current: .empty, char: " ", kind: .empty),
+            repeating: LevelSlot(base: .empty, current: .empty),
             count: LevelGrid.tilesY),
         count: LevelGrid.tilesX)
 
@@ -117,38 +119,33 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
     var index = 0
     for y in 0..<LevelGrid.tilesY {
         for x in 0..<LevelGrid.tilesX {
-            let char = chars[index]
+            let (base, current) = parseLevelChar(chars[index])
             index += 1
-            var (base, current, kind) = parseLevelChar(char)
+            var resolvedCurrent = current
 
-            switch kind {
-            case .guard:
+            if current == .guard {
                 mapGuardCount -= 1
                 if mapGuardCount >= maxGuardLimit {
-                    current = .empty
-                    kind = .empty  // demoted - no spawn
+                    resolvedCurrent = .empty  // demoted - no spawn
                     culledGuardCount += 1
                 } else {
                     guardCount += 1
                     guards.append(GridPoint(x: x, y: y))
                 }
-            case .runner:
+            } else if current == .runner {
                 if runnerPlaced {
-                    current = .empty
-                    kind = .empty  // demoted - no spawn
+                    resolvedCurrent = .empty  // demoted - no spawn
                     culledRunnerCount += 1
                 } else {
                     runnerPlaced = true
                     runnerCount = 1
                     runner = GridPoint(x: x, y: y)
                 }
-            case .gold:
+            } else if base == .gold {
                 goldCount += 1
-            default:
-                break
             }
 
-            slots[x][y] = LevelSlot(base: base, current: current, char: String(char), kind: kind)
+            slots[x][y] = LevelSlot(base: base, current: resolvedCurrent)
         }
     }
 
