@@ -1,0 +1,32 @@
+name: Swift
+
+on:
+  release:
+    branches: [ dev ]
+    types: [ published ]
+
+jobs:
+  build:
+
+    runs-on: macos-26
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: sw_vers
+      run: sw_vers
+    - name: Available Xcodes
+      run: ls /Applications | grep Xcode
+    - name: Switch to Xcode 26
+      run: sudo xcode-select -s "/Applications/Xcode_26.4.app/Contents/Developer"
+    - name: Xcode Version
+      run: xcodebuild -version
+    - name: Install iOS
+      run: xcodebuild -downloadPlatform iOS
+    - name: Show SDKs
+      run: xcodebuild -showsdks
+    - name: Show Destinations
+      run: xcodebuild -scheme LodeRunnerCore -showdestinations
+    - name: Build / Test
+      run: swift test -v -Xswiftc -warnings-as-errors
+    - name: Build iOS / macOS
+      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerCore -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS"
