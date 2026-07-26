@@ -43,8 +43,8 @@ private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
     return String(cells)
 }
 
-#Preview("Apple2") {
-    let level = resolveLevelMap(
+private func previewLevel() -> LevelParseResult {
+    resolveLevelMap(
         makeLevel(stamps: [
             (x: 3, y: 14, ch: "&"),
             (x: 10, y: 14, ch: "0"),
@@ -58,20 +58,17 @@ private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
             (x: 8, y: 12, ch: "X"),
             (x: 5, y: 10, ch: "@"), (x: 6, y: 10, ch: "@"), (x: 7, y: 10, ch: "@"),
         ]))
-    LevelGridView(tiles: level.slots.map { $0.map(\.current) })
+}
+
+#Preview("Apple2") {
+    LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
         .environment(\.tileTheme, .apple2)
         .background(Color.gray.opacity(0.2))
         .border(Color.gray)
 }
 
 #Preview("C64") {
-    let level = resolveLevelMap(
-        makeLevel(stamps: [
-            (x: 3, y: 14, ch: "&"),
-            (x: 10, y: 14, ch: "0"),
-            (x: 6, y: 14, ch: "$"),
-        ]))
-    LevelGridView(tiles: level.slots.map { $0.map(\.current) })
+    LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
         .environment(\.tileTheme, .c64)
         .background(Color.gray.opacity(0.2))
         .border(Color.gray)
