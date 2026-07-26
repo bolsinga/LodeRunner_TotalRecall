@@ -5,23 +5,6 @@ import Testing
 
 @Suite
 struct RunnerSimulationTests {
-    /// Build a blank 28x16 level, then stamp entities/terrain at [x,y] positions, matching
-    /// phase 1's `makeLevel` test helper. Always fills the bottom row with bricks so the
-    /// string looks valid.
-    private func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
-        var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-        for stamp in stamps {
-            cells[stamp.y * LevelGrid.tilesX + stamp.x] = stamp.ch
-        }
-        for x in 0..<LevelGrid.tilesX {
-            let index = (LevelGrid.tilesY - 1) * LevelGrid.tilesX + x
-            if cells[index] == " " {
-                cells[index] = "#"
-            }
-        }
-        return String(cells)
-    }
-
     @Test("a level with no runner spawn throws noRunnerSpawn")
     func noRunnerSpawnThrows() {
         let level = resolveLevelMap(makeLevel(stamps: []))
