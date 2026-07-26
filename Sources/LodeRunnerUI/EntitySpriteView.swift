@@ -2,29 +2,27 @@ import LodeRunnerCore
 import SwiftUI
 
 /// Renders a runner as an animated sprite positioned by tile + subtile offsets.
-/// Position math matches `lodeRunner.runner.js:277-278`
-/// (`sprite.x = x * tileW + xOffset`, ignoring the JS's `tileScale` — the port
-/// draws at 1x). The animation is derived from `RunnerAnimation.forRunner`; when
-/// that returns `nil` (`.stop`), falls back to the theme's static `runner1`
-/// image the way `TileCellView` does.
+/// Position math matches `lodeRunner.runner.js:277-278` (`sprite.x = x * tileW +
+/// xOffset`, ignoring the JS's `tileScale` — the port draws at 1x). Animation
+/// state comes from a `RunnerAppearance`: its `lastAnimation` drives the
+/// visible frame sequence, matching the JS's `runner.shape`. When
+/// `runner.action == .stop`, the view freezes on the animation's first frame —
+/// approximating `runner.sprite.stop()` from `runner.js:273`.
 public struct RunnerSpriteView: View {
     let runner: Runner
-    let facing: RunnerAction
-    let baseTile: TileType
+    let appearance: RunnerAppearance
 
-    public init(runner: Runner, facing: RunnerAction, baseTile: TileType) {
+    public init(runner: Runner, appearance: RunnerAppearance) {
         self.runner = runner
-        self.facing = facing
-        self.baseTile = baseTile
+        self.appearance = appearance
     }
 
     public var body: some View {
         EntitySprite(
-            animation: RunnerAnimation.forRunner(
-                action: runner.action, baseTile: baseTile, facing: facing
-            ),
+            frames: appearance.lastAnimation.frames,
+            framesPerSecond: appearance.lastAnimation.framesPerSecond,
+            isPlaying: runner.action != .stop,
             sheet: .runner,
-            idleAsset: "runner1",
             position: runner.position,
             xOffset: runner.xOffset,
             yOffset: runner.yOffset
@@ -34,31 +32,28 @@ public struct RunnerSpriteView: View {
 
 /// Renders a guard as an animated sprite, same absolute-position math as
 /// `RunnerSpriteView`. `sheet` is `.guard` by default and `.redhat` when the
-/// guard is one of the champLevel red-hat variants — same asset switch the JS
-/// makes via `guard.sprite` picked in `lodeRunner.preload.js:496-497`.
+/// guard is a champLevel red-hat variant — same asset switch the JS makes via
+/// `guard.sprite` picked in `lodeRunner.preload.js:496-497`.
 public struct GuardSpriteView: View {
     let guardState: Guard
-    let facing: GuardAction
-    let baseTile: TileType
+    let appearance: GuardAppearance
     let sheet: SpriteSheetSpec
 
     public init(
-        guardState: Guard, facing: GuardAction, baseTile: TileType,
+        guardState: Guard, appearance: GuardAppearance,
         sheet: SpriteSheetSpec = .guard
     ) {
         self.guardState = guardState
-        self.facing = facing
-        self.baseTile = baseTile
+        self.appearance = appearance
         self.sheet = sheet
     }
 
     public var body: some View {
         EntitySprite(
-            animation: GuardAnimation.forGuard(
-                action: guardState.action, baseTile: baseTile, facing: facing
-            ),
+            frames: appearance.lastAnimation.frames,
+            framesPerSecond: appearance.lastAnimation.framesPerSecond,
+            isPlaying: guardState.action != .stop,
             sheet: sheet,
-            idleAsset: "guard1",
             position: guardState.position,
             xOffset: guardState.xOffset,
             yOffset: guardState.yOffset
@@ -66,31 +61,21 @@ public struct GuardSpriteView: View {
     }
 }
 
-private struct EntitySprite<Animation>: View
-where Animation: RawRepresentable, Animation.RawValue == String {
-    @Environment(\.tileTheme) private var theme
-
-    let animation: Animation?
+private struct EntitySprite: View {
+    let frames: [Int]
+    let framesPerSecond: Double
+    let isPlaying: Bool
     let sheet: SpriteSheetSpec
-    let idleAsset: String
     let position: GridPoint
     let xOffset: Int
     let yOffset: Int
 
     var body: some View {
         Group {
-            if let animation, let frames = frameSequence(for: animation) {
-                AnimatedSprite(
-                    sheet: sheet,
-                    frames: frames.indices,
-                    framesPerSecond: frames.framesPerSecond
-                )
+            if isPlaying {
+                AnimatedSprite(sheet: sheet, frames: frames, framesPerSecond: framesPerSecond)
             } else {
-                Image("\(theme.rawValue)/\(idleAsset)", bundle: .module)
-                    .resizable()
-                    .frame(
-                        width: CGFloat(sheet.frameWidth),
-                        height: CGFloat(sheet.frameHeight))
+                SpriteFrame(sheet: sheet, index: frames.first ?? 0)
             }
         }
         .offset(
@@ -98,65 +83,49 @@ where Animation: RawRepresentable, Animation.RawValue == String {
             y: CGFloat(position.y * sheet.frameHeight + yOffset)
         )
     }
-
-    private struct FrameSequence {
-        let indices: [Int]
-        let framesPerSecond: Double
-    }
-
-    private func frameSequence(for animation: Animation) -> FrameSequence? {
-        if let runner = animation as? RunnerAnimation {
-            return FrameSequence(indices: runner.frames, framesPerSecond: runner.framesPerSecond)
-        }
-        if let guardAnim = animation as? GuardAnimation {
-            return FrameSequence(
-                indices: guardAnim.frames, framesPerSecond: guardAnim.framesPerSecond)
-        }
-        return nil
-    }
 }
 
 // MARK: - Preview
 
 private func previewLevel() -> LevelParseResult {
     var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-    // Solid floor row and a couple of platforms
     for x in 0..<LevelGrid.tilesX {
         cells[(LevelGrid.tilesY - 1) * LevelGrid.tilesX + x] = "#"
     }
-    // A bar spanning a few columns
     for x in 10...14 {
         cells[9 * LevelGrid.tilesX + x] = "-"
     }
-    // A ladder
     for y in 9...14 {
         cells[y * LevelGrid.tilesX + 20] = "H"
     }
     return resolveLevelMap(String(cells))
 }
 
+/// Manually construct appearances that reflect specific action histories so we
+/// can visually verify facing + last-animation caching without a tick driver:
+/// the runner has been running right, the bar guard is hanging left, the
+/// falling guard was last heading left before the fall.
 private struct EntitySpritePreview: View {
     var body: some View {
         let level = previewLevel()
         let runningRunner = Runner(
             position: GridPoint(x: 3, y: 14), xOffset: 0, yOffset: 0, action: .right)
+        let runnerAppearance = RunnerAppearance(facing: .right, lastAnimation: .runRight)
+
         let barGuard = Guard(
             position: GridPoint(x: 12, y: 9), xOffset: 0, yOffset: 0, action: .left)
+        let barGuardAppearance = GuardAppearance(facing: .left, lastAnimation: .barLeft)
+
         let fallingGuard = Guard(
             position: GridPoint(x: 6, y: 5), xOffset: 0, yOffset: 20, action: .fall)
+        let fallingGuardAppearance = GuardAppearance(facing: .left, lastAnimation: .fallLeft)
 
         FittedBoardView {
             ZStack(alignment: .topLeading) {
                 LevelGridView(tiles: level.slots.map { $0.map(\.current) })
-                RunnerSpriteView(
-                    runner: runningRunner, facing: .right,
-                    baseTile: level.slots[3][14].base)
-                GuardSpriteView(
-                    guardState: barGuard, facing: .left,
-                    baseTile: level.slots[12][9].base)
-                GuardSpriteView(
-                    guardState: fallingGuard, facing: .left,
-                    baseTile: level.slots[6][5].base)
+                RunnerSpriteView(runner: runningRunner, appearance: runnerAppearance)
+                GuardSpriteView(guardState: barGuard, appearance: barGuardAppearance)
+                GuardSpriteView(guardState: fallingGuard, appearance: fallingGuardAppearance)
             }
         }
         .background(Color.gray.opacity(0.2))
