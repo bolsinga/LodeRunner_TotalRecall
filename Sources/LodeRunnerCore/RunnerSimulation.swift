@@ -14,6 +14,24 @@ private let digAnimationFrameCount = 11
 // burial-death can trigger. Total fill duration: 166+8+8+4 = 186 ticks.
 private let fillFrameDurations = [166, 8, 8, 4]
 
+// SCORE_* constants, lodeRunner.def.js:80-82. Not `private`: scored from both this
+// file and RunnerSimulation+Guard.swift, and `private` is file-scoped in Swift.
+// Not a raw-value enum: SCORE_IN_HOLE and SCORE_GUARD_DEAD are both genuinely 75 in
+// the source, and Swift requires distinct raw values per case.
+enum Score {
+    case getGold
+    case inHole
+    case guardDead
+
+    var value: Int {
+        switch self {
+        case .getGold: return 250
+        case .inHole: return 75
+        case .guardDead: return 75
+        }
+    }
+}
+
 /// A brick mid-dig. `pos` matches the JS's `holeObj.pos`: the RUNNER's row, not the
 /// brick's — the brick actually being dug is at `(pos.x, pos.y + 1)`. Kept literally
 /// as-is (not renamed/normalized) to avoid introducing an off-by-one bug porting the
@@ -43,9 +61,7 @@ public enum RunnerSimulationError: Error, Equatable, Sendable, CustomStringConve
 }
 
 /// Ported from `lodeRunner.runner.js` and `lodeRunner.guard.js`, targeting AI
-/// version 4 only. Guard pathfinding (`scanFloor`/`scanDown`/`scanUp`) is deferred
-/// to a later phase — see the phase-3a plan for why `bestMove` falls back to
-/// `.stop` when a guard can't directly chase the runner.
+/// version 4 only.
 public struct RunnerSimulation: Equatable, Codable, Sendable {
     // `internal(set)`, not `private(set)`: RunnerSimulation+Guard.swift's
     // extension needs write access too, and `private` in Swift is file-scoped —
@@ -57,6 +73,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     public private(set) var goldRemaining: Int
     public private(set) var goldComplete: Bool
     public internal(set) var phase: RunnerPhase
+    public internal(set) var score: Int
 
     public internal(set) var guards: [Guard]
     var moveOffset: Int
@@ -76,6 +93,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         goldRemaining = level.goldCount
         goldComplete = false
         phase = .playing
+        score = 0
 
         guards = level.guards.map { Guard(position: $0) }
         moveOffset = 0
@@ -348,7 +366,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
 
         slots[x][y].current = .runner
 
-        // Gold pickup (runner.js:301-307) — the left/right check is deliberately
+        // Gold pickup (runner.js:301-314) — the left/right check is deliberately
         // asymmetric (only 0 <= xOffset < quarterTileWidth, no negative-offset
         // counterpart for approaching from the right); preserve as written.
         if slots[x][y].base == .gold
@@ -359,6 +377,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         {
             slots[x][y].base = .empty
             decGold()
+            addScore(.getGold)
         }
 
         checkCollision(x, y)
@@ -408,6 +427,10 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         if goldRemaining <= 0 {
             showHideLaddr()
         }
+    }
+
+    mutating func addScore(_ points: Score) {
+        score += points.value
     }
 
     private mutating func showHideLaddr() {
@@ -534,6 +557,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                     holePos: guards[gid].holePos)
             }
             guardReborn(at: cell)
+            addScore(.guardDead)  // runner.js:670-671.
         }
         slots[cell.x][cell.y].current = .brick
     }

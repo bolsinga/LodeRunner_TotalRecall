@@ -48,6 +48,7 @@ func initialStateMatchesSpawn() throws {
     #expect(sim.goldComplete == false)
     #expect(sim.digState == nil)
     #expect(sim.fillStates.isEmpty)
+    #expect(sim.score == 0)
 }
 
 @Test("walking right on open floor: 3 ticks crosses one tile boundary")
@@ -176,6 +177,7 @@ func goldPickupRevealsHiddenLadders() throws {
     #expect(sim.slots[6][14].base == .empty)
     #expect(sim.slots[10][5].base == .ladder)
     #expect(sim.slots[10][5].current == .ladder)
+    #expect(sim.score == 250)
 }
 
 @Test("reaching row 0 centered with all gold collected wins")
