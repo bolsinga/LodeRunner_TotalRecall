@@ -60,16 +60,20 @@ private func previewLevel() -> LevelParseResult {
         ]))
 }
 
-#Preview("Apple2") {
-    LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
-        .environment(\.tileTheme, .apple2)
-        .background(Color.gray.opacity(0.2))
-        .border(Color.gray)
+#Preview("Apple2", traits: .landscapeLeft) {
+    FittedBoardView {
+        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
+    }
+    .environment(\.tileTheme, .apple2)
+    .background(Color.gray.opacity(0.2))
+    .border(Color.gray)
 }
 
-#Preview("C64") {
-    LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
-        .environment(\.tileTheme, .c64)
-        .background(Color.gray.opacity(0.2))
-        .border(Color.gray)
+#Preview("C64", traits: .landscapeLeft) {
+    FittedBoardView {
+        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
+    }
+    .environment(\.tileTheme, .c64)
+    .background(Color.gray.opacity(0.2))
+    .border(Color.gray)
 }
