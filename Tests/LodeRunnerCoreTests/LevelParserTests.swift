@@ -124,6 +124,20 @@ func cullingFollowsRowMajorOrder() {
     #expect(result.guards.contains(GridPoint(x: 0, y: 1)))
 }
 
+@Test("a shorter-than-expected levelMap reads as space-padded instead of trapping")
+func shortLevelMapPadsInsteadOfTrapping() {
+    let result = resolveLevelMap(String(repeating: "#", count: 10))
+    #expect(result.slots[0][0].current == .brick)
+    #expect(result.slots[LevelGrid.tilesX - 1][LevelGrid.tilesY - 1].current == .empty)
+}
+
+@Test("a longer-than-expected levelMap reads as truncated instead of trapping")
+func longLevelMapTruncatesInsteadOfTrapping() {
+    let result = resolveLevelMap(String(repeating: "#", count: LevelGrid.tileCount + 100))
+    #expect(result.slots[0][0].current == .brick)
+    #expect(result.slots[LevelGrid.tilesX - 1][LevelGrid.tilesY - 1].current == .brick)
+}
+
 // MARK: - resolveLevelMap against real shipped levels
 //
 // Hand-copied (verbatim, programmatically extracted, not retyped) from
