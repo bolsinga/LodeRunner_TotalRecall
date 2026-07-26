@@ -16,10 +16,20 @@ private let fillFrameDurations = [166, 8, 8, 4]
 
 // SCORE_* constants, lodeRunner.def.js:80-82. Not `private`: scored from both this
 // file and RunnerSimulation+Guard.swift, and `private` is file-scoped in Swift.
+// Not a raw-value enum: SCORE_IN_HOLE and SCORE_GUARD_DEAD are both genuinely 75 in
+// the source, and Swift requires distinct raw values per case.
 enum Score {
-    static let getGold = 250
-    static let inHole = 75
-    static let guardDead = 75
+    case getGold
+    case inHole
+    case guardDead
+
+    var value: Int {
+        switch self {
+        case .getGold: return 250
+        case .inHole: return 75
+        case .guardDead: return 75
+        }
+    }
 }
 
 /// A brick mid-dig. `pos` matches the JS's `holeObj.pos`: the RUNNER's row, not the
@@ -367,7 +377,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         {
             slots[x][y].base = .empty
             decGold()
-            addScore(Score.getGold)
+            addScore(.getGold)
         }
 
         checkCollision(x, y)
@@ -419,9 +429,8 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         }
     }
 
-    // SCORE_* constants, lodeRunner.def.js:80-82.
-    mutating func addScore(_ points: Int) {
-        score += points
+    mutating func addScore(_ points: Score) {
+        score += points.value
     }
 
     private mutating func showHideLaddr() {
@@ -548,7 +557,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
                     holePos: guards[gid].holePos)
             }
             guardReborn(at: cell)
-            addScore(Score.guardDead)  // runner.js:670-671.
+            addScore(.guardDead)  // runner.js:670-671.
         }
         slots[cell.x][cell.y].current = .brick
     }
