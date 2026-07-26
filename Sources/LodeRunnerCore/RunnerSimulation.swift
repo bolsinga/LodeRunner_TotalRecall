@@ -14,20 +14,23 @@ private let digAnimationFrameCount = 11
 // burial-death can trigger. Total fill duration: 166+8+8+4 = 186 ticks.
 private let fillFrameDurations = [166, 8, 8, 4]
 
-// SCORE_* constants, lodeRunner.def.js:80-82. Not `private`: scored from both this
-// file and RunnerSimulation+Guard.swift, and `private` is file-scoped in Swift.
-// Not a raw-value enum: SCORE_IN_HOLE and SCORE_GUARD_DEAD are both genuinely 75 in
-// the source, and Swift requires distinct raw values per case.
+// SCORE_* constants, lodeRunner.def.js:79-82. Not `private`: scored from this
+// file, RunnerSimulation+Guard.swift, and GameSession.swift, and `private` is
+// file-scoped in Swift. Not a raw-value enum: SCORE_IN_HOLE and SCORE_GUARD_DEAD
+// are both genuinely 75 in the source, and Swift requires distinct raw values per
+// case.
 enum Score {
     case getGold
     case inHole
     case guardDead
+    case completeLevel
 
     var value: Int {
         switch self {
         case .getGold: return 250
         case .inHole: return 75
         case .guardDead: return 75
+        case .completeLevel: return 1500
         }
     }
 }
