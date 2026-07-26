@@ -13,7 +13,7 @@ struct LevelDataTool: ParsableCommand {
     var sourceDir: String = "."
 
     @Option(help: "Directory to write generated <pack>.json files into.")
-    var outputDir: String = "LevelData"
+    var outputDir: String
 
     func run() throws {
         try FileManager.default.createDirectory(atPath: outputDir, withIntermediateDirectories: true)
