@@ -62,6 +62,7 @@ var dbName = "LodeRunner";
 
 function init()
 {
+	initAccent();         //saved accent applies before any chrome paints
 	settingsPanel.init(); //settings menu is a page peer, built before the game boots
 
 	var screenSize = getScreenSize();
@@ -98,18 +99,31 @@ function loadStoreVariable()
 
 function canvasReSize() 
 {
-	var iconSizeX;
-	for (var scale = MAX_SCALE*100; scale >= MIN_SCALE*100; scale -= 5) {
-		tileScale = scale / 100;
-		canvasX = BASE_SCREEN_X * tileScale;
-		canvasY = BASE_SCREEN_Y * tileScale;
-		//if (canvasX <= screenX1 && canvasY <= screenY1 || tileScale <= MIN_SCALE) break;
-		iconSizeX = BASE_ICON_X * 2 * tileScale;
-		if( (canvasX+iconSizeX) <= screenX1 && canvasY <= screenY1 || tileScale <= MIN_SCALE) break;
-	}
+	// Closed-form fit: the board may occupy the window less its four margins.
+	// Whichever axis runs out first sets the scale and lands on its minimum
+	// exactly; the other follows from the fixed 28x16 aspect and its leftover
+	// space is wasted to the right and bottom.
+	//
+	// Tiles are PLACED at x * tileWScale but DRAWN at scaleX = tileScale, so the
+	// two have to agree to the pixel or adjacent bricks show seams. An arbitrary
+	// scale (0.9766 -> 42.96875px tiles) accumulates rounding error down the
+	// grid; the original stepped by 0.05 for exactly this reason. Keep a step,
+	// but fit closed-form and snap down to it rather than looping.
+	var availX = screenX1 - BOARD_MARGIN_LEFT - BOARD_MARGIN_RIGHT;
+	var availY = screenY1 - BOARD_MARGIN_TOP - BOARD_MARGIN_BOTTOM;
+	var STEP = 0.05;
+
+	tileScale = Math.min(availX / BASE_SCREEN_X, availY / BASE_SCREEN_Y);
+	tileScale = Math.round(Math.floor(tileScale / STEP) * STEP * 100) / 100;
+
+	if(tileScale > MAX_SCALE) tileScale = MAX_SCALE;
+	if(tileScale < MIN_SCALE) tileScale = MIN_SCALE;
+
+	canvasX = BASE_SCREEN_X * tileScale;
+	canvasY = BASE_SCREEN_Y * tileScale;
+	var iconSizeX = BASE_ICON_X * 2 * tileScale;
 	debug("SCALE=" + tileScale);
-	//debug("screenX1 = " + screenX1 + " screenY1 = " + screenY1 + "scale = " + scale);
-	
+
 	screenBorder = (screenX1 - (canvasX+iconSizeX))/2;
 	if(screenBorder > ICON_BORDER*2) screenBorder = ICON_BORDER*2; 
 	else if (screenBorder < 0) screenBorder = 0;
@@ -120,11 +134,10 @@ function canvasReSize()
 	canvas.width = canvasX;
 	canvas.height = canvasY;
 	
-	//Set canvas top left position
-	var left = ((screenX1 - canvasX)/2|0),
-		top  = ((screenY1 - canvasY)/2|0);
-	canvas.style.left = (left>0?left:0) + "px";
-	canvas.style.top =  (top>0?top:0) + "px";
+	//Pinned to a fixed inset rather than centred, so the board holds its place
+	//as the window changes instead of sliding around under the chrome.
+	canvas.style.left = BOARD_MARGIN_LEFT + "px";
+	canvas.style.top =  BOARD_MARGIN_TOP + "px";
 	canvas.style.position = "absolute";
 	canvas.style.cursor = "default";
 	
@@ -225,7 +238,6 @@ function stopDemoAndPlay()
 	soundStop(soundFall);
 	stopAllSpriteObj();
 
-	if(playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) selectIconObj.disable(1);
 	if(playMode == PLAY_DEMO_ONCE) showStartMsg = 0;
 	////genUserLevel(MAX_EDIT_LEVEL); //for debug only
 	////getEditLevelInfo(); //load edit levels
@@ -1193,20 +1205,16 @@ function closingScreen(r)
 	}
 }
 
+// Show/hide seam for the board icons (choose level, watch demo). They show
+// themselves only in the modes where they apply.
 function menuIconEnable()
 {
-	if(playMode == PLAY_MODERN || playMode == PLAY_DEMO) {
-		selectIconObj.enable();
-	}
-	if(playMode == PLAY_MODERN) demoIconObj.enable();
+	boardIcons.update();
 }
 
 function menuIconDisable(hidden)
 {
-	if(playMode == PLAY_MODERN) {
-		selectIconObj.disable(hidden);
-	}
-	demoIconObj.disable(hidden);
+	boardIcons.hide();
 }
 
 
@@ -1370,8 +1378,14 @@ function gameFinishCallback(selectMode)
 		gameState = GAME_NEW_LEVEL;
 		break;
 	case 1: //menu selection
-		//incLevel(1);
-		activeSelectMenu(gameFinishActiveNew, gameFinishCloseIcon);	
+		// onClose fires on every close path, a pick included, so only resume the
+		// old level when the dialog was dismissed without choosing one.
+		var picked = 0;
+		levelSelect.open({
+			current: curLevel,
+			onPick: function(level) { picked = 1; gameFinishActiveNew(level); },
+			onClose: function() { if(!picked) gameFinishCloseIcon(); }
+		});
 		break;
 	case 2: //new level
 		incLevel(1,0);	
@@ -1409,7 +1423,6 @@ function mainTick(event)
 			disableAutoDemoTimer();	
 			gamepadClearId();	
 			gameState = GAME_RUNNING;
-			if(playMode == PLAY_MODERN) demoIconObj.disable(1);
 			playTickTimer = 0; //modern mode time counter
 			if(goldCount <= 0) showHideLaddr();
 		}

@@ -75,10 +75,10 @@ function startEditMode()
 	installEditUnloadGuard();
 }
 
+// The editor's level picker went with the legacy select icon; it gets rewired
+// to the new level selector when the editor UI is rebuilt.
 function setEditSelectMenu()
 {
-	if(editLevels>0)selectIconObj.enable(); 
-	else selectIconObj.disable(1);
 }
 
 function canvasEditReSize()
@@ -615,14 +615,15 @@ function drawLoadButton()
 		startEditMode();
 	}
 	
+	// Picking which level to load went with the legacy select dialog. The
+	// version still loads; choosing from it is rewired when the editor UI is
+	// rebuilt on the new level selector.
 	function loadSelectMenu(id, callbackFun)
 	{
 		loadPlayData = menuId2GameVersionId(id);
 		ensurePlayVersionLoaded(loadPlayData, function () {
-			var titleName = "Load From: " + playDataToTitleName(loadPlayData);
 			loadLevelData = getPlayVerData(loadPlayData);
-			selectDialog(titleName, checkBitmap, loadLevelData, 1, screenX1, screenY1, 
-					mainStage, tileScale, loadSelectLevel, null, restoreState);
+			restoreState();
 		});
 	}
 			
@@ -771,7 +772,6 @@ function startTestMode()
 	saveTestState();
 	canvasReSize();
 	setKeyHandler(handleKeyDown); //key press
-	selectIconObj.disable(1);
 	initShowDataMsg();
 	startGame();
 }

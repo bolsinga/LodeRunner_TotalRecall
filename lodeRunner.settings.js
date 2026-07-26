@@ -8,6 +8,35 @@
 // the two UIs never desync.
 //=============================================================================
 
+// Interaction accent: hover, focus rings, links. All three are period monitor
+// phosphors -- green and amber are what these machines actually glowed, gold is
+// the game's own treasure color. Purely cosmetic and panel-only; nothing in the
+// game reads it.
+var ACCENTS = {
+	green: { name: "Green", base: "#5f9e6e", bright: "#7fc48e" },
+	gold:  { name: "Gold",  base: "#c8a63c", bright: "#e7c64a" },
+	amber: { name: "Amber", base: "#c98a3c", bright: "#e0a95c" }
+};
+var ACCENT_DEFAULT = "gold";
+var curAccent = ACCENT_DEFAULT;
+
+// Drives the two custom properties the whole panel already keys off, so one
+// write recolors every hover and focus ring at once.
+function applyAccent(id)
+{
+	var a = ACCENTS[id] || ACCENTS[ACCENT_DEFAULT];
+	var s = document.documentElement.style;
+	s.setProperty("--ls-cyan", a.base);
+	s.setProperty("--ls-cyan-bright", a.bright);
+	curAccent = ACCENTS[id] ? id : ACCENT_DEFAULT;
+}
+
+function initAccent()
+{
+	var saved = getStorage(STORAGE_ACCENT);
+	applyAccent(ACCENTS[saved] ? saved : ACCENT_DEFAULT);
+}
+
 var gameSettings = {
 	_listeners: [],
 
@@ -31,6 +60,7 @@ var gameSettings = {
 		case "speed":   return speed;                     //0..speedMode.length-1
 		case "repeat":  return !!repeatAction;
 		case "gamepad": return !!gamepadMode;
+		case "accent":  return curAccent;                 //"green" | "gold" | "amber"
 		//navigation state (which game is loaded / how it's being played)
 		case "mode":    return playMode;                  //PLAY_CLASSIC | PLAY_MODERN | PLAY_DEMO | PLAY_EDIT | ...
 		case "version": return playData;                  //1..5 game id, or PLAY_DATA_USERDEF
@@ -69,6 +99,13 @@ var gameSettings = {
 		});
 	},
 
+	setAccent: function(id) {
+		if(!ACCENTS[id] || id === curAccent) return;
+		applyAccent(id);
+		setStorage(STORAGE_ACCENT, id);
+		this._notify("accent", id);
+	},
+
 	//tile color slot 0..maxThemeColor-1 for the active theme.
 	setColor: function(id) {
 		if(curColorId[curTheme] === id) return;
@@ -105,13 +142,12 @@ var gameSettings = {
 
 	//-------- navigation (launches gameplay; replaces the canvas game-menu) --------
 
-	//launch a play mode for the current version. mode: "challenge" | "training" | "demo".
-	setMode: function(mode) {
+	//Training on = practice any level (PLAY_MODERN); off = Challenge, from level
+	//1 for score (PLAY_CLASSIC). Either way the current version relaunches.
+	setMode: function(on) {
 		var self = this;
 		function done(){ self._notify("mode", playMode); }
-		if(mode === "challenge") classicPlay(0, done);
-		else if(mode === "training") modernPlay(0, done);
-		else if(mode === "demo") demoPlay(0, done);
+		if(on) modernPlay(0, done); else classicPlay(0, done);
 	},
 
 	//switch the loaded game version (playData), then relaunch the current play mode
@@ -119,10 +155,7 @@ var gameSettings = {
 	setVersion: function(playDataId) {
 		if(playDataId === playData) return;
 		playData = playDataId;
-		var mode = (playMode === PLAY_MODERN) ? "training"
-		         : (playMode === PLAY_DEMO)   ? "demo"
-		         : "challenge";                       //classic/other -> challenge
-		this.setMode(mode);
+		this.setMode(playMode === PLAY_MODERN);       //classic/other -> challenge
 		this._notify("version", playData);
 	},
 
@@ -156,12 +189,6 @@ var gameSettings = {
 
 var settingsPanel = (function() {
 	var SPEED_LABELS = ["Very Slow", "Slow", "Normal", "Fast", "Very Fast"];
-	var MODE_INFO = [
-		["Challenge", "Play from level 1 for score, competing against other players' high scores."],
-		["Training",  "Jump to any level and practice; progress is kept per version."],
-		["Demo",      "Watch recorded playthroughs of levels others have cleared."],
-		["Edit",      "Build and test your own custom levels."]
-	];
 	var root, panel, body;
 
 	function el(tag, cls, html) {
@@ -202,7 +229,8 @@ var settingsPanel = (function() {
 					'<button class="ls-back" aria-label="Back">&larr;</button>' +
 					'<h2 class="ls-title"><b>LODE</b> RUNNER</h2>' +
 				'</div>' +
-				'<div class="ls-body">' + mainView() + helpView() + infoView() + modeView() + '</div>' +
+				'<div class="ls-body">' + mainView() + helpView() +
+					(richOptions ? "" : '<div class="view-info"></div>') + '</div>' +
 			'</div>';
 
 		document.body.appendChild(toggleBtn);
@@ -213,20 +241,120 @@ var settingsPanel = (function() {
 		wire();
 	}
 
+	// One dropdown row: the version name with its level count, plus an info
+	// marker carrying that version's record. Both the marker and the count are
+	// hidden in the closed control (see .ls-version selectedcontent) -- they
+	// help you compare versions in the list, but once one is chosen the count
+	// only makes the control wide.
+	// Chrome/Edge render <option> children as real elements; elsewhere the
+	// browser keeps only their text, which would spill every card into the
+	// list. Same test the stylesheet uses -- markup and styling must agree.
+	var richOptions = window.CSS && CSS.supports && CSS.supports("appearance", "base-select");
+
+	function versionOption(id, name) {
+		var count = playVersionLevelCount(id);
+		var facts = richOptions ? playVersionFacts(id) : [];
+		var card  = "";
+
+		//custom levels are the user's own, so describe what they are rather
+		//than inventing a publication record they do not have
+		if(richOptions && id == PLAY_DATA_USERDEF)
+			facts = [["Source", "Built by you in the level editor"],
+			         ["Capacity", "Up to " + MAX_EDIT_LEVEL + " levels"],
+			         ["Stored", "In this browser only"]];
+
+		if(facts.length) {
+			var rows = "";
+			for(var i = 0; i < facts.length; i++) {
+				var url = facts[i][2];
+				var value = url
+					? '<a class="vi-link" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
+					      facts[i][1] + '</a>'
+					: facts[i][1];
+				rows += '<span class="vi-k">' + facts[i][0] + '</span>' +
+				        '<span class="vi-v">' + value + '</span>';
+			}
+			//popover puts the card in the top layer, so it escapes the panel's
+			//overflow:hidden instead of being cut off at the 400px edge
+			card = '<span class="vi">&#9432;<span class="vi-card" popover>' +
+			           '<span class="vi-h">' + name + '</span>' +
+			           '<span class="vi-rows">' + rows + '</span>' +
+			       '</span></span>';
+		}
+
+		var levels = count ? '<span class="vi-count">' + playVersionCountText(count) + '</span>' : "";
+		if(!richOptions)
+			return '<option value="' + id + '">' +
+			       name + (count ? "  " + playVersionCountText(count) : "") + '</option>';
+
+		return '<option value="' + id + '">' + card +
+		       '<span class="vi-label">' + name + '</span>' + levels + '</option>';
+	}
+
+	// Show a version's record beside its marker. The card is a popover, so it
+	// has to be opened and placed here rather than by :hover -- top-layer
+	// elements are out of flow and know nothing about the marker's position.
+	function showVersionCard(marker) {
+		var card = marker.querySelector(".vi-card");
+		if(!card || card.matches(":popover-open")) return;
+
+		card.showPopover();
+
+		//offsets in em, so they track the card's type like its padding does
+		var em = parseFloat(getComputedStyle(card).fontSize) || 14;
+		var GAP = 2.1 * em, RISE = 0.7 * em, EDGE = 0.6 * em;
+
+		//the card holds itself open while the pointer is inside it
+		if(!card.dataset.wired) {
+			card.dataset.wired = "1";
+			card.addEventListener("mouseenter", function(){ clearTimeout(closeCardTimer); });
+			card.addEventListener("mouseleave", function(){ card.hidePopover(); });
+		}
+
+		var m = marker.getBoundingClientRect();
+
+		//Cap the card at the room actually available on the side it will use,
+		//so a long value (the Fan Book URL) is never cropped by a fixed limit.
+		var roomRight = window.innerWidth - (m.right + GAP) - EDGE;
+		var roomLeft = m.left - GAP - EDGE;
+		card.style.setProperty("--vi-room", Math.max(roomRight, roomLeft) + "px");
+
+		var w = card.getBoundingClientRect().width;
+		//prefer the free space right of the panel; fall back to the left edge
+		var left = m.right + GAP;
+		if(left + w > window.innerWidth - EDGE) left = Math.max(EDGE, m.left - GAP - w);
+
+		var h = card.getBoundingClientRect().height;
+		var top = Math.max(EDGE, Math.min(m.top - RISE, window.innerHeight - h - EDGE));
+
+		card.style.left = left + "px";
+		card.style.top = top + "px";
+	}
+
+	// Closing is deferred so the pointer can travel from the marker into the
+	// card (to reach a link). Entering the card cancels the pending close.
+	var closeCardTimer = null;
+
+	function hideVersionCard(marker, delayed) {
+		var card = marker.querySelector(".vi-card");
+		if(!card || !card.matches(":popover-open")) return;
+
+		clearTimeout(closeCardTimer);
+		if(!delayed) { card.hidePopover(); return; }
+		closeCardTimer = setTimeout(function(){
+			if(!card.matches(":hover")) card.hidePopover();
+		}, 260);
+	}
+
 	function mainView() {
 		//version options from playVersionInfo so each carries its real playData id
 		//(name<->id order differs from gameVersionName; use the registry as truth)
 		var versionOpts = "";
 		for(var i = 0; i < playVersionInfo.length; i++)
-			versionOpts += '<option value="' + playVersionInfo[i].id + '">' + playVersionInfo[i].name.trim() + '</option>';
+			versionOpts += versionOption(playVersionInfo[i].id, playVersionInfo[i].name.trim());
 		//Custom Levels is a selectable version too -- the editor switches to it, so
 		//without an option here the dropdown goes blank and strands the user.
-		versionOpts += '<option value="' + PLAY_DATA_USERDEF + '">' + playDataNameUserDef + '</option>';
-		//mode dropdown = Challenge / Training / Demo (Edit is the separate Level Editor item)
-		var MODE_KEYS = ["challenge", "training", "demo"];
-		var modeOpts = "";
-		for(var m = 0; m < MODE_KEYS.length; m++)
-			modeOpts += '<option value="' + MODE_KEYS[m] + '">' + MODE_INFO[m][0] + '</option>';
+		versionOpts += versionOption(PLAY_DATA_USERDEF, playDataNameUserDef);
 
 		//one swatch per preset slot; backgrounds are painted on open (refreshSwatches),
 		//since the sampled "original" color is not ready until preload runs.
@@ -237,22 +365,53 @@ var settingsPanel = (function() {
 			swatches += '<button class="swatch" data-color="' + c + '" aria-label="' + label + '"></button>';
 		}
 
+		//accent swatches paint from the table directly -- unlike tile colors,
+		//these are fixed and need no sampling
+		var accentOpts = "";
+		for(var key in ACCENTS) {
+			accentOpts += '<button class="swatch" data-accent="' + key + '"' +
+			              ' style="background:' + ACCENTS[key].bright + '"' +
+			              ' aria-label="' + ACCENTS[key].name + '"></button>';
+		}
+
+		//Settings starts checked: resetting preferences is the common case, and
+		//it is the only group you can lose without losing anything you earned.
+		var clearChecks = "";
+		for(var s = 0; s < STORAGE_GROUPS.length; s++) {
+			var grp = STORAGE_GROUPS[s];
+			clearChecks +=
+				'<label class="clear-item">' +
+					'<input type="checkbox" data-group="' + grp.id + '"' +
+						(grp.id === "settings" ? " checked" : "") + '>' +
+					'<span class="clear-name">' + grp.name +
+						'<small>' + grp.note + '</small></span>' +
+					'<span class="clear-count" data-count="' + grp.id + '"></span>' +
+				'</label>';
+		}
+
 		return '<div class="view-main">' +
 			'<div class="group"><p class="group-label">Game</p>' +
 				'<div class="row"><span class="row-name">Version</span>' +
-					'<div class="pick-group">' +
-						'<button class="icon-btn ls-info" aria-label="About this version">&#9432;</button>' +
-						'<select class="pick ls-version" aria-label="Game version">' + versionOpts + '</select>' +
+					//without per-option cards the info needs a route of its own
+					(richOptions ? "" : '<div class="pick-group">' +
+						'<button class="icon-btn ls-info" aria-label="About this version">&#9432;</button>') +
+					'<select class="pick ls-version" aria-label="Game version">' +
+						'<button><selectedcontent></selectedcontent></button>' +
+						versionOpts +
+					'</select>' +
+					(richOptions ? "" : '</div>') +
+				'</div>' +
+				//Training on/off IS the mode: off is Challenge (level 1, for score),
+				//on is practice at any level. Watching a demo is an action inside
+				//training, not a third mode -- it lives on the board icons.
+				'<div class="row"><span class="row-name">Training mode' +
+					'<small>Practice any level</small></span>' +
+					'<div class="seg ls-mode" role="group" aria-label="Training mode">' +
+						'<button data-on="1">On</button><button data-on="0">Off</button>' +
 					'</div>' +
 				'</div>' +
-				'<div class="row"><span class="row-name">Mode</span>' +
-					'<div class="pick-group">' +
-						'<button class="icon-btn ls-mode-info" aria-label="About game modes">&#9432;</button>' +
-						'<select class="pick ls-mode" aria-label="Game mode">' + modeOpts + '</select>' +
-					'</div>' +
-				'</div>' +
-				//Level: gated by mode (Training/Demo only); the rich picker is deferred
-				'<div class="row"><span class="row-name">Level<small>Training / Demo</small></span>' +
+				//Level: training only -- challenge starts at 1 and progresses
+				'<div class="row"><span class="row-name">Level<small>Training only</small></span>' +
 					'<button class="btn ls-level">Choose&hellip;</button>' +
 				'</div>' +
 				'<div class="row"><span class="row-name">Level Editor</span>' +
@@ -289,6 +448,26 @@ var settingsPanel = (function() {
 						'<button data-on="1">On</button><button data-on="0">Off</button></div></div>' +
 			'</div>' +
 			'<div class="group"><button class="btn ls-keys" style="width:100%">Keys</button></div>' +
+			'<div class="group"><p class="group-label">Appearance</p>' +
+				'<div class="row"><span class="row-name">Accent<small>Menu highlight color</small></span>' +
+					'<div class="swatches accents ls-accent" role="group" aria-label="Accent color">' + accentOpts + '</div>' +
+				'</div>' +
+			'</div>' +
+			'<div class="group"><p class="group-label">Testing</p>' +
+				'<div class="row"><span class="row-name">Browser storage' +
+					'<small>Reset to a blank slate</small></span>' +
+					'<button class="btn ls-clear">Clear…</button>' +
+				'</div>' +
+				//the panel expands in place; nothing is destroyed until Erase
+				'<div class="clear-panel ls-clear-panel" hidden>' +
+					clearChecks +
+					'<div class="clear-actions">' +
+						'<button class="btn ls-clear-cancel">Cancel</button>' +
+						'<button class="btn danger ls-clear-go">Erase</button>' +
+					'</div>' +
+					'<p class="clear-note ls-clear-note" role="status"></p>' +
+				'</div>' +
+			'</div>' +
 		'</div>';
 	}
 
@@ -314,32 +493,42 @@ var settingsPanel = (function() {
 		'</div>';
 	}
 
-	function infoView() {
-		// static Classic details; will populate from playVersionInfo per selection
-		return '<div class="view-info">' +
-			'<p class="help-h">Classic Lode Runner</p>' +
-			'<div class="info-rows">' +
-				'<span class="info-k">Released</span><span>1983, 1984</span>' +
-				'<span class="info-k">Platform</span><span>Apple II, C64, IBM PC, NES</span>' +
-				'<span class="info-k">Publisher</span><span>Br&oslash;derbund &amp; Ariolasoft</span>' +
-				'<span class="info-k">Developer</span><span>Douglas E. Smith</span>' +
-				'<span class="info-k">Levels</span><span>150</span>' +
-				'<span class="info-k">Difficulty</span><span class="stars">&#9733;&#9733;&#9733;</span>' +
-			'</div>' +
-			'<div class="about">Version details will follow the selected version here.</div>' +
-		'</div>';
-	}
+	// Fallback for browsers without styleable options: the same record the
+	// hover cards show, as a sub-view reached from the info button. Rendered
+	// on open (not at build time) so it follows the selected version.
+	function renderInfoView() {
+		var host = root.querySelector(".view-info");
+		if(!host) return;
 
-	function modeView() {
+		var id = gameSettings.get("version");
+		var facts = playVersionFacts(id);
+		if(id == PLAY_DATA_USERDEF)
+			facts = [["Source", "Built by you in the level editor"],
+			         ["Capacity", "Up to " + MAX_EDIT_LEVEL + " levels"],
+			         ["Stored", "In this browser only"]];
+
+		var v = findPlayVersionInfo(id);
+		var name = v ? v.name.trim() : playDataNameUserDef;
+		var count = playVersionLevelCount(id);
+		if(count) facts = facts.concat([["Levels", count]]);
+
 		var rows = "";
-		for(var i = 0; i < MODE_INFO.length; i++)
-			rows += '<dt>' + MODE_INFO[i][0] + '</dt><dd>' + MODE_INFO[i][1] + '</dd>';
-		return '<div class="view-mode"><p class="help-h">Game Modes</p><dl class="mode-list">' + rows + '</dl></div>';
+		for(var i = 0; i < facts.length; i++) {
+			var url = facts[i][2];
+			var value = url
+				? '<a class="vi-link" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
+				      facts[i][1] + '</a>'
+				: facts[i][1];
+			rows += '<span class="vi-k">' + facts[i][0] + '</span>' +
+			        '<span class="vi-v">' + value + '</span>';
+		}
+		host.innerHTML = '<p class="help-h">' + name + '</p>' +
+		                 '<div class="vi-rows">' + rows + '</div>';
 	}
 
 	//--- open/close + sub-view routing ---
-	var TITLES = { main: "<b>LODE</b> RUNNER", help: "KEYS", info: "VERSION", mode: "MODES" };
-	var SUBVIEWS = ["help", "info", "mode"];
+	var TITLES = { main: "<b>LODE</b> RUNNER", help: "KEYS", info: "VERSION" };
+	var SUBVIEWS = ["help", "info"];
 
 	// The settings menu knows nothing about the game. It only opens and closes,
 	// and announces that it did. The game (if it cares) listens for those
@@ -374,12 +563,74 @@ var settingsPanel = (function() {
 		for(var i = 0; i < btns.length; i++)
 			btns[i].setAttribute("aria-pressed", matchFn(btns[i]) ? "true" : "false");
 	}
+	var clearing = 0;      //erase done, reload pending -- freeze the panel
+
+	function checkedClearGroups() {
+		var ids = [], boxes = root.querySelectorAll(".ls-clear-panel input[data-group]");
+		for(var i = 0; i < boxes.length; i++)
+			if(boxes[i].checked) ids.push(boxes[i].getAttribute("data-group"));
+		return ids;
+	}
+
+	// Erase names its own scope, so the button always says what it will do, and
+	// goes inert when nothing is ticked.
+	function renderClearGo() {
+		var ids = checkedClearGroups();
+		var go = root.querySelector(".ls-clear-go");
+		go.disabled = !ids.length;
+		go.textContent = !ids.length ? "Erase"
+		               : ids.length === STORAGE_GROUPS.length ? "Erase everything"
+		               : "Erase " + ids.length + " of " + STORAGE_GROUPS.length;
+	}
+
+	// Counts come from storage each time it opens, so a group that holds
+	// nothing says so instead of implying there is something to lose.
+	function openClearPanel() {
+		var counts = storageGroupCounts();
+		var labels = root.querySelectorAll(".ls-clear-panel [data-count]");
+		for(var i = 0; i < labels.length; i++) {
+			var n = counts[labels[i].getAttribute("data-count")] || 0;
+			labels[i].textContent = n ? n : "empty";
+			labels[i].classList.toggle("none", !n);
+		}
+		var panel = root.querySelector(".ls-clear-panel");
+		panel.hidden = false;
+		root.querySelector(".ls-clear").hidden = true;
+		renderClearGo();
+
+		// It expands at the bottom of a scrolling body, so on a short window it
+		// opens out of sight. Scroll its row into view -- anchoring the row
+		// rather than the panel keeps the checkboxes visible when the panel is
+		// taller than the remaining space.
+		var row = panel.previousElementSibling || panel;
+		var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		row.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+	}
+
+	// Back to the resting state. Also called whenever the panel is reopened, so
+	// a half-made decision never waits around for the next visit.
+	function disarmClear() {
+		var panel = root && root.querySelector(".ls-clear-panel");
+		if(!panel || clearing) return;      //a reload is already on its way
+
+		panel.hidden = true;
+		root.querySelector(".ls-clear").hidden = false;
+		var note = root.querySelector(".ls-clear-note");
+		note.textContent = "";
+		note.className = "clear-note ls-clear-note";
+
+		var boxes = panel.querySelectorAll("input[data-group]");
+		for(var i = 0; i < boxes.length; i++)
+			boxes[i].checked = (boxes[i].getAttribute("data-group") === "settings");
+	}
 	function syncFromModel() {
 		pressOne(".ls-theme",   function(b){ return b.getAttribute("data-theme") === gameSettings.get("theme"); });
 		pressOne(".ls-sound",   function(b){ return (b.getAttribute("data-on") === "1") === gameSettings.get("sound"); });
 		pressOne(".ls-repeat",  function(b){ return (b.getAttribute("data-on") === "1") === gameSettings.get("repeat"); });
 		pressOne(".ls-gamepad", function(b){ return (b.getAttribute("data-on") === "1") === gameSettings.get("gamepad"); });
 		pressOne(".ls-color",   function(b){ return +b.getAttribute("data-color") === gameSettings.get("color"); });
+		pressOne(".ls-accent",  function(b){ return b.getAttribute("data-accent") === gameSettings.get("accent"); });
+		disarmClear();
 		refreshSwatches();
 		renderSpeed();
 		syncNav();
@@ -404,16 +655,15 @@ var settingsPanel = (function() {
 		var vsel = dialog.querySelector(".ls-version");
 		selectValue(vsel, gameSettings.get("version"));
 
-		// map current playMode to a mode-dropdown key (edit/other stay on their nearest)
+		// Watching a demo is a round trip out of training and back, so the toggle
+		// stays On for its duration rather than flickering off mid-replay.
 		var mode = gameSettings.get("mode");
-		var key = (mode === PLAY_MODERN) ? "training"
-		        : (mode === PLAY_DEMO || mode === PLAY_DEMO_ONCE) ? "demo"
-		        : "challenge";
-		key = selectValue(dialog.querySelector(".ls-mode"), key);
+		var training = (mode === PLAY_MODERN || mode === PLAY_DEMO ||
+		                mode === PLAY_DEMO_ONCE);
+		pressOne(".ls-mode", function(b){ return (b.getAttribute("data-on") === "1") === training; });
 
-		// Level picker follows what the dropdown ACTUALLY shows, not what we asked
-		// for, so the control and its gating can never disagree.
-		dialog.querySelector(".ls-level").disabled = (key !== "training" && key !== "demo");
+		//choosing a level only means something when you can jump to one
+		dialog.querySelector(".ls-level").disabled = !training;
 	}
 	//swatch backgrounds follow the active theme's true brick colors
 	//(Apple II and C64 differ; "original" is the sampled brick color)
@@ -435,14 +685,36 @@ var settingsPanel = (function() {
 		toggleBtn.onclick = function(){ setMenuOpen(true); };
 		dialog.querySelector(".ls-back").onclick = function(){ setView("main"); };
 		dialog.querySelector(".ls-keys").onclick = function(){ setView("help"); };
-		dialog.querySelector(".ls-info").onclick = function(){ setView("info"); };
-		dialog.querySelector(".ls-mode-info").onclick = function(){ setView("mode"); };
 
-		//navigation: choosing a mode/version launches gameplay, so close the menu
-		dialog.querySelector(".ls-mode").onchange = function(e){
+		//navigation: switching mode/version relaunches the game, so close the menu
+		dialog.querySelector(".ls-mode").onclick = function(e){
+			var b = e.target.closest("button"); if(!b) return;
+			var on = b.getAttribute("data-on") === "1";
+			if(on === (gameSettings.get("mode") === PLAY_MODERN)) return; //already there
 			setMenuOpen(false);
-			gameSettings.setMode(e.target.value);
+			gameSettings.setMode(on);
 		};
+		var infoBtn = dialog.querySelector(".ls-info");
+		if(infoBtn) infoBtn.onclick = function(){ renderInfoView(); setView("info"); };
+
+		//capture: the picker's option rows do not bubble hover like normal DOM
+		dialog.querySelector(".ls-version").addEventListener("mouseover", function(e){
+			var m = e.target.closest && e.target.closest(".vi");
+			if(m) showVersionCard(m);
+		}, true);
+		//Closing on mouseout alone would make a link in the card unreachable:
+		//the pointer has to cross the gap to get there. Close on a short delay
+		//instead, which entering the card cancels.
+		dialog.querySelector(".ls-version").addEventListener("mouseout", function(e){
+			var m = e.target.closest && e.target.closest(".vi");
+			if(m) hideVersionCard(m, true);
+		}, true);
+		//a closing list leaves no mouseout behind, so sweep any card still up
+		dialog.querySelector(".ls-version").addEventListener("toggle", function(){
+			var cards = dialog.querySelectorAll(".vi-card");
+			for(var i = 0; i < cards.length; i++)
+				if(cards[i].matches(":popover-open")) cards[i].hidePopover();
+		});
 		dialog.querySelector(".ls-version").onchange = function(e){
 			setMenuOpen(false);
 			gameSettings.setVersion(+e.target.value);
@@ -475,6 +747,28 @@ var settingsPanel = (function() {
 		dialog.querySelector(".ls-color").onclick = function(e){
 			var b = e.target.closest("button"); if(!b) return;
 			gameSettings.setColor(+b.getAttribute("data-color"));
+		};
+		dialog.querySelector(".ls-accent").onclick = function(e){
+			var b = e.target.closest("button"); if(!b) return;
+			gameSettings.setAccent(b.getAttribute("data-accent"));
+			syncFromModel();          //repaint the selected ring onto the new swatch
+		};
+		dialog.querySelector(".ls-clear").onclick = function(){ openClearPanel(); };
+		dialog.querySelector(".ls-clear-cancel").onclick = function(){ disarmClear(); };
+		dialog.querySelector(".ls-clear-panel").onchange = function(){ renderClearGo(); };
+		dialog.querySelector(".ls-clear-go").onclick = function(){
+			var ids = checkedClearGroups();
+			if(!ids.length) return;
+
+			clearing = 1;
+			var n = clearStorageGroups(ids);
+			var note = dialog.querySelector(".ls-clear-note");
+			this.disabled = true;
+			note.textContent = n + (n === 1 ? " key" : " keys") + " removed. Reloading…";
+			note.className = "clear-note ls-clear-note";
+			// The game re-seeds storage as it boots (first-play version, last
+			// play mode), so reloading is part of the operation, not advice.
+			setTimeout(function(){ location.reload(); }, 700);
 		};
 		dialog.querySelector(".ls-speed-down").onclick = function(){ gameSettings.setSpeed(gameSettings.get("speed") - 1); };
 		dialog.querySelector(".ls-speed-up").onclick   = function(){ gameSettings.setSpeed(gameSettings.get("speed") + 1); };

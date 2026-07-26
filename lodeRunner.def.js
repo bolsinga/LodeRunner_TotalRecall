@@ -19,6 +19,19 @@ var MIN_SCALE = 0.5,
 	MAX_SCALE = 3;
 
 var MENU_ICON_X = 40, MENU_ICON_Y = 36, ICON_BORDER = 4;
+// Height of the fixed DOM chrome band across the top (hamburger and board
+// icons): 12px inset + 40px control + 12px clearance. Unscaled -- the chrome
+// is page furniture and does not grow with the board. Keep in step with
+// .ls-toggle / .bi-bar in lodeRunner.settings.css.
+var CHROME_BAND_Y = 64;
+// Board margins. Top/left are the board's fixed position -- it sits there
+// whatever the window size rather than drifting as it is resized, and the top
+// must clear CHROME_BAND_Y. Right/bottom are minimums the fit has to leave
+// free; the axis with slack ends up with more than its minimum.
+var BOARD_MARGIN_LEFT = 70;
+var BOARD_MARGIN_TOP = 70;
+var BOARD_MARGIN_RIGHT = 50;
+var BOARD_MARGIN_BOTTOM = 50;
 var BASE_ICON_X = (MENU_ICON_X + ICON_BORDER * 2);
 
 var KEYCODE_BKSPACE = 8, //backspace
@@ -175,8 +188,8 @@ var STORAGE_FIRST_PLAY  = "loderunner_firstRun";
 
 var STORAGE_MODERN_SCORE_INFO = "loderunner_modernScore";
 
-var STORAGE_USER_INFO = "loderunner_userInfo"; //user created 
-var STORAGE_USER_SCORE_INFO = "loderunner_userScore"; //user created
+//custom levels are just playData == PLAY_DATA_USERDEF, so their progress and
+//scores use the same keys as every other version, suffixed with that id
 
 var STORAGE_EDIT_INFO = "loderunner_editInfo";
 
@@ -193,6 +206,7 @@ var STORAGE_THEME_COLOR = "loderunner_color_";
 
 var STORAGE_REPEAT_ACTION = "loderunner_actRepeat";
 var STORAGE_GAMEPAD_MODE = "loderunner_gamepadMode";
+var STORAGE_ACCENT = "loderunner_accent";
 
 //================================
 // backup & restore file header
