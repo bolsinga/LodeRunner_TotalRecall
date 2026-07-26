@@ -29,5 +29,12 @@ let package = Package(
             ]
         ),
         .testTarget(name: "lr-runnertoolTests", dependencies: ["lr-runnertool"]),
+        .executableTarget(
+            name: "lr-sessiontool",
+            dependencies: [
+                "LodeRunnerCore",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]
+        ),
     ]
 )
