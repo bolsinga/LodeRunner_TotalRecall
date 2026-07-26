@@ -31,27 +31,17 @@ struct ActionParseError: Error, CustomStringConvertible {
     var description: String { "invalid action \"\(raw)\"" }
 }
 
-private let actionsByName: [String: RunnerAction] = [
-    "stop": .stop,
-    "left": .left,
-    "right": .right,
-    "up": .up,
-    "down": .down,
-    "fall": .fall,
-    "fallbar": .fallBar,
-    "digleft": .digLeft,
-    "digright": .digRight,
-]
-
 /// Parse a comma-separated action list, each token optionally repeated with "*N"
-/// (e.g. "right*3,up*2,stop"). Case-insensitive action names.
+/// (e.g. "right*3,up*2,stop"). Case-insensitive action names, matched against
+/// `RunnerAction`'s lowercase raw values directly — no separate lookup table needed.
 func parseActions(_ raw: String) throws -> [RunnerAction] {
     guard !raw.isEmpty else { return [] }
 
     var result: [RunnerAction] = []
     for token in raw.split(separator: ",") {
         let pieces = token.split(separator: "*", maxSplits: 1)
-        guard let name = pieces.first, let action = actionsByName[name.lowercased()] else {
+        guard let name = pieces.first, let action = RunnerAction(rawValue: name.lowercased())
+        else {
             throw ActionParseError(raw: String(token))
         }
         let count = pieces.count == 2 ? Int(pieces[1]) : 1

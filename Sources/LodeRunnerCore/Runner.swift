@@ -1,7 +1,13 @@
 /// Ported from the subset of `lodeRunner.def.js`'s `ACT_*` constants the runner ever
 /// actually uses (`ACT_IN_HOLE`/`ACT_CLIMB_OUT`/`ACT_REBORN` are guard-only).
-public enum RunnerAction: Equatable, Codable, Sendable {
-    case stop, left, right, up, down, fall, fallBar, digLeft, digRight
+///
+/// `String`-backed (lowercase raw values) so callers can round-trip an action through
+/// a name — e.g. `RunnerAction(rawValue: "fallbar")` — without a separate lookup table.
+public enum RunnerAction: String, Equatable, Codable, Sendable {
+    case stop, left, right, up, down, fall
+    case fallBar = "fallbar"
+    case digLeft = "digleft"
+    case digRight = "digright"
 }
 
 public enum RunnerPhase: Equatable, Codable, Sendable {
