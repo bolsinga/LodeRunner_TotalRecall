@@ -1,18 +1,16 @@
 //=============================================================================
-// Board icons: the two in-play controls that sit on the game surface.
+// Board icons: the two in-play / in-edit controls that sit on the game surface.
 //
-// Level select and watch-demo are actions you take while playing, so they live
-// on the board rather than inside the settings panel -- a control you use mid
-// game should not be two clicks deep. They are DOM buttons pinned top-right,
-// balancing the settings hamburger top-left.
+// Training: watch-demo + choose-level.
+// Level editor: import + export (same bar geometry -- swap the pair, do not
+// invent a second layout).
 //
-// Replaces selectIconClass/demoIconClass, which drew bitmaps into their own
-// canvases. Inline SVG stays sharp at any density and takes its color from the
-// panel palette, so no preloaded art is involved.
+// Pinned top-right, balancing the settings hamburger top-left. Inline SVG stays
+// sharp at any density and takes its color from the panel palette.
 //=============================================================================
 
 var boardIcons = (function() {
-	var root, playBtn, levelBtn;
+	var root, playBtn, levelBtn, importBtn, exportBtn;
 	var demoRunning = 0;
 
 	// viewBox 40x36 throughout: the size the old icon bitmaps were authored at,
@@ -27,39 +25,64 @@ var boardIcons = (function() {
 			'</g>' +
 		'</svg>';
 
-	// A screen with a play triangle: "watch this level", not "start a level".
 	var SVG_PLAY =
 		'<svg viewBox="0 0 40 36" aria-hidden="true">' +
 			'<rect class="bi-stroke" x="5" y="7" width="30" height="22"/>' +
 			'<path class="bi-fill" d="M17 13.5 L26 18 L17 22.5 Z"/>' +
 		'</svg>';
 
-	// Same frame, stop square inside. The frame holding still across the swap is
-	// what makes it read as one control changing state; dimming would read as
-	// disabled, which is the opposite of "this is now your way out".
 	var SVG_STOP =
 		'<svg viewBox="0 0 40 36" aria-hidden="true">' +
 			'<rect class="bi-stroke" x="5" y="7" width="30" height="22"/>' +
 			'<rect class="bi-fill" x="16" y="14" width="8" height="8"/>' +
 		'</svg>';
 
+	// Download / upload trays -- Import and Export.
+	var SVG_IMPORT =
+		'<svg viewBox="0 0 40 36" aria-hidden="true">' +
+			'<g class="bi-stroke">' +
+				'<path d="M20 6 L20 22"/>' +
+				'<path d="M13 16 L20 23 L27 16"/>' +
+				'<path d="M10 28 L30 28"/>' +
+				'<path d="M10 28 L10 24"/>' +
+				'<path d="M30 28 L30 24"/>' +
+			'</g>' +
+		'</svg>';
+
+	var SVG_EXPORT =
+		'<svg viewBox="0 0 40 36" aria-hidden="true">' +
+			'<g class="bi-stroke">' +
+				'<path d="M20 23 L20 7"/>' +
+				'<path d="M13 13 L20 6 L27 13"/>' +
+				'<path d="M10 28 L30 28"/>' +
+				'<path d="M10 28 L10 24"/>' +
+				'<path d="M30 28 L30 24"/>' +
+			'</g>' +
+		'</svg>';
+
+	function makeBtn(cls, svg, title) {
+		var b = document.createElement("button");
+		b.className = "bi-btn " + cls;
+		b.innerHTML = svg;
+		b.title = title;
+		b.setAttribute("aria-label", title);
+		return b;
+	}
+
 	function build() {
 		root = document.createElement("div");
 		root.className = "bi-bar";
 		root.hidden = true;
 
-		playBtn = document.createElement("button");
-		playBtn.className = "bi-btn bi-play";
-		playBtn.innerHTML = SVG_PLAY;
-
-		levelBtn = document.createElement("button");
-		levelBtn.className = "bi-btn bi-level";
-		levelBtn.innerHTML = SVG_GRID;
-		levelBtn.title = "Choose level";
-		levelBtn.setAttribute("aria-label", "Choose level");
+		playBtn = makeBtn("bi-play", SVG_PLAY, "Watch demo");
+		levelBtn = makeBtn("bi-level", SVG_GRID, "Choose level");
+		importBtn = makeBtn("bi-import", SVG_IMPORT, "Import custom levels");
+		exportBtn = makeBtn("bi-export", SVG_EXPORT, "Export custom levels");
 
 		root.appendChild(playBtn);
 		root.appendChild(levelBtn);
+		root.appendChild(importBtn);
+		root.appendChild(exportBtn);
 		document.body.appendChild(root);
 
 		playBtn.onclick = function() {
@@ -67,6 +90,8 @@ var boardIcons = (function() {
 			focusGame();
 		};
 		levelBtn.onclick = function() { chooseLevel(); };
+		importBtn.onclick = function() { importCustomLevels(); };
+		exportBtn.onclick = function() { exportCustomLevels(); };
 
 		setPlayLabel();
 	}
@@ -79,12 +104,9 @@ var boardIcons = (function() {
 		playBtn.classList.toggle("bi-stopping", !!watching);
 	}
 
-	// Watching a recording of the level you are on. PLAY_DEMO_ONCE returns to
-	// PLAY_MODERN on every exit path (death or completion), so this is a round
-	// trip out of training and back, not a mode you are left sitting in.
 	function startDemo() {
 		if(!curDemoLevelIsVaild()) return;
-		demoSoundOff = 1;              //demos always play silent
+		demoSoundOff = 1;
 		playMode = PLAY_DEMO_ONCE;
 		anyKeyStopDemo();
 		setDemoState(1);
@@ -96,9 +118,6 @@ var boardIcons = (function() {
 		stopDemoAndPlay();
 	}
 
-	// Reachable during a demo too: stop the replay first, then pick. Choosing a
-	// level is itself a way out of the demo, so the button leads somewhere
-	// rather than sitting inert while a recording plays.
 	function chooseLevel() {
 		if(demoRunning) stopDemo();
 
@@ -122,15 +141,24 @@ var boardIcons = (function() {
 		setPlayLabel();
 	}
 
-	// Visible in training only: challenge starts at level 1 and progresses, so
-	// there is no level to choose and no recording to watch.
 	function update() {
 		if(!root) build();
 		var training = (playMode == PLAY_MODERN);
 		var watching = (playMode == PLAY_DEMO_ONCE);
+		var editing = (playMode == PLAY_EDIT || playMode == PLAY_TEST);
 
-		root.hidden = !(training || watching);
+		root.hidden = !(training || watching || editing);
 		if(root.hidden) return;
+
+		playBtn.hidden = editing;
+		levelBtn.hidden = editing;
+		importBtn.hidden = !editing;
+		exportBtn.hidden = !editing;
+
+		if(editing) {
+			exportBtn.disabled = !(typeof customLevels !== "undefined" && customLevels.canExport());
+			return;
+		}
 
 		setDemoState(watching);
 		if(!watching) playBtn.disabled = !curDemoLevelIsVaild();

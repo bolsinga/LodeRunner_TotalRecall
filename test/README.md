@@ -34,8 +34,7 @@ node --test test/*.test.js
 | `tween.test.js` | correctness | `tweenGet` chains: interpolation, completion-once, override cancel |
 | `sound.test.js` | correctness | Web Audio layer: ogg/mp3 fallback, instance stop/restart, pause offset |
 | `assets.test.js` | correctness | Image asset cache: getResult ids, cursor warm-cache, continue-on-error |
-| `iconCanvas.test.js` | characterization | `createIconCanvas` draw/hover/alpha/pointer + `iconBitmapNaturalSize` |
-| `info-overlay.test.js` | characterization | info.js has no CreateJS/enableMouseOver; edit input is pointer-driven (no `editTick`/setFPS(60)) |
+| `info-overlay.test.js` | characterization | version `*Info` arrays remain; canvas info overlay / flags gone; edit input is pointer-driven |
 | `edit-guards.test.js` | correctness | Edit mode blocks attract-demo; unsaved-map unload/leave guards exist |
 | `recolor-thumb.test.js` | characterization | colorTheme recolor uses plain-canvas readback (no Stage); level thumbs flatten via `levelThumb.js` |
 | `share-codec.test.js` | characterization | `zipLevelMap` ↔ `unzipLevelMap` round-trip; bad checksum → `""` |

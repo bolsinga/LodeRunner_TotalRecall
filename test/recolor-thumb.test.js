@@ -34,22 +34,10 @@ describe("level thumbnail flatten (characterization)", () => {
 		assert.doesNotMatch(text, /\.cache\s*\(/);
 	});
 
-	it("menu.js level2Bitmap delegates to levelMapToBitmap; no Container.cache flatten", () => {
-		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.menu.js"), "utf8");
-		const level2Bodies = [...text.matchAll(/function level2Bitmap\([^)]*\)\s*\{([\s\S]*?)\n\t\t\}/g)]
-			.map((m) => m[1]);
-		// Fallback for restoreDialog's indent (one tab less on closing brace)
-		if (level2Bodies.length < 2) {
-			level2Bodies.push(
-				...[...text.matchAll(/function level2Bitmap\([^)]*\)\s*\{([\s\S]*?)\n\t\}/g)].map((m) => m[1])
-			);
-		}
-		assert.ok(level2Bodies.length >= 2, `expected 2 level2Bitmap bodies, got ${level2Bodies.length}`);
-		for (const body of level2Bodies) {
-			assert.match(body, /levelMapToBitmap/);
-			assert.doesNotMatch(body, /createjs\.Container/);
-			assert.doesNotMatch(body, /\.cache\s*\(/);
-		}
+	it("menu.js no longer flattens thumbs; levelThumb.js is wired in HTML", () => {
+		const menu = fs.readFileSync(path.join(ROOT, "lodeRunner.menu.js"), "utf8");
+		assert.doesNotMatch(menu, /function level2Bitmap/);
+		assert.doesNotMatch(menu, /createjs\.Container/);
 		assert.match(
 			fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8"),
 			/lodeRunner\.levelThumb\.js/

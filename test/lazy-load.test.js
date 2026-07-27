@@ -49,6 +49,14 @@ describe("lazy pack wiring (characterization)", () => {
 		assert.doesNotMatch(menu, /function ensurePlayVersionLoaded/);
 		assert.doesNotMatch(menu, /var playVersionInfo\s*=/);
 		assert.match(menu, /function initMenuVariable/);
-		assert.match(menu, /var gameVersionMenuList\s*=/);
+		assert.doesNotMatch(menu, /var gameVersionMenuList\s*=/);
+		assert.doesNotMatch(menu, /function menuDialog/);
+		assert.doesNotMatch(menu, /function yesNoDialog/);
+		assert.doesNotMatch(menu, /function backupDialog/);
+		assert.doesNotMatch(menu, /function restoreDialog/);
+		assert.doesNotMatch(menu, /function closeIconClass/);
+		assert.match(menu, /var maxPlayId/);
+		assert.match(html, /lodeRunner\.yesNo\.js/);
+		assert.match(html, /lodeRunner\.customLevels\.js/);
 	});
 });

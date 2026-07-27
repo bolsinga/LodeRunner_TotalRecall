@@ -44,7 +44,7 @@ function makeGlyphText(x, y, str, numberType)
 	return g;
 }
 
-function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
+function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forceShow)
 {
 	var hiScoreInfo;
 	var surface;
@@ -68,7 +68,9 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime)
 			}
 		}
 		
-		if(!haveInfo && !_curScoreInfo) {
+		// Attract always shows the board (even all zeros); elsewhere empty
+		// storage still means "nothing to display".
+		if(!haveInfo && !_curScoreInfo && !_forceShow) {
 			if(_callbackFun) _callbackFun();
 			return; //no score info don't need display 
 		}

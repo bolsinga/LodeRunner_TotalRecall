@@ -134,10 +134,11 @@ function canvasReSize()
 	canvas.width = canvasX;
 	canvas.height = canvasY;
 	
-	//Pinned to a fixed inset rather than centred, so the board holds its place
-	//as the window changes instead of sliding around under the chrome.
-	canvas.style.left = BOARD_MARGIN_LEFT + "px";
-	canvas.style.top =  BOARD_MARGIN_TOP + "px";
+	// Centre leftover space, but never sit closer than the fit margins on
+	// left/top (so the chrome band stays clear and the right/bottom mins from
+	// the scale math still hold when an axis is tight).
+	canvas.style.left = Math.max(BOARD_MARGIN_LEFT, (screenX1 - canvasX) / 2 | 0) + "px";
+	canvas.style.top  = Math.max(BOARD_MARGIN_TOP,  (screenY1 - canvasY) / 2 | 0) + "px";
 	canvas.style.position = "absolute";
 	canvas.style.cursor = "default";
 	
@@ -205,6 +206,21 @@ function showCoverPage()
 	mainStage.addChild(remakeBitmap);
 	stagePresent();
 	waitIdleDemo(3000);
+}
+
+// Attract beat after a demo level: Classic scores (4s), then either the next
+// demo or the title. Death always returns to the title after scores.
+function attractAfterDemo(backToTitle)
+{
+	showScoreTable(1, null, function() {
+		if(backToTitle) showCoverPage();
+		else gameState = GAME_NEW_LEVEL;
+	}, 4000, true);
+}
+
+function attractDemoEnd()
+{
+	attractAfterDemo(true);
 }
 
 var idleTimer=null, startIdleTime;
@@ -371,7 +387,6 @@ function getLastPlayInfo()
 function selectGame(showDataMsg)
 {
 	getLastPlayInfo();
-	playData2GameVersionMenuId();
 	setKeyHandler(handleKeyDown, handleKeyUp);
 	initShowDataMsg(showDataMsg);
 	startGame();	
@@ -412,14 +427,16 @@ function startGame(noCycle)
 	
 	switch(playMode) {
 	case PLAY_CLASSIC:
-		getClassicInfo();	
+		getClassicInfo();
+		ensureDemoDataSynced();
 		levelMap = levelData[curLevel-1];	
 		if(curLevel >= levelData.length && (passedLevel+1) >= levelData.length) {
 			loadEndingMusic(); //6/15/2015, music prepare for winner
 		}
 		break;
 	case PLAY_MODERN:
-		getModernInfo();	
+		getModernInfo();
+		ensureDemoDataSynced();
 		levelMap = levelData[curLevel-1];
 		break;	
 	case PLAY_TEST:
@@ -430,6 +447,7 @@ function startGame(noCycle)
 		levelMap = levelData[curLevel-1];
 		break;	
 	case PLAY_DEMO_ONCE:
+		ensureDemoDataSynced();
 		getDemoOnceInfo();	
 		levelMap = levelData[curLevel-1];
 		break;	
@@ -1191,7 +1209,14 @@ function closingScreen(r)
 		curAiVersion = AI_VERSION; //07/04/2014
 		initHotKeyVariable();      //07/09/2014
 		
-		if(playMode == PLAY_AUTO) getAutoDemoLevel(0);
+		if(playMode == PLAY_AUTO) {
+			// Safety net: never start another attract demo past the cap
+			if(demoCount >= demoMaxCount) {
+				attractDemoEnd();
+				return;
+			}
+			getAutoDemoLevel(0);
+		}
 		if(playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) getNextDemoLevel();
 
 		if(playMode == PLAY_TEST) {
@@ -1258,14 +1283,16 @@ function showDataMsg()
 	}
 }
 
+// First run only: help sits between naming yourself and your first level, so a
+// new player meets the keys once. setFirstPlayInfo runs on close rather than on
+// open -- closing the tab mid-help should not burn the one showing.
 function showHelpMenu()
 {
-	if(firstPlay) { 
-		helpObj.showHelp(0, initForPlay, tileScale, null); 
-		setFirstPlayInfo();
-	} else {	
+	if(firstPlay) {
+		helpDialog.open({ onClose: function() { setFirstPlayInfo(); initForPlay(); } });
+	} else {
 		initForPlay();
-	}	
+	}
 }
 
 function initForPlay()
@@ -1488,8 +1515,12 @@ function mainTick(event)
 		if(playMode == PLAY_CLASSIC && !sometimePlayInGodMode) {	
 			scoreInfo = {s:curScore, l: passedLevel+1 };
 		}	
-			
-		showScoreTable(playData, scoreInfo , function() { showCoverPage();});	
+
+		if(playMode == PLAY_AUTO) {
+			attractDemoEnd();
+		} else {
+			showScoreTable(playData, scoreInfo , function() { showCoverPage();});
+		}
 		gameState = GAME_WAITING;	
 		return;
 	case GAME_FINISH: 
@@ -1517,10 +1548,12 @@ function mainTick(event)
 			break;
 		case PLAY_MODERN:
 			soundPlay(soundEnding);
-			var lastHiScore = lastHiScore = updateModernScoreInfo();
-			levelPassDialog(curLevel, curGetGold, curGuardDeadNo, curTime, lastHiScore,
-						  returnBitmap, select1Bitmap, nextBitmap,
-						  mainStage, tileScale, gameFinishCallback);	
+			var lastHiScore = updateModernScoreInfo();
+			levelPass.open({
+				level: curLevel, gold: curGetGold, guardDead: curGuardDeadNo,
+				time: curTime, hiScore: lastHiScore,
+				onPick: gameFinishCallback
+			});
 			gameState = GAME_WAITING;
 			break;
 		case PLAY_TEST:
@@ -1548,6 +1581,15 @@ function mainTick(event)
 			if(curScore + scoreIncValue >= finalScore) {
 				curScore = finalScore;
 				drawScore(0);
+
+				// Attract: scores after every demo, title after demoMaxCount.
+				// return (not break) so stagePresent below cannot wipe the board.
+				if(playMode == PLAY_AUTO) {
+					gameState = GAME_WAITING;
+					attractAfterDemo(demoCount >= demoMaxCount);
+					return;
+				}
+
 				gameState = GAME_NEW_LEVEL;
 				
 				switch(playMode) {
@@ -1556,12 +1598,6 @@ function mainTick(event)
 					break;
 				case PLAY_CLASSIC:
 					if(++runnerLife > RUNNER_MAX_LIFE) runnerLife = RUNNER_MAX_LIFE;	
-					break;	
-				case PLAY_AUTO:
-					if(demoCount >= demoMaxCount) {
-						setTimeout(function(){ showCoverPage();}, 500);	
-						gameState = GAME_WAITING;
-					}
 					break;	
 				}
 
