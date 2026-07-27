@@ -44,31 +44,12 @@ public struct LevelParseResult: Equatable, Codable, Sendable {
 /// Map one level character to base/current tile types.
 /// Ported from `parseLevelChar` in `lodeRunner.levelParse.js:19-44` (dropping the JS's
 /// `kind` field: it's a deterministic function of `base`/`current` and adds no
-/// information a caller can't already get from those two). Unknown characters follow the
-/// original's default-to-empty fallback.
+/// information a caller can't already get from those two). Kept as a public tuple
+/// entry point for parity with the JS API and for its dedicated tests; the actual
+/// mapping lives on `TileType.levelSlot`.
 public func parseLevelChar(_ char: Character) -> (base: TileType, current: TileType) {
-    switch char {
-    case "#":  // Normal Brick
-        return (.brick, .brick)
-    case "@":  // Solid Brick
-        return (.solid, .solid)
-    case "H":  // Ladder
-        return (.ladder, .ladder)
-    case "-":  // Line of rope
-        return (.bar, .bar)
-    case "X":  // False brick
-        return (.trap, .trap)
-    case "S":  // Ladder appears at end of level
-        return (.hiddenLadder, .empty)
-    case "$":  // Gold chest
-        return (.gold, .empty)
-    case "0":  // Guard
-        return (.empty, .guard)
-    case "&":  // Player
-        return (.empty, .runner)
-    default:  // " " and any unknown character
-        return (.empty, .empty)
-    }
+    let slot = TileType(levelChar: char).levelSlot
+    return (slot.base, slot.current)
 }
 
 /// Resolve a flat 448-character level string the same way `buildLevelMap` does for
@@ -77,28 +58,41 @@ public func parseLevelChar(_ char: Character) -> (base: TileType, current: TileT
 /// demotion. Ported from `resolveLevelMap` in `lodeRunner.levelParse.js:72-151`, with the
 /// JS's `maxGuardLimit` parameter dropped in favor of the fixed `maxGuardCount`.
 public func resolveLevelMap(_ levelMap: String) -> LevelParseResult {
-    resolveLevelMap(levelMap, maxGuardLimit: maxGuardCount)
+    resolveLevelMap(tiles(from: levelMap), maxGuardLimit: maxGuardCount)
 }
 
 /// Raw inventory parse: no guard culling at all (still demotes extra runners), mirroring
 /// the JS's `parseLevelMap`/`Number.POSITIVE_INFINITY` variant. Used for editor/inventory
 /// introspection where every declared guard should be counted.
 public func parseLevelMap(_ levelMap: String) -> LevelParseResult {
-    resolveLevelMap(levelMap, maxGuardLimit: .max)
+    resolveLevelMap(tiles(from: levelMap), maxGuardLimit: .max)
 }
 
-private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelParseResult {
-    let chars = Array(levelMap)
+/// Tile-native form of `resolveLevelMap`, used by `makeLevel(stamps:)` so previews
+/// and simulation/session tests can build a `LevelParseResult` without ever
+/// touching a raw level string. Same culling / first-runner-wins semantics.
+func resolveLevelMap(tiles: [TileType]) -> LevelParseResult {
+    resolveLevelMap(tiles, maxGuardLimit: maxGuardCount)
+}
 
-    // A shorter-than-expected levelMap reads as implicitly space-padded (empty tiles); a
-    // longer one is truncated — both read safely rather than trapping on malformed input.
-    func char(at index: Int) -> Character {
-        index < chars.count ? chars[index] : " "
+/// Convert a level string to its row-major tile array, padding to
+/// `LevelGrid.tileCount` with `.empty` (a shorter map reads as implicitly space-
+/// padded; a longer one is truncated).
+private func tiles(from levelMap: String) -> [TileType] {
+    let chars = Array(levelMap)
+    return (0..<LevelGrid.tileCount).map { index in
+        index < chars.count ? TileType(levelChar: chars[index]) : .empty
+    }
+}
+
+private func resolveLevelMap(_ tiles: [TileType], maxGuardLimit: Int) -> LevelParseResult {
+    func tile(at index: Int) -> TileType {
+        index < tiles.count ? tiles[index] : .empty
     }
 
-    // Pass 1: count all '0' characters (mirrors resolveLevelMap's first loop).
+    // Pass 1: count all guards (mirrors resolveLevelMap's first loop).
     var mapGuardCount = (0..<LevelGrid.tileCount).reduce(into: 0) { count, index in
-        if char(at: index) == "0" { count += 1 }
+        if tile(at: index) == .guard { count += 1 }
     }
     let rawGuardCount = mapGuardCount
 
@@ -121,11 +115,11 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
     var index = 0
     for y in 0..<LevelGrid.tilesY {
         for x in 0..<LevelGrid.tilesX {
-            let (base, current) = parseLevelChar(char(at: index))
+            let slot = tile(at: index).levelSlot
             index += 1
-            var resolvedCurrent = current
+            var resolvedCurrent = slot.current
 
-            if current == .guard {
+            if slot.current == .guard {
                 mapGuardCount -= 1
                 if mapGuardCount >= maxGuardLimit {
                     resolvedCurrent = .empty  // demoted - no spawn
@@ -134,7 +128,7 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
                     guardCount += 1
                     guards.append(GridPoint(x: x, y: y))
                 }
-            } else if current == .runner {
+            } else if slot.current == .runner {
                 if runnerPlaced {
                     resolvedCurrent = .empty  // demoted - no spawn
                     culledRunnerCount += 1
@@ -143,11 +137,11 @@ private func resolveLevelMap(_ levelMap: String, maxGuardLimit: Int) -> LevelPar
                     runnerCount = 1
                     runner = GridPoint(x: x, y: y)
                 }
-            } else if base == .gold {
+            } else if slot.base == .gold {
                 goldCount += 1
             }
 
-            slots[x][y] = LevelSlot(base: base, current: resolvedCurrent)
+            slots[x][y] = LevelSlot(base: slot.base, current: resolvedCurrent)
         }
     }
 

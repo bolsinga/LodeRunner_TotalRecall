@@ -55,10 +55,9 @@ private func digPreviewSimulation() throws -> RunnerSimulation {
     // Runner spawn at (5, 14) — bottom floor bricks at row 15 come from
     // makeLevel's auto-fill, so digRight is immediately valid and the cycle
     // can loop.
-    let level = resolveLevelMap(
-        makeLevel(stamps: [
-            (x: 5, y: 14, tile: .runner),
-        ]))
+    let level = makeLevel(stamps: [
+        (x: 5, y: 14, tile: .runner),
+    ])
     return try RunnerSimulation(level: level)
 }
 

@@ -26,20 +26,19 @@ public struct LevelGridView: View {
 }
 
 private func previewLevel() -> LevelParseResult {
-    resolveLevelMap(
-        makeLevel(stamps: [
-            (x: 3, y: 14, tile: .runner),
-            (x: 10, y: 14, tile: .guard),
-            (x: 6, y: 14, tile: .gold),
-            (x: 15, y: 9, tile: .gold),
-            (x: 20, y: 5, tile: .ladder), (x: 20, y: 6, tile: .ladder), (x: 20, y: 7, tile: .ladder),
-            (x: 20, y: 8, tile: .ladder), (x: 20, y: 9, tile: .ladder), (x: 20, y: 10, tile: .ladder),
-            (x: 20, y: 11, tile: .ladder), (x: 20, y: 12, tile: .ladder), (x: 20, y: 13, tile: .ladder),
-            (x: 12, y: 9, tile: .bar), (x: 13, y: 9, tile: .bar), (x: 14, y: 9, tile: .bar),
-            (x: 15, y: 9, tile: .bar), (x: 16, y: 9, tile: .bar),
-            (x: 8, y: 12, tile: .trap),
-            (x: 5, y: 10, tile: .solid), (x: 6, y: 10, tile: .solid), (x: 7, y: 10, tile: .solid),
-        ]))
+    makeLevel(stamps: [
+        (x: 3, y: 14, tile: .runner),
+        (x: 10, y: 14, tile: .guard),
+        (x: 6, y: 14, tile: .gold),
+        (x: 15, y: 9, tile: .gold),
+        (x: 20, y: 5, tile: .ladder), (x: 20, y: 6, tile: .ladder), (x: 20, y: 7, tile: .ladder),
+        (x: 20, y: 8, tile: .ladder), (x: 20, y: 9, tile: .ladder), (x: 20, y: 10, tile: .ladder),
+        (x: 20, y: 11, tile: .ladder), (x: 20, y: 12, tile: .ladder), (x: 20, y: 13, tile: .ladder),
+        (x: 12, y: 9, tile: .bar), (x: 13, y: 9, tile: .bar), (x: 14, y: 9, tile: .bar),
+        (x: 15, y: 9, tile: .bar), (x: 16, y: 9, tile: .bar),
+        (x: 8, y: 12, tile: .trap),
+        (x: 5, y: 10, tile: .solid), (x: 6, y: 10, tile: .solid), (x: 7, y: 10, tile: .solid),
+    ])
 }
 
 #Preview("Apple2", traits: .landscapeLeft) {

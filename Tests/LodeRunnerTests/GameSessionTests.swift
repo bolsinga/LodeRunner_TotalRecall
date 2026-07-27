@@ -13,15 +13,14 @@ struct GameSessionTests {
     /// action) is needed for the finish-check — which runs at the *start* of the next
     /// tick against the position the previous tick left — to actually fire.
     private func completableLevel(offsetX: Int) -> LevelParseResult {
-        resolveLevelMap(
-            makeLevel(stamps: [
-                (x: offsetX + 3, y: 1, tile: .runner),
-                (x: offsetX + 4, y: 1, tile: .gold),
-                (x: offsetX + 5, y: 0, tile: .ladder),
-                (x: offsetX + 5, y: 1, tile: .ladder),
-                (x: offsetX + 3, y: 2, tile: .brick),
-                (x: offsetX + 4, y: 2, tile: .brick),
-            ]))
+        makeLevel(stamps: [
+            (x: offsetX + 3, y: 1, tile: .runner),
+            (x: offsetX + 4, y: 1, tile: .gold),
+            (x: offsetX + 5, y: 0, tile: .ladder),
+            (x: offsetX + 5, y: 1, tile: .ladder),
+            (x: offsetX + 3, y: 2, tile: .brick),
+            (x: offsetX + 4, y: 2, tile: .brick),
+        ])
     }
 
     private let completeActions: [RunnerAction] =
@@ -35,7 +34,7 @@ struct GameSessionTests {
 
     @Test("init: starting lives/score/level/phase, and empty levels throws")
     func initialState() throws {
-        let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, tile: .runner)]))
+        let level = makeLevel(stamps: [(x: 5, y: 14, tile: .runner)])
         let session = try GameSession(levels: [level])
 
         #expect(session.lives == 5)
@@ -52,11 +51,10 @@ struct GameSessionTests {
 
     @Test("death with lives remaining retries the same level fresh")
     func deathWithLivesRemainingRetries() throws {
-        let deathLevel = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, tile: .runner),
-                (x: 6, y: 14, tile: .guard),
-            ]))
+        let deathLevel = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
         var session = try GameSession(levels: [deathLevel])
 
         for _ in 0..<10 {
@@ -76,11 +74,10 @@ struct GameSessionTests {
 
     @Test("death at the last life ends the session")
     func deathAtLastLifeEndsSession() throws {
-        let deathLevel = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, tile: .runner),
-                (x: 6, y: 14, tile: .guard),
-            ]))
+        let deathLevel = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
         var session = try GameSession(levels: [deathLevel])
 
         for _ in 0..<200 {

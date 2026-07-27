@@ -92,8 +92,7 @@ private func walkingPreviewSimulation() throws -> RunnerSimulation {
     for x in 8...22 {
         stamps.append((x: x, y: 10, tile: .brick))
     }
-    let level = resolveLevelMap(makeLevel(stamps: stamps))
-    return try RunnerSimulation(level: level)
+    return try RunnerSimulation(level: makeLevel(stamps: stamps))
 }
 
 private struct WalkingRunnerPreview: View {

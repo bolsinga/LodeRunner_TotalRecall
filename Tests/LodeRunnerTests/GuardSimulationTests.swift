@@ -7,12 +7,11 @@ import Testing
 struct GuardSimulationTests {
     @Test("guard spawns match the level's guard positions; scheduler starts at 0")
     func guardSpawnsMatchLevel() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, tile: .runner),
-                (x: 10, y: 5, tile: .guard),
-                (x: 12, y: 5, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 10, y: 5, tile: .guard),
+            (x: 12, y: 5, tile: .guard),
+        ])
         let sim = try RunnerSimulation(level: level)
 
         #expect(sim.guards.count == 2)
@@ -33,11 +32,10 @@ struct GuardSimulationTests {
 
     @Test("move-throttling: with one guard, it only actually steps on odd ticks")
     func moveThrottlingWithOneGuard() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 20, y: 14, tile: .runner),
-                (x: 5, y: 5, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 20, y: 14, tile: .runner),
+            (x: 5, y: 5, tile: .guard),
+        ])
         var sim = try RunnerSimulation(level: level)
         // Column 5 is open air below the guard for many rows, so it just keeps
         // falling every time it's actually given a turn — a simple, observable signal.
@@ -60,12 +58,11 @@ struct GuardSimulationTests {
 
     @Test("a guard falls through the runner's tile from directly above")
     func guardFallsThroughRunnerFromAbove() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, tile: .runner),
-                (x: 5, y: 11, tile: .brick),
-                (x: 5, y: 9, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 5, y: 11, tile: .brick),
+            (x: 5, y: 9, tile: .guard),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         // Guard moves on ticks 1,3,5 (odds, only 1 guard). Crossing into the
@@ -76,21 +73,20 @@ struct GuardSimulationTests {
 
     @Test("a guard resting on another guard's head does not fall")
     func guardOnGuardHeadDoesNotFall() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 20, y: 14, tile: .runner),
-                (x: 5, y: 9, tile: .guard),
-                (x: 5, y: 10, tile: .guard),
-                (x: 5, y: 11, tile: .brick),
-                // Box both guards in laterally so neither wanders off via scanFloor
-                // pathfinding while looking for an unreachable runner — the forced-fall
-                // check under test (resting on another guard's head) is otherwise
-                // unaffected by these walls.
-                (x: 4, y: 9, tile: .brick),
-                (x: 6, y: 9, tile: .brick),
-                (x: 4, y: 10, tile: .brick),
-                (x: 6, y: 10, tile: .brick),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 20, y: 14, tile: .runner),
+            (x: 5, y: 9, tile: .guard),
+            (x: 5, y: 10, tile: .guard),
+            (x: 5, y: 11, tile: .brick),
+            // Box both guards in laterally so neither wanders off via scanFloor
+            // pathfinding while looking for an unreachable runner — the forced-fall
+            // check under test (resting on another guard's head) is otherwise
+            // unaffected by these walls.
+            (x: 4, y: 9, tile: .brick),
+            (x: 6, y: 9, tile: .brick),
+            (x: 4, y: 10, tile: .brick),
+            (x: 6, y: 10, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<10 { sim.tick(.stop) }
@@ -105,11 +101,10 @@ struct GuardSimulationTests {
 
     @Test("same-floor chase: an adjacent guard catches the runner")
     func chaseAdjacentGuardCatchesRunner() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 15, y: 14, tile: .runner),
-                (x: 14, y: 14, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 15, y: 14, tile: .runner),
+            (x: 14, y: 14, tile: .guard),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         // Guard moves on odd ticks. xOffset: 8, 16, 24(>20, cross into runner's cell).
@@ -125,12 +120,11 @@ struct GuardSimulationTests {
         // runner's row), so the guard heads toward the gap instead — an intentional
         // behavior change from the phase-3a stub, not a regression. Only the
         // immediate decision is checked here rather than the multi-tile fall-through.
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 15, y: 14, tile: .runner),
-                (x: 10, y: 14, tile: .guard),
-                (x: 12, y: 15, tile: .trap),  // trap: neither solid/ladder/brick footing
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 15, y: 14, tile: .runner),
+            (x: 10, y: 14, tile: .guard),
+            (x: 12, y: 15, tile: .trap),  // trap: neither solid/ladder/brick footing
+        ])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.stop)  // tick 1 (odd, only 1 guard): the guard's first active move.
@@ -140,15 +134,14 @@ struct GuardSimulationTests {
 
     @Test("a guard boxed in on all four sides with no ladder returns .stop")
     func scanFloorFindsNothingWhenBoxedIn() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 20, y: 14, tile: .runner),
-                (x: 10, y: 10, tile: .guard),
-                (x: 9, y: 10, tile: .brick),
-                (x: 11, y: 10, tile: .brick),
-                (x: 10, y: 9, tile: .brick),
-                (x: 10, y: 11, tile: .brick),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 20, y: 14, tile: .runner),
+            (x: 10, y: 10, tile: .guard),
+            (x: 9, y: 10, tile: .brick),
+            (x: 11, y: 10, tile: .brick),
+            (x: 10, y: 9, tile: .brick),
+            (x: 10, y: 11, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<10 { sim.tick(.stop) }
@@ -165,20 +158,19 @@ struct GuardSimulationTests {
         // 12) reachable by walking along the guard's own floor. scanFloor should
         // guide the guard to the ladder, then down it, then phase 3a's already-tested
         // same-floor chase finishes the catch.
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 15, y: 12, tile: .runner),
-                (x: 10, y: 10, tile: .guard),
-                (x: 12, y: 10, tile: .ladder),
-                (x: 12, y: 11, tile: .ladder),
-                (x: 12, y: 12, tile: .ladder),
-                (x: 10, y: 11, tile: .brick),  // footing under the guard's start
-                (x: 11, y: 11, tile: .brick),  // footing along the walk to the ladder
-                (x: 12, y: 13, tile: .brick),  // anchors the ladder's bottom at row 12
-                (x: 13, y: 13, tile: .brick),  // footing for the row-12 chase, once there
-                (x: 14, y: 13, tile: .brick),
-                (x: 15, y: 13, tile: .brick),  // footing under the runner
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 15, y: 12, tile: .runner),
+            (x: 10, y: 10, tile: .guard),
+            (x: 12, y: 10, tile: .ladder),
+            (x: 12, y: 11, tile: .ladder),
+            (x: 12, y: 12, tile: .ladder),
+            (x: 10, y: 11, tile: .brick),  // footing under the guard's start
+            (x: 11, y: 11, tile: .brick),  // footing along the walk to the ladder
+            (x: 12, y: 13, tile: .brick),  // anchors the ladder's bottom at row 12
+            (x: 13, y: 13, tile: .brick),  // footing for the row-12 chase, once there
+            (x: 14, y: 13, tile: .brick),
+            (x: 15, y: 13, tile: .brick),  // footing under the runner
+        ])
         var sim = try RunnerSimulation(level: level)
 
         var reachedLadder = false
@@ -219,17 +211,16 @@ struct GuardSimulationTests {
         // interrupt check in isDigging() watches) until well after the dig has
         // already completed naturally — arriving mid-dig would abort the dig instead
         // of ever creating a hole to fall into.
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, tile: .runner),
-                (x: 1, y: 10, tile: .guard),
-                (x: 1, y: 11, tile: .brick),
-                (x: 2, y: 11, tile: .brick),
-                (x: 3, y: 11, tile: .brick),
-                (x: 4, y: 11, tile: .brick),
-                (x: 5, y: 11, tile: .brick),
-                (x: 4, y: 12, tile: .brick),  // support so the guard settles in the hole
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 1, y: 10, tile: .guard),
+            (x: 1, y: 11, tile: .brick),
+            (x: 2, y: 11, tile: .brick),
+            (x: 3, y: 11, tile: .brick),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+            (x: 4, y: 12, tile: .brick),  // support so the guard settles in the hole
+        ])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.digLeft)
@@ -283,7 +274,7 @@ struct GuardSimulationTests {
             stamps.append((x: x, y: 11, tile: .brick))
         }
         stamps.append((x: 24, y: 12, tile: .brick))
-        let level = resolveLevelMap(makeLevel(stamps: stamps))
+        let level = makeLevel(stamps: stamps)
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.digLeft)
@@ -319,11 +310,10 @@ struct GuardSimulationTests {
 
     @Test("guard reborn: schedules a respawn, completes after 9 ticks, lands on a valid cell")
     func guardRebornSchedulesAndCompletes() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, tile: .runner),
-                (x: 10, y: 5, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 10, y: 5, tile: .guard),
+        ])
         var sim = try RunnerSimulation(level: level)
         let buriedCell = sim.guards[0].position
 
@@ -350,12 +340,11 @@ struct GuardSimulationTests {
 
     @Test("a guard chasing across gold picks it up, then eventually drops it")
     func guardPicksUpAndDropsGold() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 20, y: 14, tile: .runner),
-                (x: 10, y: 14, tile: .guard),
-                (x: 11, y: 14, tile: .gold),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 20, y: 14, tile: .runner),
+            (x: 10, y: 14, tile: .guard),
+            (x: 11, y: 14, tile: .gold),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         // Guard moves on odd ticks. xOffset: 8, 16, 24(cross to x=11, offset -16),
@@ -374,11 +363,10 @@ struct GuardSimulationTests {
 
     @Test("runner colliding with a guard is fatal")
     func runnerCollidingWithGuardIsFatal() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, tile: .runner),
-                (x: 6, y: 14, tile: .guard),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<10 {
@@ -390,17 +378,16 @@ struct GuardSimulationTests {
 
     @Test("RunnerSimulation with guards round-trips through JSON")
     func codableRoundTripWithGuards() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, tile: .runner),
-                (x: 1, y: 10, tile: .guard),
-                (x: 1, y: 11, tile: .brick),
-                (x: 2, y: 11, tile: .brick),
-                (x: 3, y: 11, tile: .brick),
-                (x: 4, y: 11, tile: .brick),
-                (x: 5, y: 11, tile: .brick),
-                (x: 4, y: 12, tile: .brick),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 1, y: 10, tile: .guard),
+            (x: 1, y: 11, tile: .brick),
+            (x: 2, y: 11, tile: .brick),
+            (x: 3, y: 11, tile: .brick),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+            (x: 4, y: 12, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.digLeft)

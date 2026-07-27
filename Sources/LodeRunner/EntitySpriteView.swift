@@ -95,7 +95,7 @@ private func previewLevel() -> LevelParseResult {
     for y in 9...14 {
         stamps.append((x: 20, y: y, tile: .ladder))
     }
-    return resolveLevelMap(makeLevel(stamps: stamps))
+    return makeLevel(stamps: stamps)
 }
 
 /// Manually construct appearances that reflect specific action histories so we
