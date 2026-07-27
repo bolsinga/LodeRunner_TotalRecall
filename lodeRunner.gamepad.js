@@ -116,7 +116,7 @@ var keyCodeMapping  = [
 	[[KEYCODE_X,     0, 0],   [KEYCODE_ENTER, 0, 0]], //dig-right
 	[[KEYCODE_ESC,   0, 0],   [KEYCODE_ENTER, 0, 0]], //pause
 	[[KEYCODE_ENTER, 0, 0],   [KEYCODE_ENTER, 0, 0]], //enter
-	[[KEYCODE_A,     1, 0],   [KEYCODE_ENTER, 0, 0]]  //game abort
+	[[KEYCODE_X,     1, 0],   [KEYCODE_ENTER, 0, 0]]  //exit game
 ];
 
 var gameButtonMapping = [ 
@@ -130,7 +130,7 @@ var gameButtonMapping = [
 	[ 1, ['B',  1]],                                  //DIG-RIGHT
 	[ 0, ['B',  8],['B', 11]],                        //PAUSE  (ESC)
 	[ 0, ['B',  9]],                        //Enter (Accept)
-	[ 2, ['B',  4],['B',  5], ['B',  6],['B',  7]]    //GAME ABORT (CTRL-A)
+	[ 2, ['B',  4],['B',  5], ['B',  6],['B',  7]]    //EXIT GAME (CTRL-X)
 ];
 
 var lastButtonState = [ 

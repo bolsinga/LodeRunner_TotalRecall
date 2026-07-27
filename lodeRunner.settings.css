@@ -154,11 +154,10 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	scrollbar-width: thin; scrollbar-color: var(--ls-panel-edge) transparent;
 }
 
-/* sub-view swap */
-.ls-dialog .view-help, .ls-dialog .view-info { display: none; }
-.ls-dialog .ls-panel.help .view-main,
+/* sub-view swap. Only the version fallback remains a sub-view; keys moved out
+   to their own dialog (lodeRunner.help.css). */
+.ls-dialog .view-info { display: none; }
 .ls-dialog .ls-panel.info .view-main { display: none; }
-.ls-dialog .ls-panel.help .view-help { display: block; }
 .ls-dialog .ls-panel.info .view-info { display: block; }
 .ls-dialog .ls-panel.info .ls-back { display: grid; }
 
@@ -433,22 +432,6 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	margin: 16px 0 6px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ls-gold);
 }
 .ls-dialog .help-h:first-child { margin-top: 6px; }
-.ls-dialog .keys {
-	display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; align-items: center;
-	font-size: 12px; color: var(--ls-ink-dim);
-}
-.ls-dialog .keys kbd {
-	font: inherit; font-size: 11px;
-	background: var(--ls-ground); border: 1px solid var(--ls-panel-edge);
-	border-radius: 2px; padding: 2px 7px; color: var(--ls-ink);
-	justify-self: start; white-space: nowrap;
-}
-.ls-dialog .rebind-note {
-	margin-top: 16px; padding: 10px 12px;
-	font-size: 11px; color: var(--ls-ink-dim); line-height: 1.5;
-	border: 1px dashed var(--ls-panel-edge); border-radius: var(--ls-radius);
-}
-.ls-dialog .rebind-note b { color: var(--ls-cyan); font-weight: 400; }
 
 @media (prefers-reduced-motion: reduce) {
 	.ls-dialog *, .ls-dialog *::before, .ls-dialog *::after { transition: none !important; }

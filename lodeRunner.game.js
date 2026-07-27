@@ -10,7 +10,8 @@
 
 var game = (function() {
 
-	var wasRunning = true; // what the game was doing when an interruption began
+	var wasRunning = true; // what the game was doing when the outermost interruption began
+	var suspendDepth = 0;  // nested dialogs (settings -> Help) share one pause
 
 	return {
 		// Pause is a state change, not a teardown: gameState = GAME_PAUSE is what
@@ -29,10 +30,24 @@ var game = (function() {
 		// Not run(false)/run(true): if the player had already paused with Esc,
 		// resuming here would strand the PAUSE banner, which only the Esc handler
 		// clears.
+		//
+		// Nesting: settings -> Help (or Level) closes one dialog and opens another.
+		// <dialog>.close() queues its "close" event, so Help's menu-open can land
+		// before settings' menu-close. Without a depth count, the nested open
+		// would gamePause again and overwrite lastGameState, and the settings
+		// close would resume early into that clobbered state -- leaving Esc on
+		// Help unable to restart play. Only the outermost open/close pair may
+		// touch wasRunning or call run().
 		suspend: function(on) {
-			if(!on) { wasRunning = this.isRunning(); this.run(false); }
-			else if(wasRunning) this.run(true);
-			else focusGame(); // still paused, but the game owns the keyboard again
+			if(!on) {
+				if(suspendDepth++ === 0) {
+					wasRunning = this.isRunning();
+					this.run(false);
+				}
+			} else if(suspendDepth > 0 && --suspendDepth === 0) {
+				if(wasRunning) this.run(true);
+				else focusGame(); // still paused, but the game owns the keyboard again
+			}
 		},
 
 		isRunning: function() { return gameState != GAME_PAUSE; },

@@ -1,0 +1,247 @@
+/*
+ * Lode Runner - keys & gamepad help.
+ * Shares the settings overlay's palette (--ls-* on :root); scoped under
+ * .hk-dialog. A large centered dialog like the level selector, not a panel
+ * sub-view: 25 bindings and a controller diagram do not fit a 340px rail.
+ */
+
+dialog.hk-dialog {
+	box-sizing: border-box;
+	width: min(880px, 92vw);
+	max-height: 88dvh;
+	padding: 0; border: 0;
+	border-radius: var(--ls-radius);
+	background: linear-gradient(180deg, var(--ls-panel) 0%, #101019 100%);
+	border: 1px solid var(--ls-panel-edge);
+	color: var(--ls-ink); font-family: var(--ls-font);
+	overflow: hidden;
+	opacity: 0; transform: scale(.98);
+	transition: opacity .18s ease, transform .18s ease,
+	            overlay .18s allow-discrete, display .18s allow-discrete;
+}
+dialog.hk-dialog[open] { opacity: 1; transform: scale(1); }
+@starting-style { dialog.hk-dialog[open] { opacity: 0; transform: scale(.98); } }
+
+dialog.hk-dialog::backdrop {
+	background: rgba(4,4,10,.72);
+	backdrop-filter: blur(2px);
+}
+.hk-dialog * { box-sizing: border-box; }
+
+.hk-panel { display: flex; flex-direction: column; max-height: 88dvh; }
+
+.hk-head {
+	flex: 0 0 auto;
+	display: flex; align-items: center; justify-content: space-between;
+	padding: 14px 18px 10px;
+	border-bottom: 1px solid var(--ls-panel-edge);
+}
+.hk-title {
+	font-size: 15px; font-weight: 700;
+	letter-spacing: .1em; text-transform: uppercase;
+	color: var(--ls-ink);
+}
+.hk-title b { color: var(--ls-brick); font-weight: inherit; }
+.hk-close {
+	background: none; border: 0; cursor: pointer;
+	color: var(--ls-ink-dim); font-size: 22px; line-height: 1;
+	padding: 0 4px; font-family: var(--ls-font);
+	transition: color .15s;
+}
+.hk-close:hover { color: var(--ls-brick); }
+.hk-close:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+/* tabs */
+.hk-tabs {
+	flex: 0 0 auto;
+	display: flex; gap: 2px; padding: 0 18px;
+	background: var(--ls-panel);
+	border-bottom: 1px solid var(--ls-panel-edge);
+}
+.hk-tab {
+	appearance: none; background: none; border: 0;
+	border-bottom: 2px solid transparent;
+	color: var(--ls-ink-dim); font-family: var(--ls-font); font-size: 13px;
+	letter-spacing: .1em; text-transform: uppercase;
+	padding: 10px 16px; cursor: pointer;
+	transition: color .15s, border-color .15s;
+}
+.hk-tab:hover { color: var(--ls-ink); }
+.hk-tab[aria-selected="true"] { color: var(--ls-gold); border-bottom-color: var(--ls-gold); }
+.hk-tab:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: -2px; }
+
+/* panes. The keyboard pane is a two-column grid of key groups; the gamepad
+   pane lays itself out, so it opts out. [hidden] has to beat both. */
+.hk-body {
+	flex: 1 1 auto; min-height: 0;
+	overflow-y: auto; scrollbar-width: thin;
+	scrollbar-color: var(--ls-panel-edge) transparent;
+	padding: 20px 22px 22px;
+	background: var(--ls-ground);
+	display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+	gap: 4px 40px; align-content: start;
+}
+.hk-pane[hidden] { display: none; }
+.hk-body.hk-pane-gp:not([hidden]) { display: block; }
+
+.hk-group { break-inside: avoid; }
+/* the key clusters need full width; the shortcut tables pair up beneath them */
+.hk-group.full { grid-column: 1 / -1; }
+.hk-h {
+	margin: 18px 0 10px;
+	font-size: 13px; letter-spacing: .18em; text-transform: uppercase;
+	color: var(--ls-gold);
+}
+/* only the first group starts flush; every later header keeps its top margin */
+.hk-group:first-child > .hk-h:first-child { margin-top: 0; }
+/* extra air where the key clusters end and the shortcut tables begin. GAME and
+   SETTINGS share a grid row, so both headers take it or they stop lining up. */
+.hk-group.full ~ .hk-group .hk-h { margin-top: 34px; }
+.hk-h .ctx {
+	color: var(--ls-ink-dim); letter-spacing: .08em;
+	text-transform: none; font-size: 12px;
+}
+
+/* keycaps. 42px square with an 18px face, matching the scale of the art this
+   replaces -- the old 11px caps were unreadable. */
+/* box-sizing so the border is inside the 42px: the caps sit in 42px grid
+   tracks, and a cap wider than its track drifts out of line with the label */
+.hk-dialog kbd.cap {
+	box-sizing: border-box;
+	font: inherit; font-size: 18px; line-height: 1;
+	min-width: 42px; height: 42px; padding: 0 11px;
+	display: inline-grid; place-items: center;
+	color: var(--ls-ink); background: #1e1e2c;
+	border: 1px solid #3a3a54; border-bottom-width: 3px;
+	border-radius: 6px; white-space: nowrap;
+}
+/* the inverted T, laid out as it sits on the keyboard: the arrangement is
+   itself the instruction, so it is a grid rather than a row */
+.hk-cluster {
+	display: grid; grid-template-columns: repeat(3, 42px); gap: 5px;
+	justify-content: start; margin: 2px 0 4px;
+}
+.hk-cluster.hk-pair { grid-template-columns: repeat(2, 42px); }
+.hk-cluster .up    { grid-column: 2; grid-row: 1; }
+.hk-cluster .left  { grid-column: 1; grid-row: 2; }
+.hk-cluster .down  { grid-column: 2; grid-row: 2; }
+.hk-cluster .right { grid-column: 3; grid-row: 2; }
+
+/* One grid for the whole block, so rows line up by structure rather than by
+   arithmetic. Row 1 is the Dig header (full width, a section header like Move
+   above the grid); rows 2-5 are each set's cluster, caption, dig pair and
+   left/right labels. Sharing rows is what centres Z X under the arrows, U O
+   under I J K L and Q E under W A S D. */
+.hk-sets {
+	display: grid;
+	grid-template-columns: repeat(3, auto);
+	grid-template-rows: auto auto auto auto auto;
+	justify-content: start; align-items: center;
+	column-gap: 34px; row-gap: 10px;
+}
+.hk-dig-h { grid-column: 1 / -1; grid-row: 3; justify-self: start; }
+.hk-set {
+	display: grid; grid-row: 1 / -1; grid-template-rows: subgrid;
+	justify-items: center; row-gap: 10px;
+}
+/* the cluster and caption sit above the Dig header, the dig keys below it */
+.hk-set > .hk-cluster:not(.hk-pair) { grid-row: 1; }
+.hk-set > .hk-cap-note:not(.hk-dig-note) { grid-row: 2; }
+.hk-set > .hk-pair { grid-row: 4; }
+.hk-set > .hk-dig-note { grid-row: 5; }
+
+.hk-cap-note { font-size: 13px; color: var(--ls-ink-dim); margin: 0; text-align: center; }
+/* left / right sit on the same two 42px tracks as the dig caps above them, so
+   each word centres on its key rather than on the pair */
+.hk-dig-note {
+	display: grid; grid-template-columns: repeat(2, 42px); gap: 5px;
+	font-size: 12px;
+}
+.hk-foot-note {
+	margin-top: 14px; max-width: 80ch; line-height: 1.6; text-align: left;
+}
+
+/* shortcut tables: everything that is a lookup rather than a shape */
+.hk-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.hk-table th {
+	text-align: left; padding: 0 14px 7px 0;
+	font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+	color: var(--ls-ink-dim); font-weight: 400;
+	border-bottom: 1px solid var(--ls-panel-edge);
+}
+.hk-table td { padding: 7px 14px 7px 0; border-bottom: 1px solid #1c1c2a; }
+.hk-table tr:last-child td { border-bottom: 0; }
+.hk-table td.k { white-space: nowrap; width: 1%; }
+.hk-table td.a { color: var(--ls-ink); }
+/* names the menu control that does the same job, so the key reads as a
+   shortcut and not as the only way in */
+.hk-table td.m {
+	color: var(--ls-ink-dim); font-size: 13px;
+	white-space: nowrap; text-align: right;
+}
+.hk-table td.m::before { content: "\2192\00a0"; color: #3a3a54; }
+.hk-table td.m.none::before { content: ""; }
+
+/* the chip is a bordered box on a text baseline, so it needs its own breathing
+   room in running prose -- a bare word-space leaves the border touching the
+   next letter. Harmless in tables, where each chip sits alone in its cell. */
+.hk-k {
+	font: inherit; font-size: 13px; color: var(--ls-ink);
+	background: #1e1e2c; border: 1px solid #3a3a54; border-radius: 3px;
+	padding: 2px 7px; margin: 0 2px; white-space: nowrap;
+}
+.hk-tag { color: var(--ls-ink-dim); font-size: 13px; }
+
+.hk-note {
+	grid-column: 1 / -1;
+	margin-top: 16px; padding: 10px 12px;
+	font-size: 13px; color: var(--ls-ink-dim); line-height: 1.55;
+	border: 1px dashed var(--ls-panel-edge); border-radius: var(--ls-radius);
+}
+.hk-note b { color: var(--ls-cyan); font-weight: 400; }
+
+/* ---- gamepad tab ---- */
+.gp-wrap {
+	display: grid;
+	grid-template-columns: minmax(300px, 1fr) minmax(280px, 1fr);
+	gap: 8px 36px; align-items: start;
+}
+/* the drawing rides above the vertical centre of its column */
+.gp-fig { min-height: 200px; align-self: center; margin-top: -8%; }
+.gp-fig svg { width: 100%; height: auto; display: block; }
+/* the art is one stroke colour, inherited -- so it follows the accent */
+.gp-art .gp-body    { color: var(--ls-ink-dim); }
+/* the pad's own button letters -- A B X Y, SELECT, START */
+.gp-art .gp-label { fill: var(--ls-ink-dim); stroke: none; font-family: var(--ls-font); }
+.gp-art .gp-nums circle { fill: var(--ls-cyan); stroke: none; }
+.gp-art .gp-nums text   { fill: #14141f; stroke: none; font-family: var(--ls-font); }
+
+.gp-list { list-style: none; margin: 0; padding: 0; }
+.gp-list li {
+	display: flex; align-items: baseline; gap: 10px; padding: 8px 0;
+	border-bottom: 1px solid #1c1c2a; font-size: 14px; color: var(--ls-ink);
+}
+.gp-list li:last-child { border-bottom: 0; }
+.gp-list small {
+	display: block; color: var(--ls-ink-dim); font-size: 12px; margin-top: 2px;
+}
+/* callout number, matching the ones drawn into the art */
+.gp-n {
+	display: inline-grid; place-items: center;
+	width: 20px; height: 20px; flex: none; position: relative; top: 3px;
+	border-radius: 50%; background: var(--ls-cyan); color: #14141f;
+	font-size: 12px; font-weight: 700; line-height: 1;
+}
+.gp-status {
+	margin-top: 14px; padding: 10px 12px;
+	font-size: 13px; color: var(--ls-ink-dim); line-height: 1.55;
+	border: 1px dashed var(--ls-panel-edge); border-radius: var(--ls-radius);
+}
+.gp-status.found { color: var(--ls-ink); border-style: solid; }
+
+@media (max-width: 760px) {
+	.gp-wrap { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.hk-dialog, .hk-dialog * { transition: none !important; }
+}
