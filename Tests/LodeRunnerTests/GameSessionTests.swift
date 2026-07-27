@@ -15,12 +15,12 @@ struct GameSessionTests {
     private func completableLevel(offsetX: Int) -> LevelParseResult {
         resolveLevelMap(
             makeLevel(stamps: [
-                (x: offsetX + 3, y: 1, ch: "&"),
-                (x: offsetX + 4, y: 1, ch: "$"),
-                (x: offsetX + 5, y: 0, ch: "H"),
-                (x: offsetX + 5, y: 1, ch: "H"),
-                (x: offsetX + 3, y: 2, ch: "#"),
-                (x: offsetX + 4, y: 2, ch: "#"),
+                (x: offsetX + 3, y: 1, tile: .runner),
+                (x: offsetX + 4, y: 1, tile: .gold),
+                (x: offsetX + 5, y: 0, tile: .ladder),
+                (x: offsetX + 5, y: 1, tile: .ladder),
+                (x: offsetX + 3, y: 2, tile: .brick),
+                (x: offsetX + 4, y: 2, tile: .brick),
             ]))
     }
 
@@ -35,7 +35,7 @@ struct GameSessionTests {
 
     @Test("init: starting lives/score/level/phase, and empty levels throws")
     func initialState() throws {
-        let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, ch: "&")]))
+        let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, tile: .runner)]))
         let session = try GameSession(levels: [level])
 
         #expect(session.lives == 5)
@@ -54,8 +54,8 @@ struct GameSessionTests {
     func deathWithLivesRemainingRetries() throws {
         let deathLevel = resolveLevelMap(
             makeLevel(stamps: [
-                (x: 5, y: 14, ch: "&"),
-                (x: 6, y: 14, ch: "0"),
+                (x: 5, y: 14, tile: .runner),
+                (x: 6, y: 14, tile: .guard),
             ]))
         var session = try GameSession(levels: [deathLevel])
 
@@ -78,8 +78,8 @@ struct GameSessionTests {
     func deathAtLastLifeEndsSession() throws {
         let deathLevel = resolveLevelMap(
             makeLevel(stamps: [
-                (x: 5, y: 14, ch: "&"),
-                (x: 6, y: 14, ch: "0"),
+                (x: 5, y: 14, tile: .runner),
+                (x: 6, y: 14, tile: .guard),
             ]))
         var session = try GameSession(levels: [deathLevel])
 
