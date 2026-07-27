@@ -100,6 +100,34 @@ public enum HoleAnimation: String, CaseIterable, Sendable {
     }
 }
 
+/// Cycles a `HoleFrame` through a frame-index sequence at a fixed rate. Same
+/// `TimelineView(.periodic:)`-driven design as `AnimatedSprite`, but sized for
+/// the hole sheet's mixed 40×88 dig / 40×44 fill frames. Each `HoleAnimation`
+/// case uses uniform-sized frames internally, so a given animation renders at
+/// a consistent size (dig animations render 40×88, fill renders 40×44).
+public struct AnimatedHoleFrame: View {
+    let frames: [Int]
+    let framesPerSecond: Double
+
+    public init(frames: [Int], framesPerSecond: Double) {
+        self.frames = frames
+        self.framesPerSecond = framesPerSecond
+    }
+
+    public var body: some View {
+        TimelineView(.periodic(from: .now, by: 1.0 / max(framesPerSecond, 0.001))) { context in
+            HoleFrame(frameIndex(at: context.date))
+        }
+    }
+
+    private func frameIndex(at date: Date) -> Int {
+        guard !frames.isEmpty else { return 0 }
+        let step = Int(floor(date.timeIntervalSinceReferenceDate * framesPerSecond))
+        let wrapped = ((step % frames.count) + frames.count) % frames.count
+        return frames[wrapped]
+    }
+}
+
 // MARK: - Preview
 
 private struct HoleFramesGrid: View {
@@ -137,6 +165,23 @@ private struct HoleFramesGrid: View {
                             .background(Color.gray.opacity(0.2))
                             .border(Color.gray)
                         Text("\(i)").font(.caption2)
+                    }
+                }
+            }
+
+            Divider()
+
+            Text("Animations").font(.caption)
+            HStack(alignment: .top, spacing: 16) {
+                ForEach(HoleAnimation.allCases, id: \.self) { animation in
+                    VStack(spacing: 4) {
+                        AnimatedHoleFrame(
+                            frames: animation.frames,
+                            framesPerSecond: animation.framesPerSecond
+                        )
+                        .background(Color.gray.opacity(0.2))
+                        .border(Color.gray)
+                        Text(animation.rawValue).font(.caption2)
                     }
                 }
             }
