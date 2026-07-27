@@ -51,14 +51,15 @@ extension GuardAnimation {
     /// `climbOut` (`guard.js:522-525`). Same `facing` contract as
     /// `RunnerAnimation.forRunner`.
     ///
-    /// **In-hole shake orientation**: the JS picks `shakeRight`/`shakeLeft` from
-    /// the *previous* shape (`guard.js:243-244`: `curShape == "fallRight"`
-    /// → `shakeRight` else `shakeLeft`). We don't track previous shape here, so
-    /// we substitute `facing` — an approximation that will disagree with the JS
-    /// only when the guard was somehow shaken while previously running rather
-    /// than falling, which the game doesn't produce.
+    /// **In-hole shake orientation**: JS picks `shakeRight`/`shakeLeft` from the
+    /// *previous* shape (`guard.js:243-244`: `curShape == "fallRight"` →
+    /// `shakeRight`, else `shakeLeft`). When `previous` is supplied we match
+    /// that exactly; when it isn't we fall back to `facing`, which produces the
+    /// same answer in the paths that lead to `.inHole` (the guard is always
+    /// falling before entering the hole).
     public static func forGuard(
-        action: GuardAction, baseTile: TileType, facing: GuardAction
+        action: GuardAction, baseTile: TileType, facing: GuardAction,
+        previous: GuardAnimation? = nil
     ) -> GuardAnimation? {
         switch action {
         case .up, .down, .climbOut:
@@ -72,6 +73,9 @@ extension GuardAnimation {
         case .fallBar:
             return facing == .left ? .barLeft : .barRight
         case .inHole:
+            if let previous {
+                return previous == .fallRight ? .shakeRight : .shakeLeft
+            }
             return facing == .left ? .shakeLeft : .shakeRight
         case .reborn:
             return .reborn
