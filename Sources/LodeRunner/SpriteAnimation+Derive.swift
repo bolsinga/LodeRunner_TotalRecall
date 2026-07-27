@@ -1,4 +1,3 @@
-import LodeRunnerCore
 
 extension RunnerAnimation {
     /// Ports the `newShape` derivation from `lodeRunner.runner.js:127-259` and the

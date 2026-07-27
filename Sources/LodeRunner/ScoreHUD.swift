@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Info-line HUD showing `SCORE 0000000  MEN 000  LEVEL 000`. Column positions

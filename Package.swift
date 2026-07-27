@@ -2,27 +2,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "LodeRunnerCore",
+    name: "LodeRunner",
     platforms: [.iOS(.v26), .macOS(.v26)],
     products: [
-        .library(name: "LodeRunnerCore", targets: ["LodeRunnerCore"]),
-        .library(name: "LodeRunnerUI", targets: ["LodeRunnerUI"]),
+        .library(name: "LodeRunner", targets: ["LodeRunner"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0")
     ],
     targets: [
-        .target(name: "LodeRunnerCore"),
-        .testTarget(name: "LodeRunnerCoreTests", dependencies: ["LodeRunnerCore"]),
         .target(
-            name: "LodeRunnerUI",
-            dependencies: ["LodeRunnerCore"],
+            name: "LodeRunner",
             resources: [.process("Resources")]
         ),
+        .testTarget(name: "LodeRunnerTests", dependencies: ["LodeRunner"]),
         .executableTarget(
             name: "lr",
             dependencies: [
-                "LodeRunnerCore",
+                "LodeRunner",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),

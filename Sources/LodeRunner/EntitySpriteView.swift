@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders a runner as an animated sprite positioned by tile + subtile offsets.

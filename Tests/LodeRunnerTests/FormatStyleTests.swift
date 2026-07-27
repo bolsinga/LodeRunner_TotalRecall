@@ -1,6 +1,6 @@
 import Testing
 
-@testable import LodeRunnerCore
+@testable import LodeRunner
 
 @Suite
 struct FormatStyleTests {

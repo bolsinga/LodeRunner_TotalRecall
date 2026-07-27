@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Describes a uniform-grid sprite sheet: the base asset name (theme prefix is

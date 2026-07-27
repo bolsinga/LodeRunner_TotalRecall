@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders a full level's terrain as a fixed `LevelGrid.tilesX` x `LevelGrid.tilesY`

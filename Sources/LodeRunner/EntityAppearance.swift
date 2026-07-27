@@ -1,4 +1,3 @@
-import LodeRunnerCore
 
 /// Display-side state that reconstructs the two fields the JS embedded in
 /// `runner`/`guard` but the Swift sim intentionally dropped as display-only

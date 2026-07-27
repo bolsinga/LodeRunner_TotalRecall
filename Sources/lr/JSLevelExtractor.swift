@@ -1,4 +1,4 @@
-import LodeRunnerCore
+import LodeRunner
 
 enum JSLevelExtractorError: Error, CustomStringConvertible {
     case variableNotFound(String)

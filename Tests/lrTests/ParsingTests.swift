@@ -1,4 +1,4 @@
-import LodeRunnerCore
+import LodeRunner
 import Testing
 
 @testable import lr

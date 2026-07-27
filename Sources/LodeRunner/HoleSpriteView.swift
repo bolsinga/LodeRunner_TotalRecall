@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders the double-tall dig-in-progress sprite over a `DigState`. The
