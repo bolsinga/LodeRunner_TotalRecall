@@ -1,7 +1,9 @@
 @testable import LodeRunner
 
-/// Build a blank 28x16 level, then stamp entities/terrain at [x,y] positions. Always
-/// fills the bottom row with bricks so the string looks valid.
+/// Character-based level builder for the parser tests: those tests specifically
+/// exercise the char → tile parse path, so they can't go through the shared
+/// TileType-based `makeLevel(stamps:)` in the library. Always fills the bottom row
+/// with bricks so the string looks valid.
 func makeLevel(stamps: [(x: Int, y: Int, ch: Character)]) -> String {
     var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
     for stamp in stamps {

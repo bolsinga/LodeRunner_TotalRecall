@@ -87,17 +87,15 @@ private struct EntitySprite: View {
 // MARK: - Preview
 
 private func previewLevel() -> LevelParseResult {
-    var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-    for x in 0..<LevelGrid.tilesX {
-        cells[(LevelGrid.tilesY - 1) * LevelGrid.tilesX + x] = "#"
-    }
+    // Bottom floor comes from makeLevel's auto-fill of row 15.
+    var stamps: [(x: Int, y: Int, tile: TileType)] = []
     for x in 10...14 {
-        cells[9 * LevelGrid.tilesX + x] = "-"
+        stamps.append((x: x, y: 9, tile: .bar))
     }
     for y in 9...14 {
-        cells[y * LevelGrid.tilesX + 20] = "H"
+        stamps.append((x: 20, y: y, tile: .ladder))
     }
-    return resolveLevelMap(String(cells))
+    return makeLevel(stamps: stamps)
 }
 
 /// Manually construct appearances that reflect specific action histories so we

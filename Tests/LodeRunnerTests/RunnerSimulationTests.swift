@@ -7,7 +7,7 @@ import Testing
 struct RunnerSimulationTests {
     @Test("a level with no runner spawn throws noRunnerSpawn")
     func noRunnerSpawnThrows() {
-        let level = resolveLevelMap(makeLevel(stamps: []))
+        let level = makeLevel(stamps: [] as [(x: Int, y: Int, tile: TileType)])
         #expect(throws: RunnerSimulationError.noRunnerSpawn) {
             try RunnerSimulation(level: level)
         }
@@ -15,12 +15,11 @@ struct RunnerSimulationTests {
 
     @Test("initial state matches the level's runner spawn")
     func initialStateMatchesSpawn() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 8, y: 10, ch: "$"),
-                (x: 9, y: 10, ch: "$"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 8, y: 10, tile: .gold),
+            (x: 9, y: 10, tile: .gold),
+        ])
         let sim = try RunnerSimulation(level: level)
 
         #expect(sim.runner.position == GridPoint(x: 5, y: 10))
@@ -38,7 +37,7 @@ struct RunnerSimulationTests {
 
     @Test("walking right on open floor: 3 ticks crosses one tile boundary")
     func walkingRightCrossesTileBoundary() throws {
-        let level = resolveLevelMap(makeLevel(stamps: [(x: 5, y: 14, ch: "&")]))
+        let level = makeLevel(stamps: [(x: 5, y: 14, tile: .runner)])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.right)
@@ -58,11 +57,10 @@ struct RunnerSimulationTests {
 
     @Test("blocked by a wall: offset stays clamped at 0, action resolves to .stop")
     func blockedByWallStaysClamped() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, ch: "&"),
-                (x: 6, y: 14, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<3 {
@@ -75,11 +73,10 @@ struct RunnerSimulationTests {
 
     @Test("falling: lands on solid ground one tile below")
     func fallingLandsOnFloor() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 5, y: 12, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 5, y: 12, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<5 {
@@ -96,18 +93,17 @@ struct RunnerSimulationTests {
 
     @Test("walking onto a ladder column, then climbing up one tile")
     func walkOntoLadderThenClimb() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 4, y: 10, ch: "&"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 5, ch: "H"),
-                (x: 5, y: 6, ch: "H"),
-                (x: 5, y: 7, ch: "H"),
-                (x: 5, y: 8, ch: "H"),
-                (x: 5, y: 9, ch: "H"),
-                (x: 5, y: 10, ch: "H"),
-                (x: 5, y: 11, ch: "H"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 4, y: 10, tile: .runner),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 5, tile: .ladder),
+            (x: 5, y: 6, tile: .ladder),
+            (x: 5, y: 7, tile: .ladder),
+            (x: 5, y: 8, tile: .ladder),
+            (x: 5, y: 9, tile: .ladder),
+            (x: 5, y: 10, tile: .ladder),
+            (x: 5, y: 11, tile: .ladder),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<3 { sim.tick(.right) }
@@ -126,11 +122,10 @@ struct RunnerSimulationTests {
 
     @Test("falling onto a bar transitions to hanging, then drop-through on down")
     func barHangAndDrop() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 8, ch: "&"),
-                (x: 5, y: 9, ch: "-"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 8, tile: .runner),
+            (x: 5, y: 9, tile: .bar),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<5 { sim.tick(.stop) }
@@ -146,12 +141,11 @@ struct RunnerSimulationTests {
 
     @Test("picking up the last gold sets goldComplete and reveals hidden ladders")
     func goldPickupRevealsHiddenLadders() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 14, ch: "&"),
-                (x: 6, y: 14, ch: "$"),
-                (x: 10, y: 5, ch: "S"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .gold),
+            (x: 10, y: 5, tile: .hiddenLadder),
+        ])
         var sim = try RunnerSimulation(level: level)
         #expect(sim.goldRemaining == 1)
 
@@ -167,15 +161,14 @@ struct RunnerSimulationTests {
 
     @Test("reaching row 0 centered with all gold collected wins")
     func reachingTopWithAllGoldWins() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 3, y: 1, ch: "&"),
-                (x: 4, y: 1, ch: "$"),
-                (x: 5, y: 0, ch: "H"),
-                (x: 5, y: 1, ch: "H"),
-                (x: 3, y: 2, ch: "#"),
-                (x: 4, y: 2, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 3, y: 1, tile: .runner),
+            (x: 4, y: 1, tile: .gold),
+            (x: 5, y: 0, tile: .ladder),
+            (x: 5, y: 1, tile: .ladder),
+            (x: 3, y: 2, tile: .brick),
+            (x: 4, y: 2, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         for _ in 0..<8 { sim.tick(.right) }
@@ -193,12 +186,11 @@ struct RunnerSimulationTests {
 
     @Test("digging: completes after 11 ticks, hole refills after 186 more")
     func diggingHappyPath() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 11, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.digLeft)
@@ -220,13 +212,12 @@ struct RunnerSimulationTests {
 
     @Test("digging + burial: standing in a hole when it refills is fatal")
     func diggingBurialDeath() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 11, ch: "#"),
-                (x: 4, y: 12, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+            (x: 4, y: 12, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
 
         sim.tick(.digLeft)
@@ -242,36 +233,33 @@ struct RunnerSimulationTests {
     @Test("ok2Dig rejects a non-brick target, an occupied column, and a gold-based target")
     func ok2DigRejections() throws {
         // (a) diagonal target isn't a brick (it's empty)
-        let notBrick = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 5, y: 11, ch: "#"),
-            ]))
+        let notBrick = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 5, y: 11, tile: .brick),
+        ])
         var sim1 = try RunnerSimulation(level: notBrick)
         sim1.tick(.digLeft)
         #expect(sim1.digState == nil)
         #expect(sim1.runner.action == .stop)
 
         // (b) target column is occupied (a brick sits at [x-1][y])
-        let occupied = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 4, y: 10, ch: "#"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 11, ch: "#"),
-            ]))
+        let occupied = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 4, y: 10, tile: .brick),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+        ])
         var sim2 = try RunnerSimulation(level: occupied)
         sim2.tick(.digLeft)
         #expect(sim2.digState == nil)
 
         // (c) target column's base is gold
-        let goldTarget = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 4, y: 10, ch: "$"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 11, ch: "#"),
-            ]))
+        let goldTarget = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 4, y: 10, tile: .gold),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+        ])
         var sim3 = try RunnerSimulation(level: goldTarget)
         sim3.tick(.digLeft)
         #expect(sim3.digState == nil)
@@ -279,12 +267,11 @@ struct RunnerSimulationTests {
 
     @Test("RunnerSimulation round-trips through JSON")
     func codableRoundTrip() throws {
-        let level = resolveLevelMap(
-            makeLevel(stamps: [
-                (x: 5, y: 10, ch: "&"),
-                (x: 4, y: 11, ch: "#"),
-                (x: 5, y: 11, ch: "#"),
-            ]))
+        let level = makeLevel(stamps: [
+            (x: 5, y: 10, tile: .runner),
+            (x: 4, y: 11, tile: .brick),
+            (x: 5, y: 11, tile: .brick),
+        ])
         var sim = try RunnerSimulation(level: level)
         sim.tick(.digLeft)
         for _ in 0..<5 { sim.tick(.stop) }

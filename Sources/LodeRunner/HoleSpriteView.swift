@@ -52,14 +52,12 @@ public struct FillSpriteView: View {
 // MARK: - Preview
 
 private func digPreviewSimulation() throws -> RunnerSimulation {
-    var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-    for x in 0..<LevelGrid.tilesX {
-        cells[(LevelGrid.tilesY - 1) * LevelGrid.tilesX + x] = "#"
-    }
-    // Runner spawn at (5, 14) — floor bricks at row 15 to its right so digRight is
-    // immediately valid and the cycle can loop.
-    cells[14 * LevelGrid.tilesX + 5] = "&"
-    let level = resolveLevelMap(String(cells))
+    // Runner spawn at (5, 14) — bottom floor bricks at row 15 come from
+    // makeLevel's auto-fill, so digRight is immediately valid and the cycle
+    // can loop.
+    let level = makeLevel(stamps: [
+        (x: 5, y: 14, tile: .runner),
+    ])
     return try RunnerSimulation(level: level)
 }
 

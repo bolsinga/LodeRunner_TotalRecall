@@ -80,22 +80,19 @@ public final class SimulationDriver {
 /// so guard AI (`lodeRunner.guard.js:moveGuard`) can't actually catch the
 /// runner — it paces trying — which keeps the preview from freezing on death.
 private func walkingPreviewSimulation() throws -> RunnerSimulation {
-    var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
-    // Bottom floor
-    for x in 0..<LevelGrid.tilesX {
-        cells[(LevelGrid.tilesY - 1) * LevelGrid.tilesX + x] = "#"
-    }
-    // Mid-height platform, cols 8-22, row 10
+    var stamps: [(x: Int, y: Int, tile: TileType)] = [
+        // Runner spawn on the floor
+        (x: 3, y: 14, tile: .runner),
+        // Guard spawns on the platform (one facing the runner, one away)
+        (x: 12, y: 9, tile: .guard),
+        (x: 18, y: 9, tile: .guard),
+    ]
+    // Mid-height platform, cols 8-22, row 10. (Bottom floor comes from
+    // makeLevel's auto-fill of row 15.)
     for x in 8...22 {
-        cells[10 * LevelGrid.tilesX + x] = "#"
+        stamps.append((x: x, y: 10, tile: .brick))
     }
-    // Runner spawn on the floor
-    cells[14 * LevelGrid.tilesX + 3] = "&"
-    // Guard spawns on the platform (one facing the runner, one away)
-    cells[9 * LevelGrid.tilesX + 12] = "0"
-    cells[9 * LevelGrid.tilesX + 18] = "0"
-    let level = resolveLevelMap(String(cells))
-    return try RunnerSimulation(level: level)
+    return try RunnerSimulation(level: makeLevel(stamps: stamps))
 }
 
 private struct WalkingRunnerPreview: View {
