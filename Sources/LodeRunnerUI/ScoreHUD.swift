@@ -50,26 +50,23 @@ public struct ScoreHUD: View {
     }
 }
 
-#Preview("HUD — Apple2") {
-    ScrollView(.horizontal) {
+#Preview("HUD — Apple2", traits: .landscapeLeft) {
+    FittedBoardView(boardHeight: CGFloat(TileGeometry.tileHeight)) {
         ScoreHUD(score: 12345, lives: 3, level: 1)
-            .padding()
     }
     .environment(\.tileTheme, .apple2)
 }
 
-#Preview("HUD — C64") {
-    ScrollView(.horizontal) {
+#Preview("HUD — C64", traits: .landscapeLeft) {
+    FittedBoardView(boardHeight: CGFloat(TileGeometry.tileHeight)) {
         ScoreHUD(score: 12345, lives: 3, level: 1)
-            .padding()
     }
     .environment(\.tileTheme, .c64)
 }
 
-#Preview("HUD — zero state") {
-    ScrollView(.horizontal) {
+#Preview("HUD — zero state", traits: .landscapeLeft) {
+    FittedBoardView(boardHeight: CGFloat(TileGeometry.tileHeight)) {
         ScoreHUD(score: 0, lives: 5, level: 1)
-            .padding()
     }
     .environment(\.tileTheme, .apple2)
 }
