@@ -111,7 +111,7 @@ private struct WalkingRunnerPreview: View {
     var body: some View {
         FittedBoardView {
             ZStack(alignment: .topLeading) {
-                LevelGridView(tiles: driver.simulation.slots.map { $0.map(\.current) })
+                LevelGridView(tiles: entityLessTiles(driver.simulation.slots))
                 RunnerSpriteView(
                     runner: driver.simulation.runner,
                     appearance: driver.runnerAppearance
@@ -129,6 +129,19 @@ private struct WalkingRunnerPreview: View {
         .task {
             driver.currentAction = .right
             await driver.run()
+        }
+    }
+
+    /// Show `.base` where an entity currently occupies a cell so the static
+    /// `runner1`/`guard1` tile in `TileCellView` doesn't ghost behind the
+    /// overlaid `RunnerSpriteView`/`GuardSpriteView` during mid-tile motion.
+    /// Everywhere else we show `.current` as usual (e.g. dug/filled brick
+    /// states).
+    private func entityLessTiles(_ slots: [[LevelSlot]]) -> [[TileType]] {
+        slots.map { column in
+            column.map { slot in
+                (slot.current == .runner || slot.current == .guard) ? slot.base : slot.current
+            }
         }
     }
 }
