@@ -229,7 +229,7 @@ var settingsPanel = (function() {
 					'<button class="ls-back" aria-label="Back">&larr;</button>' +
 					'<h2 class="ls-title"><b>LODE</b> RUNNER</h2>' +
 				'</div>' +
-				'<div class="ls-body">' + mainView() + helpView() +
+				'<div class="ls-body">' + mainView() +
 					(richOptions ? "" : '<div class="view-info"></div>') + '</div>' +
 			'</div>';
 
@@ -447,7 +447,7 @@ var settingsPanel = (function() {
 					'<div class="seg ls-gamepad" role="group" aria-label="Gamepad">' +
 						'<button data-on="1">On</button><button data-on="0">Off</button></div></div>' +
 			'</div>' +
-			'<div class="group"><button class="btn ls-keys" style="width:100%">Keys</button></div>' +
+			'<div class="group"><button class="btn ls-help" style="width:100%">Help</button></div>' +
 			'<div class="group"><p class="group-label">Appearance</p>' +
 				'<div class="row"><span class="row-name">Accent<small>Menu highlight color</small></span>' +
 					'<div class="swatches accents ls-accent" role="group" aria-label="Accent color">' + accentOpts + '</div>' +
@@ -468,28 +468,6 @@ var settingsPanel = (function() {
 					'<p class="clear-note ls-clear-note" role="status"></p>' +
 				'</div>' +
 			'</div>' +
-		'</div>';
-	}
-
-	function helpView() {
-		return '<div class="view-help">' +
-			'<p class="help-h">Move &amp; Dig</p>' +
-			'<div class="keys">' +
-				'<kbd>&larr; &rarr;</kbd><span>Move left / right</span>' +
-				'<kbd>&uarr; &darr;</kbd><span>Climb up / down</span>' +
-				'<kbd>Z</kbd><span>Dig left</span>' +
-				'<kbd>X</kbd><span>Dig right</span>' +
-			'</div>' +
-			'<p class="help-h">Game</p>' +
-			'<div class="keys">' +
-				'<kbd>Esc</kbd><span>Pause / help</span>' +
-				'<kbd>Ctrl &minus;</kbd><span>Slower</span>' +
-				'<kbd>Ctrl =</kbd><span>Faster</span>' +
-				'<kbd>Ctrl A</kbd><span>Abort level</span>' +
-				'<kbd>Ctrl R</kbd><span>Abort game</span>' +
-			'</div>' +
-			'<div class="rebind-note"><b>Rebinding keys</b> is coming to this screen &mdash; ' +
-				'you\'ll click a key and press the one you want. For now these are the defaults.</div>' +
 		'</div>';
 	}
 
@@ -527,8 +505,8 @@ var settingsPanel = (function() {
 	}
 
 	//--- open/close + sub-view routing ---
-	var TITLES = { main: "<b>LODE</b> RUNNER", help: "KEYS", info: "VERSION" };
-	var SUBVIEWS = ["help", "info"];
+	var TITLES = { main: "<b>LODE</b> RUNNER", info: "VERSION" };
+	var SUBVIEWS = ["info"];
 
 	// The settings menu knows nothing about the game. It only opens and closes,
 	// and announces that it did. The game (if it cares) listens for those
@@ -684,7 +662,12 @@ var settingsPanel = (function() {
 	function wire() {
 		toggleBtn.onclick = function(){ setMenuOpen(true); };
 		dialog.querySelector(".ls-back").onclick = function(){ setView("main"); };
-		dialog.querySelector(".ls-keys").onclick = function(){ setView("help"); };
+		// Help opens its own dialog, the way the level selector does: the key
+		// list and controller diagram are reference material, not settings.
+		dialog.querySelector(".ls-help").onclick = function() {
+			setMenuOpen(false);
+			helpDialog.open({});
+		};
 
 		//navigation: switching mode/version relaunches the game, so close the menu
 		dialog.querySelector(".ls-mode").onclick = function(e){

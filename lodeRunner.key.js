@@ -36,9 +36,9 @@ function pressShiftKey(code)
 function pressCtrlKey(code)
 {
 	switch(code) {
-	case KEYCODE_A: //CTRL-A : abort level
-		gameState = GAME_RUNNER_DEAD;	
-		break;	
+	case KEYCODE_R: //CTRL-R : restart level, at the cost of one life
+		gameState = GAME_RUNNER_DEAD;
+		break;
 	case KEYCODE_C: //CTRL-C : copy current level
 		copyLevelMap = levelData[curLevel-1];
 		copyLevelPassed = 1; //means copy from exists level	
@@ -51,11 +51,11 @@ function pressCtrlKey(code)
 	case KEYCODE_K: //CTRL-K : repeat actions On/Off
 		toggleRepeatAction();
 		break;
-	case KEYCODE_R: //CTRL-R : abort game
-		runnerLife = 1;	
-		gameState = GAME_RUNNER_DEAD;	
-		break;	
-	case KEYCODE_X: //CTRL-X 
+	case KEYCODE_X: //CTRL-X : exit the game -- spend the last life, so the death
+		runnerLife = 1;         //that follows ends the run and returns to level 1
+		gameState = GAME_RUNNER_DEAD;
+		break;
+	case KEYCODE_T: //CTRL-T : reveal trap blocks
 		toggleTrapTile();
 		break;
 //	case KEYCODE_Z: //CTRL-Z, toggle god mode
@@ -65,19 +65,13 @@ function pressCtrlKey(code)
 		gameSettings.setSound(!gameSettings.get("sound"));
 		showTipsText(gameSettings.get("sound") ? "SOUND ON" : "SOUND OFF", 1500);
 		break;
-	case KEYCODE_DASH: //CTRL- '-' : speed down (Mac-friendly; Ctrl+arrows switch Spaces)
+	case KEYCODE_DASH: //CTRL- '-' : speed down
 	case KEYCODE_HYPHEN:
 	case KEYCODE_SUBTRACT:
 		setSpeed(-1);
 		break;
 	case KEYCODE_EQUALS: //CTRL- '=' : speed up (same key as +, no Shift)
 	case 61: // Firefox '='
-		setSpeed(1);
-		break;
-	case KEYCODE_LEFT: //CTRL-LEFT : speed down (kept for non-Mac)
-		setSpeed(-1);
-		break;
-	case KEYCODE_RIGHT: //CTRL-RIGHT : speed up (kept for non-Mac)
 		setSpeed(1);
 		break;
 	case KEYCODE_H:	//CTRL-H : redHat mode on/off
@@ -214,11 +208,6 @@ function setSpeed(v)
 	showTipsText(speedText[speed], 1500);
 }
 
-function helpCallBack() //help complete call back
-{
-	pressKey(KEYCODE_ESC);
-}
-
 function pressKey(code)
 {
 	switch(code) {
@@ -255,14 +244,13 @@ function pressKey(code)
 	case KEYCODE_PERIOD: //.
 		keyAction = ACT_DIG_RIGHT;
 		break;	
-	case KEYCODE_ESC: //help & pause
+	case KEYCODE_ESC: //pause
 		if(gameState == GAME_PAUSE) {
 			gameResume();
 			showTipsText("", 1000); //clear text
 		} else {
 			gamePause();
 			showTipsText("PAUSE", 0); //display "PAUSE"
-			//helpObj.showHelp(helpCallBack);
 		}
 		break;
 	case KEYCODE_ENTER: //display hi-score

@@ -131,18 +131,21 @@ function soundStop(name)
 	}
 }
 
+// The persistent instances (soundFall, soundDig) do not exist until a level
+// starts, but suspend/resume can run before that -- opening a menu over the
+// boot demo, say. A missing instance means "nothing to pause", not an error.
 function soundPause(name)
 {
 	if(soundDisable()) return;
 
-	if(typeof name != "string") name.pause();
+	if(name && typeof name != "string") name.pause();
 }
 
 function soundResume(name)
 {
 	if(soundDisable()) return;
 
-	if(typeof name != "string") name.resume();
+	if(name && typeof name != "string") name.resume();
 }
 
 //==============================

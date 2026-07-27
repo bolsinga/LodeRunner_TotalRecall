@@ -17,11 +17,10 @@ var SIGNET_UNDER_Y = 30;
 // preload cover page
 //*********************
 var coverBitmap, titleBackground, remakeBitmap, signetBitmap;
-var helpObj, helpBitmap, editHelpBitmap;
 var pasteIconBitmap, pasteIconObj; // paste icon
 var infoObj;
 var checkBitmap;
-var returnBitmap, select1Bitmap, nextBitmap;
+var nextBitmap;
 var openFolderBitmap; // for restore custom levels
 var nextMapBitmap, prevMapBitmap; // for restore custom levels
 var yesBitmap, noBitmap;
@@ -194,13 +193,11 @@ function preloadResource()
 
 		{ src: "image/eraser.png"+noCache,  id: "eraser" },
 	
-		{ src: "image/help.png"+noCache,    id: "help" },
-		{ src: "image/editHelp.png"+noCache,id: "editHelp" },
-		
+		//editHelp is the editor's tile legend, still to be rebuilt as DOM; it is
+		//not preloaded because nothing draws it as a bitmap any more
+
 		{ src: "image/check.png"+noCache,   id: "check" }, //check icon for select menu
 		
-		{ src: "image/return.png"+noCache,  id: "return" },
-		{ src: "image/select1.png"+noCache, id: "select1" },
 		{ src: "image/next.png"+noCache,    id: "next" },
 
 		{ src: "image/openFolder.png"+noCache,  id: "openFolder" }, //05/17/2021
@@ -375,15 +372,6 @@ function preloadResource()
 		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
 	}
 	
-	function createHelpObj()
-	{
-		helpBitmap = new createjs.Bitmap(preload.getResult("help"));
-		editHelpBitmap = new createjs.Bitmap(preload.getResult("editHelp"));
-		//demoHelpBitmap = new createjs.Bitmap(preload.getResult("demoHelp")); //replace by infoMenu, 5/14/2015
-		
-		helpObj = new helpMenuClass(mainStage, helpBitmap, editHelpBitmap, tileScale);
-	}
-	
 	function createMenuBitmapIcon()
 	{
 		pasteIconBitmap = new createjs.Bitmap(preload.getResult("paste")); //04/23/2021
@@ -393,8 +381,6 @@ function preloadResource()
 
 		checkBitmap = new  createjs.Bitmap(preload.getResult("check"));
 		
-		returnBitmap = new createjs.Bitmap(preload.getResult("return"));
-		select1Bitmap = new createjs.Bitmap(preload.getResult("select1"));
 		nextBitmap = new createjs.Bitmap(preload.getResult("next"));
 		
 		openFolderBitmap = new createjs.Bitmap(preload.getResult("openFolder")); // for restore custom levels
@@ -408,7 +394,6 @@ function preloadResource()
 
 	function preloadComplet()
 	{
-		createHelpObj();
 		createMenuBitmapIcon();
 		getFirstPlayInfo();
 		createjs.Ticker.removeEventListener("tick", mainStage); //remove ticker of cover page

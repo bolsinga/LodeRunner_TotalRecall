@@ -1258,14 +1258,16 @@ function showDataMsg()
 	}
 }
 
+// First run only: help sits between naming yourself and your first level, so a
+// new player meets the keys once. setFirstPlayInfo runs on close rather than on
+// open -- closing the tab mid-help should not burn the one showing.
 function showHelpMenu()
 {
-	if(firstPlay) { 
-		helpObj.showHelp(0, initForPlay, tileScale, null); 
-		setFirstPlayInfo();
-	} else {	
+	if(firstPlay) {
+		helpDialog.open({ onClose: function() { setFirstPlayInfo(); initForPlay(); } });
+	} else {
 		initForPlay();
-	}	
+	}
 }
 
 function initForPlay()
@@ -1517,10 +1519,12 @@ function mainTick(event)
 			break;
 		case PLAY_MODERN:
 			soundPlay(soundEnding);
-			var lastHiScore = lastHiScore = updateModernScoreInfo();
-			levelPassDialog(curLevel, curGetGold, curGuardDeadNo, curTime, lastHiScore,
-						  returnBitmap, select1Bitmap, nextBitmap,
-						  mainStage, tileScale, gameFinishCallback);	
+			var lastHiScore = updateModernScoreInfo();
+			levelPass.open({
+				level: curLevel, gold: curGetGold, guardDead: curGuardDeadNo,
+				time: curTime, hiScore: lastHiScore,
+				onPick: gameFinishCallback
+			});
 			gameState = GAME_WAITING;
 			break;
 		case PLAY_TEST:

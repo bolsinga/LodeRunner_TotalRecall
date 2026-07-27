@@ -1,0 +1,134 @@
+/*
+ * Lode Runner - level pass dialog.
+ * Scoped under .lp-dialog so it never collides with game page styles.
+ *
+ * Simon's canvas layout (levelPassDialog, lodeRunner.menu.js) ported to DOM.
+ * Geometry, type sizes and cadence are his; only the palette moves to the
+ * settings-panel world. His constants at _scale = 1:
+ *   TITLE_TEXT_SIZE 48px bold Helvetica   ITEM_TEXT_SIZE 40px Helvetica
+ *   TEXT_GAP_Y = 40*2/3 = 26px            GOLD_X 32px   centerGap 8px
+ */
+:root {
+	/* Simon used Helvetica, not the panel's monospace. Kept -- it is his face,
+	   and tabular-nums keeps the counting columns from jittering. */
+	--lp-font:  Helvetica, Arial, sans-serif;
+	--lp-title: 48px;    /* TITLE_TEXT_SIZE */
+	--lp-item:  40px;    /* ITEM_TEXT_SIZE  */
+	--lp-gap:   26px;    /* TEXT_GAP_Y      */
+	--lp-cell-h: 44px;   /* BASE_TILE_Y: one atlas cell */
+}
+
+dialog.lp-dialog {
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	background: var(--ls-panel);
+	color: var(--ls-ink);
+	box-shadow: 0 22px 60px rgba(0,0,0,.7);
+	padding: 0;
+	font-family: var(--lp-font);
+}
+dialog.lp-dialog * { box-sizing: border-box; }
+/* his COVER_BACKGROUND_COLOR black at alpha .6 */
+dialog.lp-dialog::backdrop { background: rgba(0,0,0,.6); }
+
+.lp-dialog .lp-panel { padding: 40px 56px 34px; display: grid; justify-items: center; }
+
+.lp-dialog .lp-title {
+	margin: 0 0 calc(var(--lp-gap) * 2);
+	font-size: var(--lp-title); font-weight: 700;
+	color: var(--ls-ink); letter-spacing: .02em; white-space: nowrap;
+}
+.lp-dialog .lp-title b { color: var(--ls-brick); font-weight: inherit; }
+
+/* Simon centres everything on one axis: labels end at centerX - centerGap,
+   values start at centerX + centerGap. Equal 1fr columns put the boundary on
+   the panel midpoint and the gap straddles it -- but only with width:100%,
+   which is what makes the columns split the PANEL rather than the content. */
+.lp-dialog .lp-rows {
+	display: grid; grid-template-columns: 1fr 1fr;
+	column-gap: 26px; row-gap: var(--lp-gap);
+	align-items: center; width: 100%;
+}
+/* Helvetica leaves ~2px of right side bearing at this size, so the box edge is
+   not where the ink ends. Pull the box in by that much to sit the letterform
+   flush against the boundary. */
+.lp-dialog .lp-lbl {
+	justify-self: end; font-size: var(--lp-item);
+	color: var(--ls-ink-dim); margin-right: -2px;
+}
+.lp-dialog .lp-val {
+	justify-self: start; font-size: var(--lp-item);
+	color: var(--ls-ink); font-variant-numeric: tabular-nums;
+}
+
+/* One atlas cell, from the same recolored sheet drawText uses, so the glyphs
+   follow the theme. The art does NOT fill its cell: both are 28px of ink in a
+   40px cell (gold x1..28, guard x2..29), so a 40px box would leave the visible
+   glyph short of the boundary while the ink-tight labels land on it. Size the
+   box to the ink and offset the sheet to match -- this is what Simon's
+   GOLD_X = 32 (not 40) compensates for. */
+.lp-dialog .lp-glyph {
+	justify-self: end;
+	width: 28px; height: var(--lp-cell-h);
+	background-image: var(--lp-atlas);
+	background-repeat: no-repeat;
+	image-rendering: pixelated;
+	/* the art sits low in its cell against a 40px cap-height label, so centring
+	   the box in the row still reads low */
+	position: relative; top: -5px;
+}
+.lp-dialog .lp-glyph-gold  { background-position: -1px  -176px; }  /* frame 40 */
+.lp-dialog .lp-glyph-guard { background-position: -42px -176px; }  /* frame 41 */
+
+/* rows appear as their count begins, his alpha 0 -> 1 */
+.lp-dialog .r-gold, .lp-dialog .r-guard, .lp-dialog .r-time { opacity: 0; }
+.lp-dialog .lp-rows.show-gold  .r-gold,
+.lp-dialog .lp-rows.show-guard .r-guard,
+.lp-dialog .lp-rows.show-time  .r-time { opacity: 1; }
+
+/* his hiScoreTextObj.color = "gold" when the record falls */
+.lp-dialog .v-hi.beat { color: var(--ls-gold); }
+
+/* Three equal icon buttons, as his createButton drew them: same size, same
+   weight, no primary -- the game gives all three outcomes equal standing. */
+.lp-dialog .lp-buttons {
+	display: flex; gap: 28px; margin-top: calc(var(--lp-gap) * 1.6);
+	opacity: 0; transition: opacity .2s;
+}
+.lp-dialog .lp-buttons.in { opacity: 1; }
+.lp-dialog .lp-btn {
+	width: 92px; height: 66px; display: grid; place-items: center;
+	background: #1b1b2a; color: var(--ls-ink);
+	border: 2px solid var(--ls-panel-edge);
+	border-radius: 6px;                        /* his BUTTON_ROUND_RADIUD */
+	cursor: pointer; padding: 0;
+	transition: border-color .14s, color .14s, background .14s;
+}
+.lp-dialog .lp-btn svg { width: 34px; height: 34px; fill: currentColor; display: block; }
+/* the board's level-select mark is stroked (bi-stroke), not filled */
+.lp-dialog .lp-btn .ic-grid {
+	width: 38px; height: 34px; fill: none; stroke: currentColor;
+	stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter;
+}
+.lp-dialog .lp-btn:hover {
+	border-color: var(--ls-cyan); color: var(--ls-cyan-bright); background: #22223a;
+}
+.lp-dialog .lp-btn:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+	.lp-dialog .lp-buttons { transition: none; }
+}
+
+/* ---- debug: show the boxes (off) ----------------------------------------
+   Uncomment to see the grid container (blue), every cell (orange) and the
+   dialog's exact centre (red). Boxes are not ink: a right-aligned box ends at
+   the column boundary but its letterform may not, and a cell's height comes
+   from its own content -- these outlines make both visible.
+.lp-dialog { position: relative; }
+.lp-dialog::after {
+	content: ""; position: absolute; left: 50%; top: 0; bottom: 0;
+	width: 1px; background: red; z-index: 10; pointer-events: none;
+}
+.lp-dialog .lp-rows { outline: 2px dashed #4af; }
+.lp-dialog .lp-rows > * { outline: 1px solid #f80; }
+*/
