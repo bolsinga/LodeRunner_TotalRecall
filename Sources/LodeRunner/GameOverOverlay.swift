@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// The centered "GAME OVER" banner that plays when the runner dies. A port of

@@ -1,5 +1,5 @@
 import ArgumentParser
-import LodeRunnerCore
+import LodeRunner
 
 struct RunnerCommand: ParsableCommand {
     static let configuration = CommandConfiguration(

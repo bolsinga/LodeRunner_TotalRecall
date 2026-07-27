@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders a single `TileType` as a fixed-size, `TileGeometry`-sized cell, using the

@@ -1,4 +1,4 @@
-import LodeRunnerCore
+import LodeRunner
 
 struct StampParseError: Error, CustomStringConvertible {
     let raw: String

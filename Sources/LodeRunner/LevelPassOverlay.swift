@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// The circular-wipe transition that closes the screen when the runner passes

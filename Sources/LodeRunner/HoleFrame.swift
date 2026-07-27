@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders one frame from the themed `hole.png` sprite sheet. Unlike the

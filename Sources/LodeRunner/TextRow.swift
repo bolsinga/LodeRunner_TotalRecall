@@ -1,4 +1,3 @@
-import LodeRunnerCore
 import SwiftUI
 
 /// Renders a string as a horizontal row of glyph tiles from the text sheet.

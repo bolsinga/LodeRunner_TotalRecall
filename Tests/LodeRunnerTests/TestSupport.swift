@@ -1,4 +1,4 @@
-@testable import LodeRunnerCore
+@testable import LodeRunner
 
 /// Build a blank 28x16 level, then stamp entities/terrain at [x,y] positions. Always
 /// fills the bottom row with bricks so the string looks valid.

@@ -1,6 +1,6 @@
 import ArgumentParser
 import Foundation
-import LodeRunnerCore
+import LodeRunner
 
 struct LevelCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
