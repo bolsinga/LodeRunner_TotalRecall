@@ -61,6 +61,7 @@ function startEditMode()
 	stopPlayTicker();
 	mainStage.removeAllChildren();
 	setKeyHandler(editHandleKeyDown);
+	focusGame();
 	
 	editInNarrowScreen = canvasEditReSize();
 	
@@ -75,8 +76,7 @@ function startEditMode()
 	installEditUnloadGuard();
 }
 
-// The editor's level picker went with the legacy select icon; it gets rewired
-// to the new level selector when the editor UI is rebuilt.
+// The editor's level picker is the shared DOM level selector (Load button).
 function setEditSelectMenu()
 {
 }
@@ -209,6 +209,7 @@ function clearEditMap()
 		}
 	}
 	editMapIsEmpty = 1;
+	stagePresent();
 }
 
 function tile2Id(tileChar)
@@ -516,13 +517,13 @@ function drawNewButton()
 			} else {
 				disableTestButton();
 			}
-			setPasteIconState();
 			clearTestLevel();
 			testLevelInfo.fromPlayData = -1; 
 			testLevelInfo.fromLevel = -1;
 		}
 		startEditInput();
 		gameResume();
+		stagePresent(); // dialog closed off-canvas; paint without waiting for a mouse move
 	}
 	
 	function newButtonClick()
@@ -530,7 +531,7 @@ function drawNewButton()
 		gamePause();
 		stopEditInput();
 		if(testLevelInfo.modified) {
-			yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale, newLevel);
+			yesNoDialog(["Abort current editing ?"], newLevel);
 		} else {
 			newLevel(1);
 		}
@@ -544,37 +545,31 @@ function drawLoadButton()
 	var width = textSting.length * tileWScale;
 	var x = 4*(tileWScale+EDIT_PADDING)+EDIT_PADDING;
 	var y = canvas.height - tileHScale - editBorder;
-	var saveStateObj;
-	var loadLevelData, loadPlayData;
-	var editGameVersionList = [
-		{ activeItem: 0 } //game version menu ID
-	];
-	
+
 	loadButton = new createjs.Container();
 
 	//child id = 0
 	border = new createjs.Shape();
 	border.graphics.beginFill("#40F").drawRect(-editBorder, -editBorder, width+editBorder*2, tileHScale+editBorder*2).endFill();
-	
+
 	//child id = 1
 	backColor = new createjs.Shape();
 	backColor.graphics.beginFill("#FFF").drawRect(0, 0, width, tileHScale).endFill();
-	
+
 	loadButton.addChild(border, backColor);
-	
+
 	//child id = 2
 	drawText(0, 0, textSting, loadButton);
-		
+
 	loadButton.x = x;
 	loadButton.y = y;
 	loadButton.addEventListener('click', loadButtonClick);
-	mainStage.addChild(loadButton);	
-	initLoadVariable();
+	mainStage.addChild(loadButton);
 
 	loadButton.x1 = x + width;
 	loadButton.y1 = y + tileHScale;
 	editorButton[editorButton.length] = loadButton;
-	
+
 	function saveState()
 	{
 		gamePause();
@@ -586,61 +581,52 @@ function drawLoadButton()
 		startEditInput();
 		gameResume();
 	}
-	
-	function initLoadVariable()
-	{
-		for(var i = 0; i < playVersionInfo.length; i++) {
-			editGameVersionList.push( 
-			{ 
-				name: playVersionInfo[i].name + " (" + playVersionInfo[i].levelCount + " Levels) ", 
-				id :playVersionInfo[i].id,
-				activeFun:  loadSelectMenu
-			});
-		}
-	}
-	
-	function menuId2GameVersionId(id)			
-	{
-		return editGameVersionList[id+1].id;
-	}
 
-	function loadSelectLevel(level)
+	// Simon's Load was: version menuDialog, then level select for that pack.
+	// The DOM level selector already picks version at the top, so Load opens it
+	// directly (browseOnly: switching packs must not call setVersion / eject edit).
+	function openLevelPicker()
 	{
-		restoreState();
-		testLevelInfo.levelMap = loadLevelData[level-1];
-		testLevelInfo.pass = 1;
-		testLevelInfo.fromPlayData = loadPlayData;
-		testLevelInfo.fromLevel = level;
-		setTestLevel(testLevelInfo);
-		startEditMode();
-	}
-	
-	// Picking which level to load went with the legacy select dialog. The
-	// version still loads; choosing from it is rewired when the editor UI is
-	// rebuilt on the new level selector.
-	function loadSelectMenu(id, callbackFun)
-	{
-		loadPlayData = menuId2GameVersionId(id);
-		ensurePlayVersionLoaded(loadPlayData, function () {
-			loadLevelData = getPlayVerData(loadPlayData);
-			restoreState();
+		var startVer = (testLevelInfo.fromPlayData > 0) ? testLevelInfo.fromPlayData
+		             : (playVersionInfo[0] ? playVersionInfo[0].id : playData);
+		var startLv  = (testLevelInfo.fromLevel > 0) ? testLevelInfo.fromLevel : 1;
+
+		levelSelect.open({
+			current: startLv,
+			startPlayData: startVer,
+			browseOnly: true,
+			onPick: function(level, versionId) {
+				ensurePlayVersionLoaded(versionId, function() {
+					var data = (versionId == PLAY_DATA_USERDEF)
+						? (editLevelData || [])
+						: (getPlayVerData(versionId) || []);
+					if(!data[level-1]) { restoreState(); return; }
+					testLevelInfo.levelMap = data[level-1];
+					testLevelInfo.pass = 1;
+					testLevelInfo.fromPlayData = versionId;
+					testLevelInfo.fromLevel = level;
+					testLevelInfo.modified = 0; // freshly loaded baseline, not dirty
+					setTestLevel(testLevelInfo);
+					restoreState();
+					startEditMode();
+				});
+			},
+			onClose: restoreState
 		});
 	}
-			
+
 	function loadExistLevel(yes)
 	{
-		if(yes) {
-			menuDialog("Load Game Version ", editGameVersionList, mainStage, tileScale, 1, restoreState, null); 
-		} else {
-			restoreState();
-		}
+		if(yes) openLevelPicker();
+		else restoreState();
 	}
 
 	function loadButtonClick()
 	{
 		saveState();
-		if(!editMapIsEmpty) {
-			yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale, loadExistLevel);
+		// Same dirty gate as NEW / leaveEdit — a non-empty map is not "editing".
+		if(testLevelInfo.modified) {
+			yesNoDialog(["Abort current editing ?"], loadExistLevel);
 		} else {
 			loadExistLevel(1);
 		}
@@ -727,7 +713,7 @@ function drawSaveButton()
 		gamePause();
 		stopEditInput();
 		saveEditLevel();
-		yesNoDialog(["Save Successful", "Play It ?"], yesBitmap, noBitmap, mainStage, tileScale, playConfirm);
+		yesNoDialog(["Save Successful", "Play It ?"], playConfirm);
 
 	}
 
@@ -830,6 +816,7 @@ function installEditUnloadGuard()
 {
 	if (editUnloadGuardInstalled) return;
 	window.addEventListener("beforeunload", editBeforeUnload);
+	document.addEventListener("keydown", editShortcutKeyDown, true);
 	editUnloadGuardInstalled = 1;
 }
 
@@ -837,7 +824,26 @@ function removeEditUnloadGuard()
 {
 	if (!editUnloadGuardInstalled) return;
 	window.removeEventListener("beforeunload", editBeforeUnload);
+	document.removeEventListener("keydown", editShortcutKeyDown, true);
 	editUnloadGuardInstalled = 0;
+}
+
+// Ctrl/Cmd+C/V while editing -- capture on document so paste works even when
+// focus is not on the game canvas (settings close, board icons).
+function editShortcutKeyDown(event)
+{
+	if(playMode != PLAY_EDIT) return;
+	if(!(event.ctrlKey || event.metaKey)) return;
+	if(event.keyCode != KEYCODE_C && event.keyCode != KEYCODE_V) return;
+
+	var t = event.target;
+	if(t && (t.tagName == "INPUT" || t.tagName == "TEXTAREA" || t.isContentEditable)) return;
+	if(document.querySelector("dialog[open]")) return;
+
+	if(editHandleKeyDown(event) === false) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
 }
 
 /**
@@ -850,7 +856,7 @@ function leaveEditMode(nextFun, cancelFun)
 	clearIdleDemoTimer();
 	stopEditInput();
 	if (editLevelModified()) {
-		yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale,
+		yesNoDialog(["Abort current editing ?"],
 			function (rc) {
 				if (rc) {
 					testLevelInfo.modified = 0;
@@ -874,7 +880,7 @@ function editConfirmAbortState(callbackFun)
 {
 	gamePause();
 	stopEditInput();
-	yesNoDialog(["Abort current editing ?"], yesBitmap, noBitmap, mainStage, tileScale, 
+	yesNoDialog(["Abort current editing ?"],
 				function(rc) {  gameResume(); if(rc) callbackFun(); else startEditInput(); } );
 }
 
@@ -1062,15 +1068,6 @@ function checkEditMapEmpty()
 			}
 		}
 	}
-	setPasteIconState();
-}
-
-function setPasteIconState()
-{
-	if (editMapIsEmpty && copyLevelMap != null && testLevelInfo.level <= MAX_EDIT_LEVEL)
-		pasteIconObj.enable();
-	else 
-		pasteIconObj.disable();
 }
 
 function copyEditingMap()
@@ -1115,19 +1112,22 @@ var copyLevelMap = null, copyLevelPassed = 0;
 function editHandleKeyDown(event)
 {
 	if(!event){ event = window.event; } //cross browser issues exist
-	
-	if (event.ctrlKey) {
+
+	// metaKey: Cmd on macOS (users paste with Cmd+V as often as Ctrl+V)
+	if (event.ctrlKey || event.metaKey) {
 		switch(event.keyCode) {
 		case KEYCODE_C: //CTRL-C : copy current level
 			if (!editMapIsEmpty) {	
 				copyLevelMap = copyEditingMap();
 				copyLevelPassed = (!testLevelInfo.modified && lastRunner) || testLevelInfo.pass;
 				setTimeout(function() { showTipsText("COPY MAP", 1500);}, 50);
+				return false;
 			}
 			break;	
 		case KEYCODE_V: //CTRL-V : paste copy map
 			if(copyLevelMap != null && editMapIsEmpty && testLevelInfo.level <= MAX_EDIT_LEVEL) {
 				editPasteMap();
+				return false;
 			}
 			break;	
 		}

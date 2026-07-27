@@ -17,14 +17,6 @@ var SIGNET_UNDER_Y = 30;
 // preload cover page
 //*********************
 var coverBitmap, titleBackground, remakeBitmap, signetBitmap;
-var helpObj, helpBitmap, editHelpBitmap;
-var pasteIconBitmap, pasteIconObj; // paste icon
-var infoObj;
-var checkBitmap;
-var returnBitmap, select1Bitmap, nextBitmap;
-var openFolderBitmap; // for restore custom levels
-var nextMapBitmap, prevMapBitmap; // for restore custom levels
-var yesBitmap, noBitmap;
 var noCache = "?" + VERSION+ ".1051230";
 
 function showLoadingPage() 
@@ -116,7 +108,6 @@ var guardData = {}, redhatData = {};
 var holeData, holeObj = {};
 var textData;
 var textAtlas; //owned glyph atlas (lodeRunner.glyphFont.js) over the text image
-var countryFlagData;
 
 var soundFall, soundDig, soundPass, soundEnding;
 
@@ -193,27 +184,6 @@ function preloadResource()
 		{ src: "image/signet.png"+noCache,  id: "signet" },
 
 		{ src: "image/eraser.png"+noCache,  id: "eraser" },
-	
-		{ src: "image/help.png"+noCache,    id: "help" },
-		{ src: "image/editHelp.png"+noCache,id: "editHelp" },
-		
-		{ src: "image/check.png"+noCache,   id: "check" }, //check icon for select menu
-		
-		{ src: "image/return.png"+noCache,  id: "return" },
-		{ src: "image/select1.png"+noCache, id: "select1" },
-		{ src: "image/next.png"+noCache,    id: "next" },
-
-		{ src: "image/openFolder.png"+noCache,  id: "openFolder" }, //05/17/2021
-		{ src: "image/nextMap.png"+noCache,   id: "nextMap" }, //05/21/2021
-		{ src: "image/prevMap.png"+noCache,   id: "prevMap" }, //05/21/2021
-		
-		{ src: "image/yes.png"+noCache,     id: "yes" },
-		{ src: "image/no.png"+noCache,      id: "no" },
-
-
-		{ src: "image/paste.png"+noCache,id: "paste" }, //04/23/2021
-
-		{ src: "image/flags32.png"+noCache,     id: "flag" },
 	
 		{ src: "sound/goldFinish.ogg"+noCache,  id:"goldFinish"},
 		{ src: "sound/ending.ogg"+noCache,      id:"ending"},
@@ -375,41 +345,8 @@ function preloadResource()
 		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
 	}
 	
-	function createHelpObj()
-	{
-		helpBitmap = new createjs.Bitmap(preload.getResult("help"));
-		editHelpBitmap = new createjs.Bitmap(preload.getResult("editHelp"));
-		//demoHelpBitmap = new createjs.Bitmap(preload.getResult("demoHelp")); //replace by infoMenu, 5/14/2015
-		
-		helpObj = new helpMenuClass(mainStage, helpBitmap, editHelpBitmap, tileScale);
-	}
-	
-	function createMenuBitmapIcon()
-	{
-		pasteIconBitmap = new createjs.Bitmap(preload.getResult("paste")); //04/23/2021
-		pasteIconObj = new pasteIconClass(screenX1, screenY1, tileScale, pasteIconBitmap);
-
-		infoObj = new infoMenuClass(mainStage, tileScale);
-
-		checkBitmap = new  createjs.Bitmap(preload.getResult("check"));
-		
-		returnBitmap = new createjs.Bitmap(preload.getResult("return"));
-		select1Bitmap = new createjs.Bitmap(preload.getResult("select1"));
-		nextBitmap = new createjs.Bitmap(preload.getResult("next"));
-		
-		openFolderBitmap = new createjs.Bitmap(preload.getResult("openFolder")); // for restore custom levels
-		nextMapBitmap = new createjs.Bitmap(preload.getResult("nextMap")); // for restore custom levels
-		prevMapBitmap = new createjs.Bitmap(preload.getResult("prevMap"));
-		
-		yesBitmap = new createjs.Bitmap(preload.getResult("yes"));
-		noBitmap = new createjs.Bitmap(preload.getResult("no"));
-		
-	}
-
 	function preloadComplet()
 	{
-		createHelpObj();
-		createMenuBitmapIcon();
 		getFirstPlayInfo();
 		createjs.Ticker.removeEventListener("tick", mainStage); //remove ticker of cover page
 		waitIdleDemo(4000); //wait user key or show demo level
@@ -478,7 +415,6 @@ function createSpriteSheet()
 {
 	createRunnerSpriteSheet(getThemeBitmap("runner").image);
 	createPreloadSpriteSheet();
-	createFlagSpriteSheet();
 }
 
 function createPreloadSpriteSheet() 
@@ -629,16 +565,4 @@ function createHoleObj()
 	}
 	
 	holeObj.action = ACT_STOP; //no digging 
-}
-
-//=======================================
-// country flag for demo info 5/14/2015
-//=======================================
-function createFlagSpriteSheet()
-{
-	countryFlagData = new createjs.SpriteSheet({
-		images: [preload.getResult("flag")],
-		frames: {regX:0, height: 32,  regY: 0, width: 32},
-		animations: countryId
-	});
 }

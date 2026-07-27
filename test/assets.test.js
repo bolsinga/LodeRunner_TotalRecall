@@ -50,7 +50,7 @@ describe("assetLoadManifest", () => {
 		await ctx.assetLoadManifest(
 			[
 				{ id: "signet", src: "image/signet.png" },
-				{ id: "menu", src: "image/menu.png" },
+				{ id: "eraser", src: "image/eraser.png" },
 			],
 			{
 				onProgress: (loaded, total) => progress.push([loaded, total]),
@@ -58,8 +58,8 @@ describe("assetLoadManifest", () => {
 			}
 		);
 		assert.equal(ctx.preload.getResult("signet")._src, "image/signet.png");
-		assert.equal(ctx.assetGetResult("menu")._src, "image/menu.png");
-		assert.deepEqual(files.sort(), ["menu", "signet"]);
+		assert.equal(ctx.assetGetResult("eraser")._src, "image/eraser.png");
+		assert.deepEqual(files.sort(), ["eraser", "signet"]);
 		assert.deepEqual(progress[0], [0, 2]);
 		assert.deepEqual(progress[progress.length - 1], [2, 2]);
 	});

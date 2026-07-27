@@ -229,7 +229,7 @@ var settingsPanel = (function() {
 					'<button class="ls-back" aria-label="Back">&larr;</button>' +
 					'<h2 class="ls-title"><b>LODE</b> RUNNER</h2>' +
 				'</div>' +
-				'<div class="ls-body">' + mainView() + helpView() +
+				'<div class="ls-body">' + mainView() +
 					(richOptions ? "" : '<div class="view-info"></div>') + '</div>' +
 			'</div>';
 
@@ -348,7 +348,6 @@ var settingsPanel = (function() {
 
 	function mainView() {
 		//version options from playVersionInfo so each carries its real playData id
-		//(name<->id order differs from gameVersionName; use the registry as truth)
 		var versionOpts = "";
 		for(var i = 0; i < playVersionInfo.length; i++)
 			versionOpts += versionOption(playVersionInfo[i].id, playVersionInfo[i].name.trim());
@@ -417,6 +416,13 @@ var settingsPanel = (function() {
 				'<div class="row"><span class="row-name">Level Editor</span>' +
 					'<button class="btn ls-editor">Open</button>' +
 				'</div>' +
+				'<div class="row"><span class="row-name">Custom levels' +
+					'<small>Import or export a .lrwg file</small></span>' +
+					'<div class="btn-pair" role="group" aria-label="Custom levels">' +
+						'<button type="button" class="btn ls-import">Import</button>' +
+						'<button type="button" class="btn ls-export">Export</button>' +
+					'</div>' +
+				'</div>' +
 			'</div>' +
 			'<div class="group"><p class="group-label">Display</p>' +
 				'<div class="row"><span class="row-name">Theme</span>' +
@@ -447,7 +453,7 @@ var settingsPanel = (function() {
 					'<div class="seg ls-gamepad" role="group" aria-label="Gamepad">' +
 						'<button data-on="1">On</button><button data-on="0">Off</button></div></div>' +
 			'</div>' +
-			'<div class="group"><button class="btn ls-keys" style="width:100%">Keys</button></div>' +
+			'<div class="group"><button class="btn ls-help" style="width:100%">Help</button></div>' +
 			'<div class="group"><p class="group-label">Appearance</p>' +
 				'<div class="row"><span class="row-name">Accent<small>Menu highlight color</small></span>' +
 					'<div class="swatches accents ls-accent" role="group" aria-label="Accent color">' + accentOpts + '</div>' +
@@ -468,28 +474,6 @@ var settingsPanel = (function() {
 					'<p class="clear-note ls-clear-note" role="status"></p>' +
 				'</div>' +
 			'</div>' +
-		'</div>';
-	}
-
-	function helpView() {
-		return '<div class="view-help">' +
-			'<p class="help-h">Move &amp; Dig</p>' +
-			'<div class="keys">' +
-				'<kbd>&larr; &rarr;</kbd><span>Move left / right</span>' +
-				'<kbd>&uarr; &darr;</kbd><span>Climb up / down</span>' +
-				'<kbd>Z</kbd><span>Dig left</span>' +
-				'<kbd>X</kbd><span>Dig right</span>' +
-			'</div>' +
-			'<p class="help-h">Game</p>' +
-			'<div class="keys">' +
-				'<kbd>Esc</kbd><span>Pause / help</span>' +
-				'<kbd>Ctrl &minus;</kbd><span>Slower</span>' +
-				'<kbd>Ctrl =</kbd><span>Faster</span>' +
-				'<kbd>Ctrl A</kbd><span>Abort level</span>' +
-				'<kbd>Ctrl R</kbd><span>Abort game</span>' +
-			'</div>' +
-			'<div class="rebind-note"><b>Rebinding keys</b> is coming to this screen &mdash; ' +
-				'you\'ll click a key and press the one you want. For now these are the defaults.</div>' +
 		'</div>';
 	}
 
@@ -527,8 +511,8 @@ var settingsPanel = (function() {
 	}
 
 	//--- open/close + sub-view routing ---
-	var TITLES = { main: "<b>LODE</b> RUNNER", help: "KEYS", info: "VERSION" };
-	var SUBVIEWS = ["help", "info"];
+	var TITLES = { main: "<b>LODE</b> RUNNER", info: "VERSION" };
+	var SUBVIEWS = ["info"];
 
 	// The settings menu knows nothing about the game. It only opens and closes,
 	// and announces that it did. The game (if it cares) listens for those
@@ -539,10 +523,13 @@ var settingsPanel = (function() {
 	function setMenuOpen(on) {
 		if(on) {
 			if(dialog.open) return;
-			syncFromModel();
 			setView("main");
 			dialog.showModal();               //top layer + ::backdrop scrim, native
+			// Stop attract / restore last playMode before painting controls.
+			// Syncing first would show Training Off while playMode is still
+			// PLAY_AUTO, then menu-open restores PLAY_MODERN with no re-paint.
 			announce("menu-open");
+			syncFromModel();
 		} else {
 			dialog.close();                   // native "close" event -> menu-close
 		}
@@ -664,6 +651,9 @@ var settingsPanel = (function() {
 
 		//choosing a level only means something when you can jump to one
 		dialog.querySelector(".ls-level").disabled = !training;
+
+		var exp = dialog.querySelector(".ls-export");
+		if(exp) exp.disabled = !(typeof customLevels !== "undefined" && customLevels.canExport());
 	}
 	//swatch backgrounds follow the active theme's true brick colors
 	//(Apple II and C64 differ; "original" is the sampled brick color)
@@ -684,7 +674,12 @@ var settingsPanel = (function() {
 	function wire() {
 		toggleBtn.onclick = function(){ setMenuOpen(true); };
 		dialog.querySelector(".ls-back").onclick = function(){ setView("main"); };
-		dialog.querySelector(".ls-keys").onclick = function(){ setView("help"); };
+		// Help opens its own dialog, the way the level selector does: the key
+		// list and controller diagram are reference material, not settings.
+		dialog.querySelector(".ls-help").onclick = function() {
+			setMenuOpen(false);
+			helpDialog.open({});
+		};
 
 		//navigation: switching mode/version relaunches the game, so close the menu
 		dialog.querySelector(".ls-mode").onclick = function(e){
@@ -722,6 +717,15 @@ var settingsPanel = (function() {
 		dialog.querySelector(".ls-editor").onclick = function(){
 			setMenuOpen(false);
 			gameSettings.enterEditor();
+		};
+		dialog.querySelector(".ls-import").onclick = function(){
+			setMenuOpen(false);
+			importCustomLevels();
+		};
+		dialog.querySelector(".ls-export").onclick = function(){
+			if(this.disabled) return;
+			setMenuOpen(false);
+			exportCustomLevels();
 		};
 		dialog.querySelector(".ls-level").onclick = function(){
 			setMenuOpen(false);

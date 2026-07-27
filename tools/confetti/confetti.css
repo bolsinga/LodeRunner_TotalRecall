@@ -1,0 +1,255 @@
+/* DOM confetti demo -- palette aligned with the level-pass / settings world. */
+
+:root {
+	--ls-panel:       #14141f;
+	--ls-panel-edge:  #26263a;
+	--ls-brick:       #b5533a;
+	--ls-cyan:        #c8a63c;
+	--ls-cyan-bright: #e7c64a;
+	--ls-gold:        #e7c64a;
+	--ls-ink:         #d8d8e0;
+	--ls-ink-dim:     #8a8aa0;
+	--ls-ground:      #0a0a12;
+	--ls-radius:      3px;
+	--ls-font:        ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+	--lp-font:        Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+	margin: 0;
+	min-height: 100%;
+	background: var(--ls-ground);
+	color: var(--ls-ink);
+	font-family: var(--ls-font);
+}
+
+body {
+	min-height: 100vh;
+	display: grid;
+	place-content: center;
+	justify-items: center;
+	gap: 20px;
+	padding: 24px;
+	background:
+		radial-gradient(ellipse at 50% 20%, #1a1a2e 0%, transparent 55%),
+		var(--ls-ground);
+}
+
+/* ---- mock level-pass panel --------------------------------------------- */
+
+.demo-panel {
+	width: min(460px, 92vw);
+	margin-top: 140px;
+	margin-bottom: 40px;
+	padding: 40px 48px 34px;
+	background: var(--ls-panel);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	box-shadow: 0 22px 60px rgba(0, 0, 0, .7);
+	text-align: center;
+	font-family: var(--lp-font);
+}
+
+.demo-panel h1 {
+	margin: 0 0 12px;
+	font-size: 32px;
+	font-weight: 700;
+	letter-spacing: .02em;
+	color: var(--ls-ink);
+}
+
+.demo-panel h1 b { color: var(--ls-brick); font-weight: inherit; }
+
+.demo-panel p {
+	margin: 0 0 28px;
+	font-size: 15px;
+	line-height: 1.45;
+	color: var(--ls-ink-dim);
+	font-family: var(--ls-font);
+}
+
+.demo-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: center;
+	margin-bottom: 20px;
+}
+
+.demo-btn {
+	min-width: 140px;
+	height: 48px;
+	padding: 0 18px;
+	background: #1b1b2a;
+	color: var(--ls-ink);
+	border: 2px solid var(--ls-panel-edge);
+	border-radius: 6px;
+	font: 600 14px/1 var(--ls-font);
+	cursor: pointer;
+	transition: border-color .14s, color .14s, background .14s;
+}
+
+.demo-btn:hover {
+	border-color: var(--ls-cyan);
+	color: var(--ls-cyan-bright);
+	background: #22223a;
+}
+
+.demo-btn:focus-visible {
+	outline: 2px solid var(--ls-cyan);
+	outline-offset: 2px;
+}
+
+.demo-btn.primary {
+	border-color: var(--ls-cyan);
+	color: var(--ls-cyan-bright);
+}
+
+.demo-note {
+	margin: 0;
+	font: 12px/1.4 var(--ls-font);
+	color: var(--ls-ink-dim);
+}
+
+/* ---- size slider (below the dialog) ------------------------------------ */
+
+.demo-controls {
+	width: min(460px, 92vw);
+	padding: 14px 16px 16px;
+	background: rgba(20, 20, 31, .85);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	font-family: var(--ls-font);
+}
+
+.demo-controls label {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 12px 0 8px;
+	font-size: 13px;
+	color: var(--ls-ink-dim);
+}
+
+.demo-controls label:first-of-type,
+.demo-controls .ctrl-group + label {
+	margin-top: 0;
+}
+
+.demo-controls .ctrl-group {
+	margin: 16px 0 8px;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: var(--ls-cyan);
+}
+
+.demo-controls .ctrl-group:first-child {
+	margin-top: 0;
+}
+
+.demo-controls .ctrl-value {
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	font-size: 15px;
+	color: var(--ls-cyan-bright);
+}
+
+.demo-controls input[type="range"] {
+	width: 100%;
+	accent-color: var(--ls-cyan);
+	cursor: pointer;
+}
+
+.demo-controls .ctrl-check {
+	align-items: center;
+	margin-top: 14px;
+	cursor: pointer;
+}
+
+.demo-controls .ctrl-check input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--ls-cyan);
+	cursor: pointer;
+}
+
+.demo-controls .hint {
+	margin: 12px 0 0;
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--ls-ink-dim);
+}
+
+.demo-controls .preset-row {
+	display: flex;
+	gap: 8px;
+	align-items: stretch;
+	margin-top: 14px;
+}
+
+.demo-controls #preset-json {
+	flex: 1;
+	min-height: 7.5em;
+	resize: vertical;
+	padding: 8px 10px;
+	background: #0e0e16;
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	color: var(--ls-ink);
+	font: 12px/1.4 var(--ls-font);
+	font-variant-numeric: tabular-nums;
+}
+
+.demo-controls #preset-json:focus {
+	outline: 2px solid var(--ls-cyan);
+	outline-offset: 1px;
+}
+
+.demo-controls .preset-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.demo-controls .preset-actions button {
+	flex: 1;
+	min-width: 72px;
+	padding: 0 10px;
+	background: #1b1b2a;
+	color: var(--ls-ink);
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	font: 600 12px/1 var(--ls-font);
+	cursor: pointer;
+}
+
+.demo-controls .preset-actions button:hover {
+	border-color: var(--ls-cyan);
+	color: var(--ls-cyan-bright);
+}
+
+/* ---- particle host ----------------------------------------------------- */
+
+.confetti-layer {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 9999;
+}
+
+.confetti-layer i {
+	position: fixed;
+	display: block;
+	border-radius: 1px;
+	will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.confetti-layer { display: none; }
+}

@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node (tests use the built-in runner; keep deps out if anyone installs)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Env / local secrets
+.env
+.env.*
+
+# C++ tool build leftovers under tools/
+*.o
+*.obj
+*.exe
+*.out
+*.dSYM/

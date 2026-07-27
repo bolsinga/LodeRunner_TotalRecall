@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Characterization: info DOM overlay + event-driven edit input (no CreateJS).
+ * Characterization: version pack metadata in info.js (settings About cards).
  */
 
 const { describe, it } = require("node:test");
@@ -10,18 +10,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ROOT } = require("./helpers/loadScripts.js");
 
-describe("info overlay CreateJS peel (characterization)", () => {
-	it("info.js has no createjs / enableMouseOver", () => {
+describe("version info metadata (characterization)", () => {
+	it("info.js keeps pack fact arrays and drops the canvas overlay", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.info.js"), "utf8");
+		assert.match(text, /var classicInfo\s*=/);
+		assert.match(text, /var championInfo\s*=/);
+		assert.doesNotMatch(text, /function infoMenu/);
+		assert.doesNotMatch(text, /function infoMenuClass/);
+		assert.doesNotMatch(text, /info_overlay/);
 		assert.doesNotMatch(text, /createjs\./);
-		assert.doesNotMatch(text, /enableMouseOver/);
-		assert.match(text, /info_overlay/);
-		assert.match(text, /function infoMenuClass/);
 	});
-});
 
-describe("edit pointer input (characterization)", () => {
-	it("edit.js does not force setFPS(60) or register editTick on Ticker", () => {
+	it("edit pointer input stays event-driven (no editTick / setFPS(60))", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.edit.js"), "utf8");
 		assert.doesNotMatch(text, /Ticker\.setFPS\(60\)/);
 		assert.doesNotMatch(text, /addEventListener\(["']tick["'],\s*editTick\)/);
@@ -34,7 +34,7 @@ describe("edit pointer input (characterization)", () => {
 	});
 
 	it("call sites use startEditInput / stopEditInput", () => {
-		for (const file of ["lodeRunner.iconClass.js", "lodeRunner.colorTheme.js", "lodeRunner.edit.js"]) {
+		for (const file of ["lodeRunner.themeScreen.js", "lodeRunner.colorTheme.js", "lodeRunner.edit.js"]) {
 			const text = fs.readFileSync(path.join(ROOT, file), "utf8");
 			assert.doesNotMatch(text, /startEditTicker|stopEditTicker/);
 		}
