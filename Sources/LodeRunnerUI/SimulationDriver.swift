@@ -76,12 +76,25 @@ public final class SimulationDriver {
 
 // MARK: - Preview
 
+/// Bottom floor + a mid-height platform holding two guards, with the runner
+/// spawning on the floor below. The platform has no ladder down to the floor,
+/// so guard AI (`lodeRunner.guard.js:moveGuard`) can't actually catch the
+/// runner — it paces trying — which keeps the preview from freezing on death.
 private func walkingPreviewSimulation() throws -> RunnerSimulation {
     var cells = Array(repeating: Character(" "), count: LevelGrid.tileCount)
+    // Bottom floor
     for x in 0..<LevelGrid.tilesX {
         cells[(LevelGrid.tilesY - 1) * LevelGrid.tilesX + x] = "#"
     }
-    cells[14 * LevelGrid.tilesX + 3] = "&"  // runner spawn
+    // Mid-height platform, cols 8-22, row 10
+    for x in 8...22 {
+        cells[10 * LevelGrid.tilesX + x] = "#"
+    }
+    // Runner spawn on the floor
+    cells[14 * LevelGrid.tilesX + 3] = "&"
+    // Guard spawns on the platform (one facing the runner, one away)
+    cells[9 * LevelGrid.tilesX + 12] = "0"
+    cells[9 * LevelGrid.tilesX + 18] = "0"
     let level = resolveLevelMap(String(cells))
     return try RunnerSimulation(level: level)
 }
@@ -98,11 +111,17 @@ private struct WalkingRunnerPreview: View {
     var body: some View {
         FittedBoardView {
             ZStack(alignment: .topLeading) {
-                LevelGridView(tiles: driver.simulation.slots.map { $0.map(\.current) })
+                LevelGridView(tiles: entityLessTiles(driver.simulation.slots))
                 RunnerSpriteView(
                     runner: driver.simulation.runner,
                     appearance: driver.runnerAppearance
                 )
+                ForEach(Array(driver.simulation.guards.enumerated()), id: \.offset) { i, guardState in
+                    GuardSpriteView(
+                        guardState: guardState,
+                        appearance: driver.guardAppearances[i]
+                    )
+                }
             }
         }
         .background(Color.gray.opacity(0.2))
@@ -112,12 +131,25 @@ private struct WalkingRunnerPreview: View {
             await driver.run()
         }
     }
+
+    /// Show `.base` where an entity currently occupies a cell so the static
+    /// `runner1`/`guard1` tile in `TileCellView` doesn't ghost behind the
+    /// overlaid `RunnerSpriteView`/`GuardSpriteView` during mid-tile motion.
+    /// Everywhere else we show `.current` as usual (e.g. dug/filled brick
+    /// states).
+    private func entityLessTiles(_ slots: [[LevelSlot]]) -> [[TileType]] {
+        slots.map { column in
+            column.map { slot in
+                (slot.current == .runner || slot.current == .guard) ? slot.base : slot.current
+            }
+        }
+    }
 }
 
-#Preview("Walking runner — Apple2", traits: .landscapeLeft) {
+#Preview("Walking runner + guards — Apple2", traits: .landscapeLeft) {
     WalkingRunnerPreview().environment(\.tileTheme, .apple2)
 }
 
-#Preview("Walking runner — C64", traits: .landscapeLeft) {
+#Preview("Walking runner + guards — C64", traits: .landscapeLeft) {
     WalkingRunnerPreview().environment(\.tileTheme, .c64)
 }
