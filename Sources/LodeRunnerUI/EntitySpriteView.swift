@@ -103,14 +103,22 @@ private func previewLevel() -> LevelParseResult {
 
 /// Manually construct appearances that reflect specific action histories so we
 /// can visually verify facing + last-animation caching without a tick driver:
-/// the runner has been running right, the bar guard is hanging left, the
-/// falling guard was last heading left before the fall.
+/// the running runner cycles right, the stopped runner freezes on frame 0 of
+/// its cached `runRight` last-animation (JS `sprite.stop()`), the bar guard
+/// hangs left, the falling guard was last heading left before the fall.
 private struct EntitySpritePreview: View {
     var body: some View {
         let level = previewLevel()
         let runningRunner = Runner(
             position: GridPoint(x: 3, y: 14), xOffset: 0, yOffset: 0, action: .right)
         let runnerAppearance = RunnerAppearance(facing: .right, lastAnimation: .runRight)
+
+        // Stopped runner: action is .stop but the appearance's cached
+        // lastAnimation is .runRight — the sprite view freezes on frame 0 of
+        // runRight rather than cycling.
+        let stoppedRunner = Runner(
+            position: GridPoint(x: 24, y: 14), xOffset: 0, yOffset: 0, action: .stop)
+        let stoppedRunnerAppearance = RunnerAppearance(facing: .right, lastAnimation: .runRight)
 
         let barGuard = Guard(
             position: GridPoint(x: 12, y: 9), xOffset: 0, yOffset: 0, action: .left)
@@ -124,6 +132,7 @@ private struct EntitySpritePreview: View {
             ZStack(alignment: .topLeading) {
                 LevelGridView(tiles: level.slots.map { $0.map(\.current) })
                 RunnerSpriteView(runner: runningRunner, appearance: runnerAppearance)
+                RunnerSpriteView(runner: stoppedRunner, appearance: stoppedRunnerAppearance)
                 GuardSpriteView(guardState: barGuard, appearance: barGuardAppearance)
                 GuardSpriteView(guardState: fallingGuard, appearance: fallingGuardAppearance)
             }
