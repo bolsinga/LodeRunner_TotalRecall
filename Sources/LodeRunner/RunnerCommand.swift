@@ -1,8 +1,7 @@
 import ArgumentParser
-import LodeRunner
 
-struct RunnerCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct RunnerCommand: ParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "runner",
         abstract: """
             Drives a RunnerSimulation from an ad-hoc level and action sequence, for \
@@ -30,7 +29,9 @@ struct RunnerCommand: ParsableCommand {
     @Flag(help: "Suppress the per-tick state line.")
     var quiet = false
 
-    func run() throws {
+    public init() {}
+
+    public func run() throws {
         let parsedStamps = try stamps.map(parseStamp)
         let level = resolveLevelMap(buildLevelString(stamps: parsedStamps))
         var simulation = try RunnerSimulation(level: level)

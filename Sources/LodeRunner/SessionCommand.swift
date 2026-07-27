@@ -1,8 +1,7 @@
 import ArgumentParser
-import LodeRunner
 
-struct SessionCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct SessionCommand: ParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "session",
         abstract: """
             Drives a GameSession from an ad-hoc level (repeated to form the session's \
@@ -33,7 +32,9 @@ struct SessionCommand: ParsableCommand {
     @Flag(help: "Suppress the per-tick state line.")
     var quiet = false
 
-    func run() throws {
+    public init() {}
+
+    public func run() throws {
         let parsedStamps = try stamps.map(parseStamp)
         let level = resolveLevelMap(buildLevelString(stamps: parsedStamps))
         var session = try GameSession(levels: Array(repeating: level, count: levelCount))

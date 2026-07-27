@@ -1,4 +1,5 @@
 import ArgumentParser
+import LodeRunner
 
 @main
 struct Program: AsyncParsableCommand {

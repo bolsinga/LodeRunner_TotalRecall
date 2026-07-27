@@ -13,6 +13,9 @@ let package = Package(
     targets: [
         .target(
             name: "LodeRunner",
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
             resources: [.process("Resources")]
         ),
         .testTarget(name: "LodeRunnerTests", dependencies: ["LodeRunner"]),
@@ -23,6 +26,5 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        .testTarget(name: "lrTests", dependencies: ["lr"]),
     ]
 )
