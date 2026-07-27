@@ -1,6 +1,6 @@
 import Testing
 
-@testable import lr
+@testable import LodeRunner
 
 @Suite
 struct JSLevelExtractorTests {

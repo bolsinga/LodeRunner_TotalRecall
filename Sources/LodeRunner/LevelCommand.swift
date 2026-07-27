@@ -1,9 +1,8 @@
 import ArgumentParser
 import Foundation
-import LodeRunner
 
-struct LevelCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct LevelCommand: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "level",
         abstract: "Extracts Lode Runner level packs from the project's .js sources into Codable JSON."
     )
@@ -14,7 +13,9 @@ struct LevelCommand: AsyncParsableCommand {
     @Option(help: "Directory to write generated <pack>.json files into.")
     var outputDir: String
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         try FileManager.default.createDirectory(atPath: outputDir, withIntermediateDirectories: true)
 
         let sourceDir = self.sourceDir

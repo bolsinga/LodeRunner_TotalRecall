@@ -1,5 +1,3 @@
-import LodeRunner
-
 struct StampParseError: Error, CustomStringConvertible {
     let raw: String
     var description: String { "invalid stamp \"\(raw)\" — expected \"x,y,ch\"" }
