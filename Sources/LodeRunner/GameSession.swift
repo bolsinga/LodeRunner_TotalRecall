@@ -53,7 +53,7 @@ public struct GameSession: Equatable, Codable, Sendable {
         guard phase == .playing else { return }
         simulation.tick(action)
         switch simulation.phase {
-        case .playing:
+        case .starting, .playing:
             break
         case .dead:
             try handleDeath()

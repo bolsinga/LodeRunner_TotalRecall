@@ -12,11 +12,13 @@ import SwiftUI
 ///   the discrete tick counter, since SwiftUI's timeline doesn't share the
 ///   sim's tick boundary.
 ///
-/// Callers gate this on a "waiting for first input" phase (not yet modeled —
-/// callers currently just apply/remove the modifier around the runner sprite);
-/// `beginPlay` at `main.js:1298-1306` sets `runner.sprite.visible = true` and
-/// `startBlinkTimer = 0`, so the sprite starts visible and only turns invisible
-/// after the first toggle period elapses.
+/// Callers gate this on `RunnerPhase.starting` — the port of JS `GAME_START`.
+/// The composition layer applies this modifier while `simulation.phase ==
+/// .starting` and removes it once input drives `simulation.beginPlay()` (the
+/// port of `beginPlay` at `main.js:1298-1306`, which sets
+/// `runner.sprite.visible = true` and `startBlinkTimer = 0`). The sprite
+/// starts visible and only turns invisible after the first toggle period
+/// elapses.
 public struct RunnerBornBlink: ViewModifier {
     let togglePeriodSeconds: Double
     @State private var startDate = Date()

@@ -280,4 +280,43 @@ struct RunnerSimulationTests {
         let decoded = try JSONDecoder().decode(RunnerSimulation.self, from: data)
         #expect(decoded == sim)
     }
+
+    @Test("beginPlay: .starting → .playing, and tick is a no-op while .starting")
+    func startingPhaseBlocksTickUntilBeginPlay() throws {
+        let level = makeLevel(stamps: [(x: 5, y: 14, tile: .runner)])
+        var sim = try RunnerSimulation(level: level)
+        sim.phase = .starting
+
+        // Ticks in .starting must not advance the runner — matches JS
+        // GAME_START where playGame's per-tick work is gated on GAME_PLAYING.
+        for _ in 0..<3 { sim.tick(.right) }
+        #expect(sim.phase == .starting)
+        #expect(sim.runner.position == GridPoint(x: 5, y: 14))
+        #expect(sim.runner.xOffset == 0)
+
+        sim.beginPlay()
+        #expect(sim.phase == .playing)
+
+        // Now ticks take effect normally.
+        sim.tick(.right)
+        #expect(sim.runner.xOffset == 8)
+    }
+
+    @Test("beginPlay is a no-op for phases other than .starting")
+    func beginPlayNoOpOutsideStarting() throws {
+        let level = makeLevel(stamps: [(x: 5, y: 14, tile: .runner)])
+        var sim = try RunnerSimulation(level: level)
+        #expect(sim.phase == .playing)
+
+        sim.beginPlay()
+        #expect(sim.phase == .playing)
+
+        sim.phase = .finished
+        sim.beginPlay()
+        #expect(sim.phase == .finished)
+
+        sim.phase = .dead
+        sim.beginPlay()
+        #expect(sim.phase == .dead)
+    }
 }

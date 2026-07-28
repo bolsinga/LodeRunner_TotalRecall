@@ -106,6 +106,16 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         columnPicker = ShuffledColumnPicker(columns: LevelGrid.tilesX)
     }
 
+    /// Transition `.starting → .playing`. Ported from `beginPlay` at
+    /// `lodeRunner.main.js:1298-1306`, which fires on the first keypress after
+    /// a level loads and switches `gameState` from `GAME_START` to
+    /// `GAME_PLAYING`. No-op for phases other than `.starting`, so it's safe
+    /// to call unconditionally from an input handler.
+    public mutating func beginPlay() {
+        guard phase == .starting else { return }
+        phase = .playing
+    }
+
     /// Advance the simulation by exactly one tick. Ported from `playGame`'s ordering
     /// in `lodeRunner.main.js:878-908`.
     public mutating func tick(_ requestedAction: RunnerAction) {
