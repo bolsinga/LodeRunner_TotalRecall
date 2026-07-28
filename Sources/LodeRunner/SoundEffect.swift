@@ -7,20 +7,25 @@
 /// sites): the eight common effects present in both themes ship first;
 /// C64-only extras (`goldFinish1-6`, `fall.org`) are deferred.
 public enum SoundEffect: String, CaseIterable, Sendable {
-    /// Runner spawn / level start (`main.js:1305`).
+    /// Guard reborn (`guard.js:913`, `themeSoundPlay("reborn")`). The JS id is
+    /// `"reborn"` but its file stem is `"born"` (`themeAssets.js:28`), so this
+    /// case keeps the filename to match the shipped assets.
     case born
-    /// Runner death (`main.js:1587`).
+    /// Runner death (`main.js:1467`, `themeSoundPlay("dead")`).
     case dead
-    /// Dig start (`runner.js:434`).
+    /// Dig start (`runner.js:496`, `soundPlay(soundDig)`).
     case dig
-    /// Guard sinking into a hole (`guard.js:227`).
+    /// Runner landing after a fall (`runner.js:270`, `runner.js:287`,
+    /// `themeSoundPlay("down")` — the thump on transition out of `.fall`).
     case down
-    /// Runner falling (`runner.js:262`).
+    /// Runner starts falling (`runner.js:289`, `soundPlay(soundFall)` — a
+    /// looped/persistent sound in the JS, one-shot here for v1).
     case fall
-    /// Gold pickup (`runner.js:315`).
+    /// Gold pickup (`runner.js:310`, `themeSoundPlay("getGold")`).
     case getGold
-    /// Level complete (`main.js:1610`).
+    /// Level complete (`main.js:1534`, `soundPlay(soundPass)`).
     case pass
-    /// Guard buried while still in the hole (`guard.js:257`).
+    /// Guard buried while still in the hole (`guard.js:245`,
+    /// `themeSoundPlay("trap")`).
     case trap
 }
