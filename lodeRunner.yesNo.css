@@ -1,0 +1,79 @@
+/*
+ * Lode Runner - Yes/No confirm dialog.
+ * Scoped under .yn-dialog; palette from the settings-panel world (--ls-*).
+ * Compact centered modal -- message lines + two equal text buttons.
+ */
+
+dialog.yn-dialog {
+	box-sizing: border-box;
+	width: min(520px, 92vw);
+	padding: 0;
+	border: 1px solid var(--ls-panel-edge);
+	border-radius: var(--ls-radius);
+	background: var(--ls-panel);
+	color: var(--ls-ink);
+	font-family: Helvetica, Arial, sans-serif;
+	box-shadow: 0 22px 60px rgba(0,0,0,.7);
+}
+dialog.yn-dialog * { box-sizing: border-box; }
+dialog.yn-dialog::backdrop { background: rgba(0,0,0,.6); }
+
+.yn-dialog .yn-panel {
+	padding: 28px 32px 24px;
+	display: grid;
+	justify-items: center;
+	gap: 28px;
+}
+
+.yn-dialog .yn-msg {
+	text-align: center;
+	width: 100%;
+}
+.yn-dialog .yn-line {
+	margin: 0 0 10px;
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--ls-ink-dim);
+	letter-spacing: .02em;
+}
+.yn-dialog .yn-line:last-child { margin-bottom: 0; }
+/* first line carries the question weight (Simon's yellow-shadow title line) */
+.yn-dialog .yn-line.lead {
+	color: var(--ls-ink);
+	text-shadow: 0 0 10px rgba(231, 198, 74, .35);
+}
+
+.yn-dialog .yn-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: center;
+}
+.yn-dialog .yn-btn {
+	min-width: 96px;
+	height: 48px;
+	padding: 0 22px;
+	background: #1b1b2a;
+	color: var(--ls-ink);
+	border: 2px solid var(--ls-panel-edge);
+	border-radius: 6px;
+	font: 700 18px/1 Helvetica, Arial, sans-serif;
+	letter-spacing: .04em;
+	cursor: pointer;
+	transition: border-color .14s, color .14s, background .14s;
+}
+.yn-dialog .yn-btn:hover {
+	border-color: var(--ls-cyan);
+	color: var(--ls-cyan-bright);
+	background: #22223a;
+}
+.yn-dialog .yn-btn:focus-visible {
+	outline: 2px solid var(--ls-cyan);
+	outline-offset: 2px;
+}
+.yn-dialog .yn-yes:hover,
+.yn-dialog .yn-yes:focus-visible {
+	border-color: var(--ls-gold);
+	color: var(--ls-gold);
+}

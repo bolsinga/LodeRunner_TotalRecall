@@ -3,19 +3,19 @@
  * Scoped under .lp-dialog so it never collides with game page styles.
  *
  * Simon's canvas layout (levelPassDialog, lodeRunner.menu.js) ported to DOM.
- * Geometry, type sizes and cadence are his; only the palette moves to the
- * settings-panel world. His constants at _scale = 1:
- *   TITLE_TEXT_SIZE 48px bold Helvetica   ITEM_TEXT_SIZE 40px Helvetica
- *   TEXT_GAP_Y = 40*2/3 = 26px            GOLD_X 32px   centerGap 8px
+ * Geometry and cadence follow his; sizes are the empirical ~80% of his
+ * scale-1 constants, baked to integers (no runtime --lp-scale). His 1.0 refs:
+ *   TITLE_TEXT_SIZE 48   ITEM_TEXT_SIZE 40   TEXT_GAP_Y 26
+ *   panel pad 40/56/34   buttons 92x66
+ * Atlas glyphs stay native BASE_TILE cells -- scaling the sheet corrupts them.
  */
 :root {
 	/* Simon used Helvetica, not the panel's monospace. Kept -- it is his face,
 	   and tabular-nums keeps the counting columns from jittering. */
 	--lp-font:  Helvetica, Arial, sans-serif;
-	--lp-title: 48px;    /* TITLE_TEXT_SIZE */
-	--lp-item:  40px;    /* ITEM_TEXT_SIZE  */
-	--lp-gap:   26px;    /* TEXT_GAP_Y      */
-	--lp-cell-h: 44px;   /* BASE_TILE_Y: one atlas cell */
+	--lp-title: 34px;    /* 42×0.8 → 33.6 */
+	--lp-item:  32px;    /* 40×0.8 */
+	--lp-gap:   21px;    /* 26×0.8 → 20.8 */
 }
 
 dialog.lp-dialog {
@@ -31,14 +31,32 @@ dialog.lp-dialog * { box-sizing: border-box; }
 /* his COVER_BACKGROUND_COLOR black at alpha .6 */
 dialog.lp-dialog::backdrop { background: rgba(0,0,0,.6); }
 
-.lp-dialog .lp-panel { padding: 40px 56px 34px; display: grid; justify-items: center; }
-
-.lp-dialog .lp-title {
-	margin: 0 0 calc(var(--lp-gap) * 2);
-	font-size: var(--lp-title); font-weight: 700;
-	color: var(--ls-ink); letter-spacing: .02em; white-space: nowrap;
+.lp-dialog .lp-panel {
+	/* 40/56/34 × 0.8 → 32 / 44.8 / 27.2 */
+	padding: 32px 45px 27px;
+	display: grid; justify-items: center;
 }
-.lp-dialog .lp-title b { color: var(--ls-brick); font-weight: inherit; }
+
+/* Celebration line; level id sits under it quieter.
+   Gold is the win accent already used for a beaten hi-score -- same token here
+   so the party header and the score share one celebration color. Soft glow
+   echoes Simon's TITLE_TEXT_SHADOW_COLOR on canvas menus. */
+.lp-dialog .lp-heading {
+	margin: 0 0 calc(var(--lp-gap) * 2);
+	text-align: center;
+}
+.lp-dialog .lp-title {
+	margin: 0;
+	font-size: var(--lp-title); font-weight: 700;
+	color: var(--ls-gold); letter-spacing: .04em; white-space: nowrap;
+	text-shadow: 0 0 10px rgba(231, 198, 74, .45);  /* 12×0.8 → 9.6 */
+}
+.lp-dialog .lp-level {
+	margin: 8px 0 0;                             /* 10×0.8 */
+	font-size: 22px; font-weight: 700;            /* 28×0.8 → 22.4 */
+	color: var(--ls-ink-dim); letter-spacing: .02em; white-space: nowrap;
+}
+.lp-dialog .lp-level b { color: var(--ls-brick); font-weight: inherit; }
 
 /* Simon centres everything on one axis: labels end at centerX - centerGap,
    values start at centerX + centerGap. Equal 1fr columns put the boundary on
@@ -46,12 +64,11 @@ dialog.lp-dialog::backdrop { background: rgba(0,0,0,.6); }
    which is what makes the columns split the PANEL rather than the content. */
 .lp-dialog .lp-rows {
 	display: grid; grid-template-columns: 1fr 1fr;
-	column-gap: 26px; row-gap: var(--lp-gap);
+	column-gap: var(--lp-gap); row-gap: var(--lp-gap);
 	align-items: center; width: 100%;
 }
-/* Helvetica leaves ~2px of right side bearing at this size, so the box edge is
-   not where the ink ends. Pull the box in by that much to sit the letterform
-   flush against the boundary. */
+/* Helvetica leaves a little right side bearing, so the box edge is not where
+   the ink ends. Pull the box in to sit the letterform flush against the boundary. */
 .lp-dialog .lp-lbl {
 	justify-self: end; font-size: var(--lp-item);
 	color: var(--ls-ink-dim); margin-right: -2px;
@@ -63,19 +80,20 @@ dialog.lp-dialog::backdrop { background: rgba(0,0,0,.6); }
 
 /* One atlas cell, from the same recolored sheet drawText uses, so the glyphs
    follow the theme. The art does NOT fill its cell: both are 28px of ink in a
-   40px cell (gold x1..28, guard x2..29), so a 40px box would leave the visible
-   glyph short of the boundary while the ink-tight labels land on it. Size the
-   box to the ink and offset the sheet to match -- this is what Simon's
-   GOLD_X = 32 (not 40) compensates for. */
+   40px cell (gold x1..28, guard x2..29). Sample at native 1:1 -- scaling the
+   sheet (background-size / position) corrupts the pixel art. Shrink with a
+   fixed transform so they sit with the baked ~80% type (28/40 of a tile). */
 .lp-dialog .lp-glyph {
 	justify-self: end;
-	width: 28px; height: var(--lp-cell-h);
+	width: 28px; height: 44px;                    /* BASE_TILE ink box */
 	background-image: var(--lp-atlas);
 	background-repeat: no-repeat;
 	image-rendering: pixelated;
-	/* the art sits low in its cell against a 40px cap-height label, so centring
+	/* the art sits low in its cell against a taller label, so centring
 	   the box in the row still reads low */
-	position: relative; top: -5px;
+	position: relative; top: -4px;
+	transform: scale(0.8);
+	transform-origin: right center;
 }
 .lp-dialog .lp-glyph-gold  { background-position: -1px  -176px; }  /* frame 40 */
 .lp-dialog .lp-glyph-guard { background-position: -42px -176px; }  /* frame 41 */
@@ -92,22 +110,28 @@ dialog.lp-dialog::backdrop { background: rgba(0,0,0,.6); }
 /* Three equal icon buttons, as his createButton drew them: same size, same
    weight, no primary -- the game gives all three outcomes equal standing. */
 .lp-dialog .lp-buttons {
-	display: flex; gap: 28px; margin-top: calc(var(--lp-gap) * 1.6);
+	display: flex; gap: 22px;                     /* 28×0.8 → 22.4 */
+	margin-top: 34px;                             /* gap×1.6 → 33.6 */
 	opacity: 0; transition: opacity .2s;
 }
 .lp-dialog .lp-buttons.in { opacity: 1; }
 .lp-dialog .lp-btn {
-	width: 92px; height: 66px; display: grid; place-items: center;
+	width: 74px; height: 53px;                    /* 92×66 × 0.8 → 73.6×52.8 */
+	display: grid; place-items: center;
 	background: #1b1b2a; color: var(--ls-ink);
 	border: 2px solid var(--ls-panel-edge);
-	border-radius: 6px;                        /* his BUTTON_ROUND_RADIUD */
+	border-radius: 5px;                           /* 6×0.8 → 4.8 */
 	cursor: pointer; padding: 0;
 	transition: border-color .14s, color .14s, background .14s;
 }
-.lp-dialog .lp-btn svg { width: 34px; height: 34px; fill: currentColor; display: block; }
+.lp-dialog .lp-btn svg {
+	width: 27px; height: 27px;                    /* 34×0.8 → 27.2 */
+	fill: currentColor; display: block;
+}
 /* the board's level-select mark is stroked (bi-stroke), not filled */
 .lp-dialog .lp-btn .ic-grid {
-	width: 38px; height: 34px; fill: none; stroke: currentColor;
+	width: 30px; height: 27px;                    /* 38×34 × 0.8 → 30.4×27.2 */
+	fill: none; stroke: currentColor;
 	stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter;
 }
 .lp-dialog .lp-btn:hover {

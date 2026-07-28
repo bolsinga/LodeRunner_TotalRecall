@@ -40,33 +40,29 @@ function getClassicInfo()
 {
 	var infoJSON = null;
 	var needEncode = 0;
-	
-	if(playData >= 1 && playData <= maxPlayId) {
-		infoJSON = getStorage(STORAGE_CLASSIC_INFO+playData); 
-		//==================================
-		// BEGIN for support base64 encode 
-		//==================================
-/*	for backward compatible disable it !	
-		if(infoJSON) {
-			if(infoJSON.charAt(0) != '{' ) { //assume base64 encoded
-				infoJSON = base64Decode(infoJSON); //base64 decode
-			} else { //no encode (for backward compatibility)
-				if( getStorage(STORAGE_FIRST_PLAY) >= VERSION) infoJSON = null; //something wrong, reset it 
-				else {
-					setFirstPlayInfo(); //set current version
-				}
-				needEncode = 1; 
-			}
+
+	switch(true) {
+	case (playData >= 1 && playData <= maxPlayId):
+		infoJSON = getStorage(STORAGE_CLASSIC_INFO+playData);
+		levelData = getPlayVerData(playData);
+		break;
+	case (playData == PLAY_DATA_USERDEF):
+		getEditLevelInfo();
+		if(editLevels > 0) {
+			infoJSON = getStorage(STORAGE_CLASSIC_INFO+playData);
+			levelData = editLevelData;
+		} else { //no custom levels -- fall back to Classic pack
+			playData = 1;
+			infoJSON = getStorage(STORAGE_CLASSIC_INFO+1);
+			levelData = getPlayVerData(playData);
 		}
-*/		
-		//================================
-		// END for support base64 encode
-		//================================
-	} else {
+		break;
+	default:
 		error("design error, value =" + playData );
-		playData = 1;	
+		playData = 1;
+		levelData = getPlayVerData(playData);
+		break;
 	}
-	levelData = getPlayVerData(playData);
 	
 	if(infoJSON == null) {
 		initClassicInfo();
@@ -101,7 +97,7 @@ function setClassicInfo(passed)
 	// for backward compatible disable it !	
 	// infoJSON = btoa(infoJSON); //base64 encode, 6/3/2015
 	
-	if(playData >= 1 && playData <= maxPlayId) {
+	if(playData >= 1 && playData <= maxPlayId || playData == PLAY_DATA_USERDEF) {
 		setStorage(STORAGE_CLASSIC_INFO+playData, infoJSON); 	
 	} else {
 		error("design error, value =" + playData );
@@ -128,7 +124,6 @@ function getModernInfo()
 			levelData = editLevelData;
 		} else { //no any user created level !
 			playData = 1;
-			playData2GameVersionMenuId();
 			infoJSON = getStorage(STORAGE_MODERN_INFO+1);
 			levelData = getPlayVerData(playData);
 		}
@@ -328,6 +323,15 @@ function compareWithExist(existLevelMap, testLevelMap)
 	return 0;
 }
 
+function levelMapIsBlank(levelMap)
+{
+	if(!levelMap) return 1;
+	for(var i = 0; i < levelMap.length; i++) {
+		if(levelMap.charAt(i) != ' ') return 0;
+	}
+	return 1;
+}
+
 function getTestLevel(testInfo)
 {
 	var infoJSON;
@@ -360,29 +364,28 @@ function getTestLevel(testInfo)
 			testInfo.fromPlayData  = testInfo.fromLevel  = -1;
 		}
 
-		//BEGIN for debug ====================
-		//var i = 0;
-		//for(var y = 0; y < NO_OF_TILES_Y; y++) {
-		//	var string = ""
-		//	for(var x = 0; x < NO_OF_TILES_X; x++) {
-		//		string += testInfo.levelMap[i++];
-		//	}
-		//	//debug('"' + string + '"');
-		//}
-		//END   for debug ====================
-		
-		if(testInfo.level > editLevels) {
-			testInfo.modified = 1;
-		} else {
-			if(compareWithExist(editLevelData[infoObj.level-1], testInfo.levelMap) == 0) { 
-				if(init) {
-					//same as exist level, new level 
-					clearTestLevel();
-					initNewLevelInfo(testInfo);
-				}
+		// Dirty = differs from the editor baseline, not merely "sitting on a new
+		// slot". A blank new level is clean; LOAD-from-pack baselines against the
+		// source map; an existing custom slot baselines against storage.
+		if(testInfo.fromPlayData > 0 && testInfo.fromLevel > 0) {
+			var srcMap = null;
+			if(testInfo.fromPlayData == PLAY_DATA_USERDEF) {
+				srcMap = (editLevelData && editLevelData[testInfo.fromLevel-1]) || null;
 			} else {
-				testInfo.modified = 1;
+				var pack = getPlayVerData(testInfo.fromPlayData);
+				srcMap = (pack && pack[testInfo.fromLevel-1]) || null;
 			}
+			testInfo.modified = (srcMap && compareWithExist(srcMap, testInfo.levelMap) != 0) ? 1 : 0;
+		} else if(testInfo.level > editLevels) {
+			testInfo.modified = levelMapIsBlank(testInfo.levelMap) ? 0 : 1;
+		} else if(compareWithExist(editLevelData[infoObj.level-1], testInfo.levelMap) != 0) {
+			testInfo.modified = 1;
+		} else if(init) {
+			//same as exist level, new level 
+			clearTestLevel();
+			initNewLevelInfo(testInfo);
+		} else {
+			testInfo.modified = 0;
 		}
 	}
 }

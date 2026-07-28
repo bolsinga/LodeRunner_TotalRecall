@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DOM Confetti Demo</title>
+	<link rel="stylesheet" href="confetti.css">
+</head>
+<body>
+	<!-- Stand-in for dialog.lp-dialog / .lp-panel from lodeRunner.levelPass.* -->
+	<section class="demo-panel" id="demo-panel" aria-labelledby="demo-title">
+		<h1 id="demo-title">🎉 Congratulations! 🎉</h1>
+		<p>
+			Reusable DOM party popper (<code>confetti.js</code>).
+			Dial the controls below, then fire.
+		</p>
+		<div class="demo-actions">
+			<button type="button" class="demo-btn primary" id="btn-popper">
+				Party popper
+			</button>
+		</div>
+		<p class="demo-note">
+			Launch point is relative to this dialog (xFrac / yFrac).
+		</p>
+	</section>
+
+	<div class="demo-controls">
+		<label for="xfrac-slider">
+			<span>xFrac (launch x)</span>
+			<span class="ctrl-value" id="xfrac-value">0.00</span>
+		</label>
+		<input id="xfrac-slider" type="range" min="-1" max="2" step="0.01" value="0">
+
+		<label for="yfrac-slider">
+			<span>yFrac (launch y)</span>
+			<span class="ctrl-value" id="yfrac-value">0.33</span>
+		</label>
+		<input id="yfrac-slider" type="range" min="-1" max="2" step="0.01" value="0.33">
+
+		<label for="angle-slider">
+			<span>angle (deg)</span>
+			<span class="ctrl-value" id="angle-value">60</span>
+		</label>
+		<input id="angle-slider" type="range" min="0" max="180" step="1" value="60">
+
+		<label for="energy-slider">
+			<span>energy</span>
+			<span class="ctrl-value" id="energy-value">1.25</span>
+		</label>
+		<input id="energy-slider" type="range" min="0.20" max="2.50" step="0.05" value="1.25">
+
+		<label for="size-slider">
+			<span>size</span>
+			<span class="ctrl-value" id="size-value">0.30</span>
+		</label>
+		<input id="size-slider" type="range" min="0.10" max="2.00" step="0.05" value="0.30">
+
+		<label for="spread-slider">
+			<span>spread (deg)</span>
+			<span class="ctrl-value" id="spread-value">28</span>
+		</label>
+		<input id="spread-slider" type="range" min="0" max="120" step="1" value="28">
+
+		<label for="count-slider">
+			<span>count</span>
+			<span class="ctrl-value" id="count-value">80</span>
+		</label>
+		<input id="count-slider" type="range" min="10" max="200" step="1" value="80">
+
+		<label class="ctrl-check" for="mirror-check">
+			<span>mirror (right twin)</span>
+			<input id="mirror-check" type="checkbox">
+		</label>
+
+		<div class="preset-row">
+			<textarea id="preset-json" spellcheck="false" aria-label="Settings JSON"></textarea>
+			<div class="preset-actions">
+				<button type="button" id="btn-copy" title="Copy JSON">Copy</button>
+				<button type="button" id="btn-apply" title="Apply JSON to sliders">Apply</button>
+			</div>
+		</div>
+		<p class="hint">
+			Sliders update the JSON live. Copy to save; paste + Apply to restore.
+			Left is canonical; mirror flips xFrac and angle across the dialog.
+		</p>
+	</div>
+
+	<script src="../../lodeRunner.confetti.js"></script>
+	<script>
+		var controls = [
+			{ id: "xfrac",  key: "xFrac",  fmt: function (v) { return parseFloat(v).toFixed(2); }, parse: parseFloat },
+			{ id: "yfrac",  key: "yFrac",  fmt: function (v) { return parseFloat(v).toFixed(2); }, parse: parseFloat },
+			{ id: "angle",  key: "angle",  fmt: String, parse: parseFloat },
+			{ id: "energy", key: "energy", fmt: function (v) { return parseFloat(v).toFixed(2); }, parse: parseFloat },
+			{ id: "size",   key: "size",   fmt: function (v) { return parseFloat(v).toFixed(2); }, parse: parseFloat },
+			{ id: "spread", key: "spread", fmt: String, parse: parseFloat },
+			{ id: "count",  key: "count",  fmt: String, parse: function (v) { return parseInt(v, 10); } }
+		];
+		var mirrorCheck = document.getElementById("mirror-check");
+		var presetEl = document.getElementById("preset-json");
+		var applying = false;
+
+		function val(id) {
+			var c = controls.filter(function (x) { return x.id === id; })[0];
+			return c.parse(document.getElementById(id + "-slider").value);
+		}
+
+		function currentSettings() {
+			var out = {};
+			controls.forEach(function (c) {
+				out[c.key] = val(c.id);
+			});
+			out.mirror = mirrorCheck.checked;
+			return out;
+		}
+
+		function syncFromSliders() {
+			controls.forEach(function (c) {
+				var slider = document.getElementById(c.id + "-slider");
+				document.getElementById(c.id + "-value").textContent = c.fmt(slider.value);
+			});
+			if (!applying) {
+				presetEl.value = JSON.stringify(currentSettings(), null, 2);
+			}
+		}
+
+		function applyJson(text) {
+			var data = JSON.parse(text);
+			applying = true;
+			controls.forEach(function (c) {
+				if (data[c.key] == null) return;
+				document.getElementById(c.id + "-slider").value = data[c.key];
+			});
+			if (data.mirror != null) mirrorCheck.checked = !!data.mirror;
+			applying = false;
+			syncFromSliders();
+		}
+
+		controls.forEach(function (c) {
+			document.getElementById(c.id + "-slider").addEventListener("input", syncFromSliders);
+		});
+		mirrorCheck.addEventListener("change", syncFromSliders);
+		syncFromSliders();
+
+		document.getElementById("btn-copy").addEventListener("click", function () {
+			presetEl.select();
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(presetEl.value);
+			} else {
+				document.execCommand("copy");
+			}
+		});
+
+		document.getElementById("btn-apply").addEventListener("click", function () {
+			try {
+				applyJson(presetEl.value);
+			} catch (err) {
+				alert("Invalid JSON: " + err.message);
+			}
+		});
+
+		document.getElementById("btn-popper").addEventListener("click", function () {
+			var s = currentSettings();
+			confetti.burst({
+				origin: document.getElementById("demo-panel"),
+				xFrac: s.xFrac,
+				yFrac: s.yFrac,
+				angle: s.angle,
+				energy: s.energy,
+				size: s.size,
+				spread: s.spread,
+				count: s.count,
+				mirror: s.mirror
+			});
+		});
+	</script>
+</body>
+</html>

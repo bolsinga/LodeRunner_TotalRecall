@@ -111,10 +111,10 @@ var helpDialog = (function() {
 			'</div>' +
 
 			'<div class="hk-group">' +
-				'<p class="hk-h">Editor <span class="ctx">&mdash; while editing</span></p>' +
+				'<p class="hk-h">Editor</p>' +
 				table("", [
-					["Ctrl C", "Copy level", ""],
-					["Ctrl V", "Paste level", ""]
+					["Ctrl C", "Copy level", "from play or the editor"],
+					["Ctrl V", "Paste level", "into an empty editor slot"]
 				]) +
 			'</div>' +
 		'</div>';

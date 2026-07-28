@@ -5,11 +5,11 @@
 
 var playVersionInfo = [
 	// classic is in lodeRunner.html; others lazy-loaded via ensurePlayVersionLoaded()
-	{ id:1, globalName: "classicData",  script: null,                           demoScript: "lodeRunner.wData.1.js", demoGlobal: "wfastDemoData1", levelCount: 150, name: gameVersionName[0], info: classicInfo },
-	{ id:3, globalName: "proData",      script: "lodeRunner.v.professional.js", demoScript: "lodeRunner.wData.3.js", demoGlobal: "wfastDemoData3", levelCount: 150, name: gameVersionName[2], info: proInfo },
-	{ id:4, globalName: "revengeData",  script: "lodeRunner.v.revenge.js",      demoScript: "lodeRunner.wData.4.js", demoGlobal: "wfastDemoData4", levelCount: 17,  name: gameVersionName[3], info: revengeInfo },
-	{ id:5, globalName: "fanBookData",  script: "lodeRunner.v.fanBookMod.js",   demoScript: "lodeRunner.wData.5.js", demoGlobal: "wfastDemoData5", levelCount: 66,  name: gameVersionName[4], info: fanBookInfo },
-	{ id:2, globalName: "championData", script: "lodeRunner.v.championship.js", demoScript: "lodeRunner.wData.2.js", demoGlobal: "wfastDemoData2", levelCount: 51,  name: gameVersionName[1], info: championInfo }
+	{ id:1, globalName: "classicData",  script: null,                           demoScript: "lodeRunner.wData.1.js", demoGlobal: "wfastDemoData1", levelCount: 150, name: " Classic Lode Runner ",        info: classicInfo },
+	{ id:3, globalName: "proData",      script: "lodeRunner.v.professional.js", demoScript: "lodeRunner.wData.3.js", demoGlobal: "wfastDemoData3", levelCount: 150, name: " Professional Lode Runner ",  info: proInfo },
+	{ id:4, globalName: "revengeData",  script: "lodeRunner.v.revenge.js",      demoScript: "lodeRunner.wData.4.js", demoGlobal: "wfastDemoData4", levelCount: 17,  name: " Revenge of Lode Runner ",    info: revengeInfo },
+	{ id:5, globalName: "fanBookData",  script: "lodeRunner.v.fanBookMod.js",   demoScript: "lodeRunner.wData.5.js", demoGlobal: "wfastDemoData5", levelCount: 66,  name: " Lode Runner Fan Book ",      info: fanBookInfo },
+	{ id:2, globalName: "championData", script: "lodeRunner.v.championship.js", demoScript: "lodeRunner.wData.2.js", demoGlobal: "wfastDemoData2", levelCount: 51,  name: " Championship Lode Runner ", info: championInfo }
 ];
 
 function findPlayVersionInfo(id)
@@ -60,6 +60,8 @@ function isPlayVersionLoaded(id)
 
 function getPlayVerData(id) 
 {
+	if(id == PLAY_DATA_USERDEF) return editLevelData || [];
+
 	var info = findPlayVersionInfo(id);
 	if (info && isGlobalDefined(info.globalName)) {
 		return window[info.globalName];
@@ -69,28 +71,9 @@ function getPlayVerData(id)
 	return classicData;
 }
 
-function getPlayVerInfo(id) 
-{
-	var info = findPlayVersionInfo(id);
-	if (info) return info.info;
-	
-	error("Error: version info can not find, id = " + id );
-	return playVersionInfo[0].info;
-}
-
 function defaultLevelData()
 {
 	return classicData;
-}
-
-function menuIdToPlayData(menuId)
-{
-	if(menuId == playVersionInfo.length) return PLAY_DATA_USERDEF; //user created
-	else if (menuId < playVersionInfo.length) return playVersionInfo[menuId].id;
-	
-	error("design error, menuId =" + menuId );
-	
-	return playVersionInfo[0].id;
 }
 
 var playDataNameUserDef = "Custom Levels";

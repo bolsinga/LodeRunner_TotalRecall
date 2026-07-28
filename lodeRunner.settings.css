@@ -57,6 +57,7 @@
 	display: flex; gap: 8px;
 }
 .bi-bar[hidden] { display: none; }
+.bi-btn[hidden] { display: none; }
 .bi-btn {
 	box-sizing: border-box;
 	width: 40px; height: 40px; padding: 0;
@@ -379,6 +380,7 @@ dialog.ls-dialog[open]::backdrop { opacity: 1; }
 	color: #3a3a4d; border-color: #1e1e2c;
 	background: transparent; cursor: default;
 }
+.ls-dialog .btn-pair { display: inline-flex; gap: 6px; flex-shrink: 0; }
 
 /* destructive action: brick, not the accent, so it never reads as the ordinary
    thing to click. Armed state fills in -- the second click is the real one. */

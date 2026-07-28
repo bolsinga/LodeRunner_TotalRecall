@@ -348,7 +348,6 @@ var settingsPanel = (function() {
 
 	function mainView() {
 		//version options from playVersionInfo so each carries its real playData id
-		//(name<->id order differs from gameVersionName; use the registry as truth)
 		var versionOpts = "";
 		for(var i = 0; i < playVersionInfo.length; i++)
 			versionOpts += versionOption(playVersionInfo[i].id, playVersionInfo[i].name.trim());
@@ -416,6 +415,13 @@ var settingsPanel = (function() {
 				'</div>' +
 				'<div class="row"><span class="row-name">Level Editor</span>' +
 					'<button class="btn ls-editor">Open</button>' +
+				'</div>' +
+				'<div class="row"><span class="row-name">Custom levels' +
+					'<small>Import or export a .lrwg file</small></span>' +
+					'<div class="btn-pair" role="group" aria-label="Custom levels">' +
+						'<button type="button" class="btn ls-import">Import</button>' +
+						'<button type="button" class="btn ls-export">Export</button>' +
+					'</div>' +
 				'</div>' +
 			'</div>' +
 			'<div class="group"><p class="group-label">Display</p>' +
@@ -517,10 +523,13 @@ var settingsPanel = (function() {
 	function setMenuOpen(on) {
 		if(on) {
 			if(dialog.open) return;
-			syncFromModel();
 			setView("main");
 			dialog.showModal();               //top layer + ::backdrop scrim, native
+			// Stop attract / restore last playMode before painting controls.
+			// Syncing first would show Training Off while playMode is still
+			// PLAY_AUTO, then menu-open restores PLAY_MODERN with no re-paint.
 			announce("menu-open");
+			syncFromModel();
 		} else {
 			dialog.close();                   // native "close" event -> menu-close
 		}
@@ -642,6 +651,9 @@ var settingsPanel = (function() {
 
 		//choosing a level only means something when you can jump to one
 		dialog.querySelector(".ls-level").disabled = !training;
+
+		var exp = dialog.querySelector(".ls-export");
+		if(exp) exp.disabled = !(typeof customLevels !== "undefined" && customLevels.canExport());
 	}
 	//swatch backgrounds follow the active theme's true brick colors
 	//(Apple II and C64 differ; "original" is the sampled brick color)
@@ -705,6 +717,15 @@ var settingsPanel = (function() {
 		dialog.querySelector(".ls-editor").onclick = function(){
 			setMenuOpen(false);
 			gameSettings.enterEditor();
+		};
+		dialog.querySelector(".ls-import").onclick = function(){
+			setMenuOpen(false);
+			importCustomLevels();
+		};
+		dialog.querySelector(".ls-export").onclick = function(){
+			if(this.disabled) return;
+			setMenuOpen(false);
+			exportCustomLevels();
 		};
 		dialog.querySelector(".ls-level").onclick = function(){
 			setMenuOpen(false);

@@ -21,7 +21,7 @@ function getAutoDemoLevel(initValue)
 		runnerLife = 1;
 		demoLevel = 1;
 		demoCount = 1;
-		demoMaxCount = 3;
+		demoMaxCount = 2;
 		demoData = demoData1;
 		levelData = classicData;
 		demoIdx = 0;
@@ -124,6 +124,22 @@ function initDemoData()
 	getDemoData(playData); //load from lazy lodeRunner.wData.N.js packs
 }
 
+// Keep playerDemoData aligned with playData. Custom levels have no demos;
+// shipped packs need initDemoData after a version switch (e.g. editor →
+// Training on Custom, then Classic in the level picker).
+function ensureDemoDataSynced()
+{
+	if(playData == PLAY_DATA_USERDEF) {
+		if(demoPlayData != playData) {
+			demoPlayData = playData;
+			playerDemoData = [];
+			wDemoData = [];
+		}
+		return;
+	}
+	if(demoPlayData != playData) initDemoData();
+}
+
 function initDemoInfo()
 {
 	var idx = curLevel - 1;
@@ -199,6 +215,7 @@ function getNextDemoLevel()
 
 function curDemoLevelIsVaild()
 {
+	ensureDemoDataSynced();
 	if(playData == PLAY_DATA_USERDEF) return 0;
 	return (playerDemoData.length >= curLevel && typeof playerDemoData[curLevel-1] != "undefined");
 }

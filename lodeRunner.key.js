@@ -301,6 +301,11 @@ function handleKeyDown(event)
 		if(gameState == GAME_START || gameState == GAME_RUNNING) {
 			pressCtrlKey(event.keyCode);
 		}
+	} else if (event.metaKey && event.keyCode == KEYCODE_C) {
+		// Cmd+C on macOS: same map-copy as Ctrl+C (do not map all Cmd-* to Ctrl)
+		if(gameState == GAME_START || gameState == GAME_RUNNING) {
+			pressCtrlKey(KEYCODE_C);
+		}
 	} else {
 		 if((gameState == GAME_PAUSE && event.keyCode == KEYCODE_ESC) ||
     	    gameState == GAME_START || gameState == GAME_RUNNING) 

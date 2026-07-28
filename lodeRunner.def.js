@@ -24,10 +24,9 @@ var MENU_ICON_X = 40, MENU_ICON_Y = 36, ICON_BORDER = 4;
 // is page furniture and does not grow with the board. Keep in step with
 // .ls-toggle / .bi-bar in lodeRunner.settings.css.
 var CHROME_BAND_Y = 64;
-// Board margins. Top/left are the board's fixed position -- it sits there
-// whatever the window size rather than drifting as it is resized, and the top
-// must clear CHROME_BAND_Y. Right/bottom are minimums the fit has to leave
-// free; the axis with slack ends up with more than its minimum.
+// Board margins used for the scale fit. After sizing, leftover space is
+// centred, clamped so left/top never go below these mins (top must also
+// clear CHROME_BAND_Y). Right/bottom are fit minimums only.
 var BOARD_MARGIN_LEFT = 70;
 var BOARD_MARGIN_TOP = 70;
 var BOARD_MARGIN_RIGHT = 50;

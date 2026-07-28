@@ -134,10 +134,11 @@ function canvasReSize()
 	canvas.width = canvasX;
 	canvas.height = canvasY;
 	
-	//Pinned to a fixed inset rather than centred, so the board holds its place
-	//as the window changes instead of sliding around under the chrome.
-	canvas.style.left = BOARD_MARGIN_LEFT + "px";
-	canvas.style.top =  BOARD_MARGIN_TOP + "px";
+	// Centre leftover space, but never sit closer than the fit margins on
+	// left/top (so the chrome band stays clear and the right/bottom mins from
+	// the scale math still hold when an axis is tight).
+	canvas.style.left = Math.max(BOARD_MARGIN_LEFT, (screenX1 - canvasX) / 2 | 0) + "px";
+	canvas.style.top  = Math.max(BOARD_MARGIN_TOP,  (screenY1 - canvasY) / 2 | 0) + "px";
 	canvas.style.position = "absolute";
 	canvas.style.cursor = "default";
 	
@@ -205,6 +206,21 @@ function showCoverPage()
 	mainStage.addChild(remakeBitmap);
 	stagePresent();
 	waitIdleDemo(3000);
+}
+
+// Attract beat after a demo level: Classic scores (4s), then either the next
+// demo or the title. Death always returns to the title after scores.
+function attractAfterDemo(backToTitle)
+{
+	showScoreTable(1, null, function() {
+		if(backToTitle) showCoverPage();
+		else gameState = GAME_NEW_LEVEL;
+	}, 4000, true);
+}
+
+function attractDemoEnd()
+{
+	attractAfterDemo(true);
 }
 
 var idleTimer=null, startIdleTime;
@@ -371,7 +387,6 @@ function getLastPlayInfo()
 function selectGame(showDataMsg)
 {
 	getLastPlayInfo();
-	playData2GameVersionMenuId();
 	setKeyHandler(handleKeyDown, handleKeyUp);
 	initShowDataMsg(showDataMsg);
 	startGame();	
@@ -412,14 +427,16 @@ function startGame(noCycle)
 	
 	switch(playMode) {
 	case PLAY_CLASSIC:
-		getClassicInfo();	
+		getClassicInfo();
+		ensureDemoDataSynced();
 		levelMap = levelData[curLevel-1];	
 		if(curLevel >= levelData.length && (passedLevel+1) >= levelData.length) {
 			loadEndingMusic(); //6/15/2015, music prepare for winner
 		}
 		break;
 	case PLAY_MODERN:
-		getModernInfo();	
+		getModernInfo();
+		ensureDemoDataSynced();
 		levelMap = levelData[curLevel-1];
 		break;	
 	case PLAY_TEST:
@@ -430,6 +447,7 @@ function startGame(noCycle)
 		levelMap = levelData[curLevel-1];
 		break;	
 	case PLAY_DEMO_ONCE:
+		ensureDemoDataSynced();
 		getDemoOnceInfo();	
 		levelMap = levelData[curLevel-1];
 		break;	
@@ -530,7 +548,7 @@ function buildLevelMap(levelMap)
 					continue;  // culled by maxGuard
 				}
 
-				curTile = new createjs.Sprite(guardData, "runLeft");
+				curTile = new GameSprite(guardData, "runLeft");
 				guard[guardCount] = { 
 					sprite: curTile,
 					pos: { x:x, y:y, xOffset:0, yOffset:0}, 
@@ -547,7 +565,7 @@ function buildLevelMap(levelMap)
 					continue;  // demoted (extra runner)
 				}
 				runner = {};	
-				curTile = runner.sprite = new createjs.Sprite(runnerData, "runRight");
+				curTile = runner.sprite = new GameSprite(runnerData, "runRight");
 				runner.pos = { x:x, y:y, xOffset:0, yOffset:0};	
 				runner.action = ACT_UNKNOWN;	
 				runner.shape = "runRight";	
@@ -846,37 +864,37 @@ function drawText(x, y, str, parentObj, numberType)
 		
 		switch(true) {
 		case (code >=48 && code <=57): //N0 ~ N9 or D0 ~ D9 
-			textTile[i] = new createjs.Sprite(textData, numberType+String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, numberType+String.fromCharCode(code));	
 			break;
 		case (code >=65 && code <= 90):
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		case (code == 46): //'.'
-			textTile[i] = new createjs.Sprite(textData, "DOT");	
+			textTile[i] = new GameSprite(textData, "DOT");	
 			break;
 		case (code == 60): //'<'
-			textTile[i] = new createjs.Sprite(textData, "LT");	
+			textTile[i] = new GameSprite(textData, "LT");	
 			break;
 		case (code == 62): //'>'
-			textTile[i] = new createjs.Sprite(textData, "GT");	
+			textTile[i] = new GameSprite(textData, "GT");	
 			break;
 		case (code == 45): //'-'
-			textTile[i] = new createjs.Sprite(textData, "DASH");	
+			textTile[i] = new GameSprite(textData, "DASH");	
 			break;
 		case (code == 58): //':'
-			textTile[i] = new createjs.Sprite(textData, "COLON");	
+			textTile[i] = new GameSprite(textData, "COLON");	
 			break;
 		case (code == 95): //'_'
-			textTile[i] = new createjs.Sprite(textData, "UNDERLINE");	
+			textTile[i] = new GameSprite(textData, "UNDERLINE");	
 			break;
 		case (code == 35): //'#': guard dead in trap hole
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		case (code == 64): //'@': gold
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		default: //space
-			textTile[i] = new createjs.Sprite(textData, "SPACE");	
+			textTile[i] = new GameSprite(textData, "SPACE");	
 			break;
 		}
 		textTile[i].setTransform(x + i*tileWScale, y, tileScale, tileScale).stop();
@@ -1191,7 +1209,14 @@ function closingScreen(r)
 		curAiVersion = AI_VERSION; //07/04/2014
 		initHotKeyVariable();      //07/09/2014
 		
-		if(playMode == PLAY_AUTO) getAutoDemoLevel(0);
+		if(playMode == PLAY_AUTO) {
+			// Safety net: never start another attract demo past the cap
+			if(demoCount >= demoMaxCount) {
+				attractDemoEnd();
+				return;
+			}
+			getAutoDemoLevel(0);
+		}
 		if(playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) getNextDemoLevel();
 
 		if(playMode == PLAY_TEST) {
@@ -1490,8 +1515,12 @@ function mainTick(event)
 		if(playMode == PLAY_CLASSIC && !sometimePlayInGodMode) {	
 			scoreInfo = {s:curScore, l: passedLevel+1 };
 		}	
-			
-		showScoreTable(playData, scoreInfo , function() { showCoverPage();});	
+
+		if(playMode == PLAY_AUTO) {
+			attractDemoEnd();
+		} else {
+			showScoreTable(playData, scoreInfo , function() { showCoverPage();});
+		}
 		gameState = GAME_WAITING;	
 		return;
 	case GAME_FINISH: 
@@ -1552,6 +1581,15 @@ function mainTick(event)
 			if(curScore + scoreIncValue >= finalScore) {
 				curScore = finalScore;
 				drawScore(0);
+
+				// Attract: scores after every demo, title after demoMaxCount.
+				// return (not break) so stagePresent below cannot wipe the board.
+				if(playMode == PLAY_AUTO) {
+					gameState = GAME_WAITING;
+					attractAfterDemo(demoCount >= demoMaxCount);
+					return;
+				}
+
 				gameState = GAME_NEW_LEVEL;
 				
 				switch(playMode) {
@@ -1560,12 +1598,6 @@ function mainTick(event)
 					break;
 				case PLAY_CLASSIC:
 					if(++runnerLife > RUNNER_MAX_LIFE) runnerLife = RUNNER_MAX_LIFE;	
-					break;	
-				case PLAY_AUTO:
-					if(demoCount >= demoMaxCount) {
-						setTimeout(function(){ showCoverPage();}, 500);	
-						gameState = GAME_WAITING;
-					}
 					break;	
 				}
 

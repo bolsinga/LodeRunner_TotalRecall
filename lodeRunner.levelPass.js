@@ -5,11 +5,10 @@
 // Container and Shadow, hand-rolled hover borders, and manual addChild/
 // removeChild -- with markup the browser lays out.
 //
-// The layout is Simon's, not a redesign: his 48px bold title, 40px rows, 26px
-// gaps, and the one centre axis every label ends on and every value starts
-// past. Only the palette moves to the settings-panel world. See the CSS for
-// the two places where boxes and ink disagree (text side bearing, and the
-// atlas art not filling its cell) and what compensates for them.
+// Header is a two-line celebration: LEVEL COMPLETE, then quieter LEVEL NNN
+// (brick on the number). Sizes are baked ~80% of Simon's scale-1 constants
+// (see levelPass.css). Dual party poppers (lodeRunner.confetti.js) fire on
+// open from dialed-in left/right settings.
 //
 // The count-up is the point of the screen, so its cadence is carried over
 // exactly: 85ms a step, +47 a step at 100 points each, a four-step rest
@@ -26,6 +25,17 @@ var levelPass = (function() {
 	var COUNT_MS = 85;    // countTime
 	var ADD      = 47;    // countAddValue
 	var POINT    = 100;   // onePointValue
+
+	// Party poppers -- dialed in tools/confetti/. Left is canonical; right was
+	// authored with mirror on (so its xFrac/angle are pre-mirror values).
+	var POPPER_LEFT = {
+		xFrac: -0.2, yFrac: 0.3, angle: 64, energy: 1.4,
+		size: 0.25, spread: 35, count: 80, mirror: false
+	};
+	var POPPER_RIGHT = {
+		xFrac: -0.08, yFrac: 0.63, angle: 70, energy: 1.5,
+		size: 0.25, spread: 35, count: 80, mirror: true
+	};
 
 	// Icons: replay and next are ours; the grid is the mark the board already
 	// uses for level select (SVG_GRID in boardIcons), so the two surfaces name
@@ -45,14 +55,23 @@ var levelPass = (function() {
 
 	var dialog, rowsEl, btnsEl;
 	var timers = [];
+	var popperTimer = null;   // setInterval id for the 4s re-fire loop
+	var popperShots = 0;
 	var pickFun = null;
 	var pending = 0;      // which button the close is reporting; 0 = replay
 	var done = 0;         // tally finished: buttons are live
+	var POPPER_EVERY = 4000;
+	var POPPER_SHOTS = 10;    // then stop (~40s at POPPER_EVERY)
 
 	function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
 	function clearTimers() {
 		for(var i = 0; i < timers.length; i++) clearTimeout(timers[i]);
 		timers = [];
+		if(popperTimer != null) {
+			clearInterval(popperTimer);
+			popperTimer = null;
+		}
+		popperShots = 0;
 	}
 	function pad3(n) { return ("00" + n).slice(-3); }
 	function pad6(n) { return ("00000" + n).slice(-6); }
@@ -62,7 +81,10 @@ var levelPass = (function() {
 		dialog.className = "lp-dialog";
 		dialog.innerHTML =
 			'<div class="lp-panel">' +
-				'<p class="lp-title">LEVEL <b class="lvl">001</b></p>' +
+				'<div class="lp-heading">' +
+					'<p class="lp-title">LEVEL COMPLETE</p>' +
+					'<p class="lp-level">LEVEL <b class="lvl">001</b></p>' +
+				'</div>' +
 				'<div class="lp-rows">' +
 					'<span class="lp-glyph lp-glyph-gold r-gold" role="img" aria-label="Gold"></span>' +
 					'<span class="lp-val r-gold v-gold">000</span>' +
@@ -137,6 +159,32 @@ var levelPass = (function() {
 		if(url) dialog.style.setProperty("--lp-atlas", 'url("' + url + '")');
 	}
 
+	function celebrate() {
+		if(typeof confetti === "undefined" || !confetti.burst) return;
+		var left = {}, right = {}, k;
+		for(k in POPPER_LEFT) left[k] = POPPER_LEFT[k];
+		for(k in POPPER_RIGHT) right[k] = POPPER_RIGHT[k];
+		left.origin = right.origin = dialog;
+		confetti.burst(left);
+		confetti.burst(right);
+	}
+
+	function startCelebrateLoop() {
+		popperShots = 0;
+		function shot() {
+			celebrate();
+			popperShots++;
+			if(popperShots >= POPPER_SHOTS && popperTimer != null) {
+				clearInterval(popperTimer);
+				popperTimer = null;
+			}
+		}
+		shot();
+		if(window.matchMedia &&
+		   window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+		popperTimer = setInterval(shot, POPPER_EVERY);
+	}
+
 	// One counter for all three rows. Simon had three near-identical copies of
 	// this (goldScoreCounting / guardScoreCounting / timeScoreCounting).
 	function countUp(show, el, from, to, hiScore, state, whenDone) {
@@ -188,6 +236,9 @@ var levelPass = (function() {
 
 		dialog.showModal();
 		document.dispatchEvent(new CustomEvent("menu-open"));
+
+		// Wait a frame so the dialog's box is laid out before we measure it.
+		later(startCelebrateLoop, 40);
 
 		later(function() {
 			countUp("show-gold", dialog.querySelector(".v-gold"), 0, opts.gold,

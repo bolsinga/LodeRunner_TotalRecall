@@ -17,13 +17,6 @@ var SIGNET_UNDER_Y = 30;
 // preload cover page
 //*********************
 var coverBitmap, titleBackground, remakeBitmap, signetBitmap;
-var pasteIconBitmap, pasteIconObj; // paste icon
-var infoObj;
-var checkBitmap;
-var nextBitmap;
-var openFolderBitmap; // for restore custom levels
-var nextMapBitmap, prevMapBitmap; // for restore custom levels
-var yesBitmap, noBitmap;
 var noCache = "?" + VERSION+ ".1051230";
 
 function showLoadingPage() 
@@ -74,7 +67,7 @@ function showLoadingPage()
 
 function createRunnerSpriteSheet(runnerImage)
 {
-	runnerData = new createjs.SpriteSheet({
+	runnerData = makeSpriteSheet({
 		images: [runnerImage],
 		
 		frames: { regX:0, height: BASE_TILE_Y,  regY:0, width: BASE_TILE_X},
@@ -115,7 +108,6 @@ var guardData = {}, redhatData = {};
 var holeData, holeObj = {};
 var textData;
 var textAtlas; //owned glyph atlas (lodeRunner.glyphFont.js) over the text image
-var countryFlagData;
 
 var soundFall, soundDig, soundPass, soundEnding;
 
@@ -181,7 +173,7 @@ function ensureThemeLoaded(themeName, callback)
 
 function preloadResource() 
 {
-	var runnerSprite = new createjs.Sprite(runnerData, "runRight");
+	var runnerSprite = new GameSprite(runnerData, "runRight");
 	var progress = new createjs.Shape(); 
 	var progressBorder = new createjs.Shape();
 	var percentTxt = new createjs.Text("0", (COVER_PROGRESS_BAR_H* tileScale) + "px Arial", "#FF0000");
@@ -192,25 +184,6 @@ function preloadResource()
 		{ src: "image/signet.png"+noCache,  id: "signet" },
 
 		{ src: "image/eraser.png"+noCache,  id: "eraser" },
-	
-		//editHelp is the editor's tile legend, still to be rebuilt as DOM; it is
-		//not preloaded because nothing draws it as a bitmap any more
-
-		{ src: "image/check.png"+noCache,   id: "check" }, //check icon for select menu
-		
-		{ src: "image/next.png"+noCache,    id: "next" },
-
-		{ src: "image/openFolder.png"+noCache,  id: "openFolder" }, //05/17/2021
-		{ src: "image/nextMap.png"+noCache,   id: "nextMap" }, //05/21/2021
-		{ src: "image/prevMap.png"+noCache,   id: "prevMap" }, //05/21/2021
-		
-		{ src: "image/yes.png"+noCache,     id: "yes" },
-		{ src: "image/no.png"+noCache,      id: "no" },
-
-
-		{ src: "image/paste.png"+noCache,id: "paste" }, //04/23/2021
-
-		{ src: "image/flags32.png"+noCache,     id: "flag" },
 	
 		{ src: "sound/goldFinish.ogg"+noCache,  id:"goldFinish"},
 		{ src: "sound/ending.ogg"+noCache,      id:"ending"},
@@ -372,29 +345,8 @@ function preloadResource()
 		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
 	}
 	
-	function createMenuBitmapIcon()
-	{
-		pasteIconBitmap = new createjs.Bitmap(preload.getResult("paste")); //04/23/2021
-		pasteIconObj = new pasteIconClass(screenX1, screenY1, tileScale, pasteIconBitmap);
-
-		infoObj = new infoMenuClass(mainStage, tileScale);
-
-		checkBitmap = new  createjs.Bitmap(preload.getResult("check"));
-		
-		nextBitmap = new createjs.Bitmap(preload.getResult("next"));
-		
-		openFolderBitmap = new createjs.Bitmap(preload.getResult("openFolder")); // for restore custom levels
-		nextMapBitmap = new createjs.Bitmap(preload.getResult("nextMap")); // for restore custom levels
-		prevMapBitmap = new createjs.Bitmap(preload.getResult("prevMap"));
-		
-		yesBitmap = new createjs.Bitmap(preload.getResult("yes"));
-		noBitmap = new createjs.Bitmap(preload.getResult("no"));
-		
-	}
-
 	function preloadComplet()
 	{
-		createMenuBitmapIcon();
 		getFirstPlayInfo();
 		createjs.Ticker.removeEventListener("tick", mainStage); //remove ticker of cover page
 		waitIdleDemo(4000); //wait user key or show demo level
@@ -463,7 +415,6 @@ function createSpriteSheet()
 {
 	createRunnerSpriteSheet(getThemeBitmap("runner").image);
 	createPreloadSpriteSheet();
-	createFlagSpriteSheet();
 }
 
 function createPreloadSpriteSheet() 
@@ -471,7 +422,7 @@ function createPreloadSpriteSheet()
 	guardData = createGuardObj("guard");
 	redhatData = createGuardObj("redhat");
 		
-	holeData = new createjs.SpriteSheet( {
+	holeData = makeSpriteSheet( {
 		images: [getThemeBitmap("hole").image],
 		
 		frames: [
@@ -518,7 +469,7 @@ function createPreloadSpriteSheet()
 		}
 	});
 	
-	textData = new createjs.SpriteSheet({
+	textData = makeSpriteSheet({
 		images: [getThemeBitmap("text").image],
 		
 		frames: {regX:0, height: BASE_TILE_Y,  regY: 0, width: BASE_TILE_X},
@@ -551,7 +502,7 @@ function createPreloadSpriteSheet()
 
 function createGuardObj(imageName)
 {
-	var guard = new createjs.SpriteSheet(
+	var guard = makeSpriteSheet(
 	{
 		images: [getThemeBitmap(imageName).image],
 		
@@ -605,7 +556,7 @@ function createGuardObj(imageName)
 	
 function createHoleObj()
 {
-	holeObj.sprite = new createjs.Sprite(holeData, "digHoleLeft");
+	holeObj.sprite = new GameSprite(holeData, "digHoleLeft");
 	
 	if(curAiVersion < 3) {
 		holeObj.digLimit = 6; //for check guard is close to runner when digging
@@ -614,16 +565,4 @@ function createHoleObj()
 	}
 	
 	holeObj.action = ACT_STOP; //no digging 
-}
-
-//=======================================
-// country flag for demo info 5/14/2015
-//=======================================
-function createFlagSpriteSheet()
-{
-	countryFlagData = new createjs.SpriteSheet({
-		images: [preload.getResult("flag")],
-		frames: {regX:0, height: 32,  regY: 0, width: 32},
-		animations: countryId
-	});
 }
