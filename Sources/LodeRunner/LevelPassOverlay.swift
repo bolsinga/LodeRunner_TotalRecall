@@ -46,7 +46,7 @@ public struct LevelPassOverlay: View {
                 maxRadius: maxRadius,
                 closeDurationSeconds: closeDurationSeconds
             )
-            PassScreenMask(radius: radius, width: boardWidth, height: boardHeight)
+            CircularWipeMask(radius: radius, width: boardWidth, height: boardHeight)
         }
     }
 
@@ -77,35 +77,6 @@ public struct LevelPassOverlay: View {
     }
 }
 
-/// The rect-minus-circle Canvas drawing shared by `LevelPassOverlay.body` and
-/// its preview. Extracted so the preview can render a static mid-wipe frame at
-/// a pinned radius — `TimelineView`-driven elapsed time is nondeterministic
-/// across `RenderPreview` snapshots.
-private struct PassScreenMask: View {
-    let radius: Double
-    let width: CGFloat
-    let height: CGFloat
-
-    var body: some View {
-        Canvas { ctx, size in
-            var path = Path(CGRect(origin: .zero, size: size))
-            if radius > 0 {
-                let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                path.addEllipse(
-                    in: CGRect(
-                        x: center.x - radius,
-                        y: center.y - radius,
-                        width: radius * 2,
-                        height: radius * 2
-                    )
-                )
-            }
-            ctx.fill(path, with: .color(.black), style: FillStyle(eoFill: true))
-        }
-        .frame(width: width, height: height)
-    }
-}
-
 // MARK: - Preview
 
 /// Static mid-wipe snapshot using a pinned radius — bypasses `TimelineView`'s
@@ -121,7 +92,7 @@ private struct LevelPassMidWipePreview: View {
             ZStack(alignment: .topLeading) {
                 Rectangle().fill(Color.orange.opacity(0.3))
                     .frame(width: boardW, height: boardH)
-                PassScreenMask(radius: maxR * 0.6, width: boardW, height: boardH)
+                CircularWipeMask(radius: maxR * 0.6, width: boardW, height: boardH)
             }
         }
         .border(Color.gray)
