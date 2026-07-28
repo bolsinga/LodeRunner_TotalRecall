@@ -15,6 +15,8 @@ import SwiftUI
 public struct GameView: View {
     @State private var driver: GameSessionDriver
     @State private var keyboard = KeyboardInput()
+    @State private var sound = SoundPlayer()
+    @Environment(\.tileTheme) private var theme
 
     public init(session: GameSession) {
         _driver = State(initialValue: GameSessionDriver(session: session))
@@ -60,8 +62,11 @@ public struct GameView: View {
         .keyboardInput(keyboard)
         .task {
             driver.input = keyboard
+            sound.theme = theme
+            driver.soundHandler = { [sound] effect in sound.play(effect) }
             await driver.run()
         }
+        .onChange(of: theme) { _, newValue in sound.theme = newValue }
     }
 
     @ViewBuilder
