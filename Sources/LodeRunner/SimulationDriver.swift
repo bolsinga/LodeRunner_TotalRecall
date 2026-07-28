@@ -20,11 +20,16 @@ public final class SimulationDriver {
     public private(set) var runnerAppearance: RunnerAppearance
     public private(set) var guardAppearances: [GuardAppearance]
 
-    /// The action to apply on the next tick. In real gameplay this will be
-    /// updated from keyboard/gamepad input, mirroring the JS's `keyRunnerAction`
-    /// global (`lodeRunner.key.js`); for previews and tests, callers set it
-    /// directly.
+    /// The action applied on each tick when no `input` source is attached.
+    /// Callers can also write to this directly (previews with canned action
+    /// sequences, deterministic tests); when `input` is non-nil, `tick()`
+    /// overwrites this from `input.currentAction` before advancing the sim.
     public var currentAction: RunnerAction = .stop
+
+    /// Optional live input source (`KeyboardInput`, later a gamepad/touch
+    /// variant). Polled once per `tick()` — the Swift equivalent of the JS's
+    /// `processInputKeyState` read in `lodeRunner.main.js:907`.
+    public var input: (any RunnerInput)?
 
     /// 30 Hz to match the JS default (`lodeRunner.preload.js:242`).
     public let tickPeriod: Duration = .microseconds(1_000_000 / 30)
@@ -33,12 +38,14 @@ public final class SimulationDriver {
 
     public init(
         simulation: RunnerSimulation,
-        runnerAppearance: RunnerAppearance = RunnerAppearance()
+        runnerAppearance: RunnerAppearance = RunnerAppearance(),
+        input: (any RunnerInput)? = nil
     ) {
         self.simulation = simulation
         self.runnerAppearance = runnerAppearance
         self.guardAppearances = Array(
             repeating: GuardAppearance(), count: simulation.guards.count)
+        self.input = input
     }
 
     /// Runs the tick loop until the enclosing task is cancelled. Attach via
@@ -57,6 +64,9 @@ public final class SimulationDriver {
     /// One tick — advance sim, then refresh appearances. Exposed so callers
     /// can step the sim deterministically in tests without the async loop.
     public func tick() {
+        if let input {
+            currentAction = input.currentAction
+        }
         simulation.tick(currentAction)
         let runner = simulation.runner
         let runnerBase = simulation.slots[runner.position.x][runner.position.y].base
@@ -97,6 +107,7 @@ private func walkingPreviewSimulation() throws -> RunnerSimulation {
 
 private struct WalkingRunnerPreview: View {
     @State private var driver: SimulationDriver
+    @State private var keyboard = KeyboardInput()
 
     init() {
         // The preview level always contains a runner spawn — safe to unwrap.
@@ -122,8 +133,9 @@ private struct WalkingRunnerPreview: View {
         }
         .background(Color.gray.opacity(0.2))
         .border(Color.gray)
+        .keyboardInput(keyboard)
         .task {
-            driver.currentAction = .right
+            driver.input = keyboard
             await driver.run()
         }
     }
