@@ -11,15 +11,15 @@ const path = require("node:path");
 const { ROOT } = require("./helpers/loadScripts.js");
 
 describe("colorTheme Stage peel (characterization)", () => {
-	it("colorTheme.js has no Stage / cache; still returns createjs.Bitmap", () => {
+	it("colorTheme.js is createjs-free; returns CanvasBitmap", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.colorTheme.js"), "utf8");
-		assert.doesNotMatch(text, /createjs\.Stage/);
+		assert.doesNotMatch(text, /createjs\./);
 		assert.doesNotMatch(text, /\.cache\s*\(/);
 		assert.doesNotMatch(text, /\.uncache\s*\(/);
 		assert.match(text, /willReadFrequently/);
 		assert.match(text, /getImageData/);
 		assert.match(text, /putImageData/);
-		assert.match(text, /createjs\.Bitmap/);
+		assert.match(text, /CanvasBitmap/);
 		assert.match(text, /function getThemeBitmapImage/);
 	});
 });

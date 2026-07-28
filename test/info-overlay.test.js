@@ -33,10 +33,16 @@ describe("version info metadata (characterization)", () => {
 		assert.match(text, /pointermove/);
 	});
 
-	it("call sites use startEditInput / stopEditInput", () => {
-		for (const file of ["lodeRunner.themeScreen.js", "lodeRunner.colorTheme.js", "lodeRunner.edit.js"]) {
-			const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-			assert.doesNotMatch(text, /startEditTicker|stopEditTicker/);
-		}
+	it("editor Load defaults to Custom Levels (browseOnly)", () => {
+		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.edit.js"), "utf8");
+		assert.match(text, /function openLevelPicker[\s\S]*startPlayData:\s*PLAY_DATA_USERDEF/);
+		assert.match(text, /function openLevelPicker[\s\S]*browseOnly:\s*true/);
+	});
+
+	it("level-select grid CSS does not flex-collapse inside max-height dialog", () => {
+		const css = fs.readFileSync(path.join(ROOT, "lodeRunner.levelSelect.css"), "utf8");
+		// Regression: flex:1 + min-height:0 with dialog max-height-only clipped all cells.
+		assert.doesNotMatch(css, /\.lv-grid\s*\{[^}]*min-height:\s*0/);
+		assert.match(css, /\.lv-grid\s*\{[^}]*max-height:\s*calc/);
 	});
 });

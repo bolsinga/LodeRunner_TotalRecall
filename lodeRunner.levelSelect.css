@@ -107,14 +107,16 @@ dialog.lv-dialog::backdrop {
 .lv-close:hover { color: var(--ls-brick); }
 .lv-close:focus-visible { outline: 2px solid var(--ls-cyan); outline-offset: 2px; }
 
-/* the grid scrolls natively -- this is what replaces the hand-rolled slider */
+/* the grid scrolls natively -- this is what replaces the hand-rolled slider.
+   Do NOT use flex:1 + min-height:0 here: the dialog only has max-height (no
+   height), so that pattern collapses the grid to padding and clips all cells. */
 .lv-grid {
-	flex: 1 1 auto; min-height: 0;
 	overflow-y: auto; scrollbar-width: thin;
 	display: grid; gap: 12px;
 	grid-template-columns: repeat(4, 1fr);
 	padding: 16px 18px 18px;
 	background: var(--ls-ground);
+	max-height: calc(88dvh - 3.5rem); /* leave room for .lv-head */
 }
 
 .lv-empty {

@@ -1,9 +1,22 @@
 var inputNameState = 0;
 
+// Active in-game name-entry session abort. inputString / inputPlayerName install
+// this; showCoverPage / startGame / re-entry call abortActiveNameInput() so the
+// blink clock listener cannot leak across mode changes.
+var cancelActiveNameInput = null;
+
+function abortActiveNameInput()
+{
+	if(!cancelActiveNameInput) return;
+	var fn = cancelActiveNameInput;
+	cancelActiveNameInput = null;
+	fn();
+}
+
 //=============================================================================
 // Owned score surface: a z-ordered list of CanvasObjects painted onto the game
 // canvas, replacing the CreateJS score Stage. No CreateJS Stage/Sprite/Shape;
-// the blink cursor still rides the CreateJS Ticker.
+// blink cursors ride the owned game clock (lodeRunner.clock.js).
 //=============================================================================
 function ScoreSurface()
 {
@@ -146,7 +159,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 	
 	function removeScoreScreen()
 	{
-		if(scoreTicker) { createjs.Ticker.removeEventListener("tick", scoreTicker); scoreTicker = null; }
+		if(scoreTicker) { removeClockListener(scoreTicker); scoreTicker = null; }
 		surface.clear();
 		//repaint the world underneath the (now empty) score surface
 		stagePresent();
@@ -250,8 +263,9 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 			//copyPlayerName();
 			redrawName();
 			changeKeyDownHandler();
-			//tick-driven cursor blink + repaint (same Ticker cadence as before)
-			scoreTicker = createjs.Ticker.addEventListener("tick", scoreTick);
+			//tick-driven cursor blink + repaint (same owned-clock cadence as play)
+			scoreTicker = scoreTick;
+			addClockListener(scoreTick);
 		}
 
 		function scoreTick()
@@ -290,7 +304,7 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 
 			//remove cursor + stop the blink ticker; freeze final frame
 			surface.remove(cursor);
-			if(scoreTicker) { createjs.Ticker.removeEventListener("tick", scoreTicker); scoreTicker = null; }
+			if(scoreTicker) { removeClockListener(scoreTicker); scoreTicker = null; }
 			surface.present();
 
 			setTimeout( function() { closeScoreTable(); }, 1500);
@@ -447,15 +461,27 @@ function inputPlayerName(_stage, _callbackFun)
 	x = inputStartX*tileWScale; y = inputStartY*tileHScale;
 	inputString(_stage, maxInputSize, x, y, playerName, inputComplete);
 
-	function inputComplete(string)
-	{
-		setPlayerName(string);
-		playerName = string;
+	// Wrap the inputString abort so board chrome leaves with the blink ticker.
+	var stringCancel = cancelActiveNameInput;
+	cancelActiveNameInput = function() {
+		if(stringCancel) stringCancel();
+		removeNameBoard();
+	};
 
+	function removeNameBoard()
+	{
 		canvasOverlay.remove(constObj);
 		canvasOverlay.remove(textBackground);
 		canvasOverlay.remove(textBorder);
 		canvasOverlay.remove(background);
+	}
+
+	function inputComplete(string)
+	{
+		setPlayerName(string);
+		playerName = string;
+		cancelActiveNameInput = null;
+		removeNameBoard();
 		stagePresent();
 		_callbackFun();
 	}
@@ -488,7 +514,10 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 	var curPos = 0;
 	var savedKeyDownHander, hiScoreTicker;
 	var cursor;
+	var finished = 0;
 
+	// One active session only — drop any stranded prior listener first.
+	abortActiveNameInput();
 	initInput();
 		
 	function initInput()
@@ -508,14 +537,16 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 
 		drawString();
 		changeKeyDownHandler();
-		//tick-driven cursor blink + overlay repaint (same Ticker cadence as the score screen)
-		hiScoreTicker = createjs.Ticker.addEventListener("tick", inputTick);
+		//tick-driven cursor blink; overlay-only paint so we never double-advance Stage sprites
+		hiScoreTicker = inputTick;
+		addClockListener(inputTick);
+		cancelActiveNameInput = abortInput;
 	}
 
 	function inputTick()
 	{
 		cursor.advance();
-		stagePresent();
+		overlayPresent();
 	}
 
 	function drawString()
@@ -527,10 +558,10 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 		//change cursor position
 		cursor.x = _startX + curPos * tileWScale;
 
-		//keep cursor on top, then repaint the overlay
+		//keep cursor on top, then repaint the overlay (world underneath is static)
 		canvasOverlay.remove(cursor);
 		canvasOverlay.add(cursor);
-		stagePresent();
+		overlayPresent();
 	}
 
 	function clearStringObj()
@@ -548,8 +579,29 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 	function restoreKeyDownHandler()
 	{
 		setKeyHandler(savedKeyDownHander);
-	}	
+	}
 
+	function stopBlink()
+	{
+		if(hiScoreTicker) {
+			removeClockListener(hiScoreTicker);
+			hiScoreTicker = null;
+		}
+	}
+
+	// Teardown without invoking the success callback (cover / re-entry / startGame).
+	function abortInput()
+	{
+		if(finished) return;
+		finished = 1;
+		stopBlink();
+		restoreKeyDownHandler();
+		clearStringObj();
+		if(cursor) canvasOverlay.remove(cursor);
+		inputNameState = 0;
+		if(cancelActiveNameInput === abortInput) cancelActiveNameInput = null;
+	}
+	
 	function nextChar(charValue, nextMode)
 	{
 		if(typeof(charValue) == "undefined") charValue = " ";
@@ -632,6 +684,10 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 	
 	function inputFinish()
 	{
+		if(finished) return;
+		finished = 1;
+		cancelActiveNameInput = null;
+
 		//cut tail space
 		for(var i = inputText.length-1; i >= 0; i--) {
 			if(inputText[i] == " ") inputText.splice(i,1);
@@ -639,12 +695,10 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 		}
 		
 		restoreKeyDownHandler();
-
-		//stop blink + remove cursor
-		if(hiScoreTicker) { createjs.Ticker.removeEventListener("tick", inputTick); hiScoreTicker = null; }
+		stopBlink();
 		clearStringObj();
 		canvasOverlay.remove(cursor);
-		stagePresent();
+		overlayPresent();
 
 		_callbackFun(inputText.join(""));
 

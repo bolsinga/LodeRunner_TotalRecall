@@ -86,11 +86,11 @@ function showTipsMsg(_tipsTxt, _stage, _scale, _tipsTxt1)
 }
 
 //==========================================
-// move z-index to top for a child of stage
+// move z-index to top (worldDisplay actor)
 //==========================================
-function moveChild2Top(stage, obj)
+function moveChild2Top(obj)
 {
-	stage.setChildIndex(obj, stage.getNumChildren() - 1);
+	if(obj) worldDisplay.moveToTop(obj);
 }
 
 //==========================

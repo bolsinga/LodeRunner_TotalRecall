@@ -204,7 +204,7 @@ function setSpeed(v)
 	speed += v;
 	if(speed < 0) speed = 0;
 	if(speed >= speedMode.length) speed = speedMode.length-1;
-	createjs.Ticker.setFPS(speedMode[speed]);
+	setClockFps(speedMode[speed]);
 	showTipsText(speedText[speed], 1500);
 }
 

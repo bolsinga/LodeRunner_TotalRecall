@@ -123,9 +123,9 @@ function createBitmap(imageName, oldColor, newColor)
 	var tintedCanvas;
 
 	if (newColor != null && (tintedCanvas = changeImageColor(img, oldColor, newColor)) != null)
-		return new createjs.Bitmap(tintedCanvas); //color changed
+		return new CanvasBitmap(tintedCanvas); //color changed
 	else
-		return new createjs.Bitmap(img);
+		return new CanvasBitmap(img);
 }
 
 //tint matching pixels on a copy of img; returns canvas or null if unchanged

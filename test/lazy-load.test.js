@@ -11,9 +11,10 @@ const path = require("node:path");
 const { ROOT } = require("./helpers/loadScripts.js");
 
 describe("lazy pack wiring (characterization)", () => {
-	it("HTML critical path includes classic + CreateJS, not wData or non-classic packs", () => {
+	it("HTML critical path includes classic + owned clock, not wData or non-classic packs", () => {
 		const html = fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8");
-		assert.match(html, /easeljs/);
+		assert.doesNotMatch(html, /easeljs/);
+		assert.match(html, /lodeRunner\.clock\.js/);
 		assert.match(html, /lodeRunner\.v\.classic\.js/);
 		assert.match(html, /lodeRunner\.lazyLoad\.js/);
 		assert.doesNotMatch(html, /lodeRunner\.wData\.js/);

@@ -68,9 +68,9 @@ function rebuildMap()
 				curTile = getThemeBitmap("gold");
 				break;
 			}
-			mainStage.removeChild(map[x][y].bitmap); //remove old
+			worldDisplay.remove(map[x][y].bitmap); //remove old
 			curTile.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale); //x,y, scaleX, scaleY
-			mainStage.addChild(curTile);  //add new
+			worldDisplay.add(curTile);  //add new
 			map[x][y].bitmap = curTile;   //replace bitmap
 		}
 	}
@@ -79,7 +79,7 @@ function rebuildMap()
 function clearGround()
 {
 	for (var i = 0; i < groundTile.length; i++)
-		mainStage.removeChild(groundTile[i]);
+		worldDisplay.remove(groundTile[i]);
 }
 
 function clearInfo()
@@ -87,28 +87,28 @@ function clearInfo()
 	var i;
 
 	if(playMode == PLAY_CLASSIC || playMode == PLAY_AUTO || playMode == PLAY_DEMO) {
-		for(i = 0; i < scoreTxt.length; i++) mainStage.removeChild(scoreTxt[i]);
-		for(i = 0; i < scoreTile.length; i++) mainStage.removeChild(scoreTile[i]);
+		for(i = 0; i < scoreTxt.length; i++) worldDisplay.remove(scoreTxt[i]);
+		for(i = 0; i < scoreTile.length; i++) worldDisplay.remove(scoreTile[i]);
 
 		if(playMode == PLAY_DEMO) {
-			for(i = 0; i < demoTxt.length; i++) mainStage.removeChild(demoTxt[i]);
+			for(i = 0; i < demoTxt.length; i++) worldDisplay.remove(demoTxt[i]);
 		} else {
-			for(i = 0; i < lifeTxt.length; i++) mainStage.removeChild(lifeTxt[i]);
-			for(i = 0; i < lifeTile.length; i++) mainStage.removeChild(lifeTile[i]);
+			for(i = 0; i < lifeTxt.length; i++) worldDisplay.remove(lifeTxt[i]);
+			for(i = 0; i < lifeTile.length; i++) worldDisplay.remove(lifeTile[i]);
 		}
 	} else { //PLAY_MODERN, PLAY_DEMO_ONCE
-		for(i = 0; i < goldTxt.length; i++) mainStage.removeChild(goldTxt[i]);
-		for(i = 0; i < goldTile.length; i++) mainStage.removeChild(goldTile[i]);
+		for(i = 0; i < goldTxt.length; i++) worldDisplay.remove(goldTxt[i]);
+		for(i = 0; i < goldTile.length; i++) worldDisplay.remove(goldTile[i]);
 
-		for(i = 0; i < guardTxt.length; i++) mainStage.removeChild(guardTxt[i]);
-		for(i = 0; i < guardTile.length; i++) mainStage.removeChild(guardTile[i]);
+		for(i = 0; i < guardTxt.length; i++) worldDisplay.remove(guardTxt[i]);
+		for(i = 0; i < guardTile.length; i++) worldDisplay.remove(guardTile[i]);
 
-		for(i = 0; i < timeTxt.length; i++) mainStage.removeChild(timeTxt[i]);
-		for(i = 0; i < timeTile.length; i++) mainStage.removeChild(timeTile[i]);
+		for(i = 0; i < timeTxt.length; i++) worldDisplay.remove(timeTxt[i]);
+		for(i = 0; i < timeTile.length; i++) worldDisplay.remove(timeTile[i]);
 	}
 	
-	for(i = 0; i < levelTxt.length; i++) mainStage.removeChild(levelTxt[i]);
-	for(i = 0; i < levelTile.length; i++) mainStage.removeChild(levelTile[i]);	
+	for(i = 0; i < levelTxt.length; i++) worldDisplay.remove(levelTxt[i]);
+	for(i = 0; i < levelTile.length; i++) worldDisplay.remove(levelTile[i]);	
 }
 
 //======================================

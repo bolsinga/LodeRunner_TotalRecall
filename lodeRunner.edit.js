@@ -60,7 +60,7 @@ function startEditMode()
 	disableAutoDemoTimer();
 	clearIdleDemoTimer();
 	stopPlayTicker();
-	mainStage.removeAllChildren();
+	worldDisplay.clear();
 	canvasOverlay.clear();
 	setKeyHandler(editHandleKeyDown);
 	focusGame();
@@ -564,18 +564,14 @@ function drawLoadButton()
 		gameResume();
 	}
 
-	// Simon's Load was: version menuDialog, then level select for that pack.
-	// The DOM level selector already picks version at the top, so Load opens it
-	// directly (browseOnly: switching packs must not call setVersion / eject edit).
+	// Editor Load always opens on Custom Levels. Shipped packs stay one
+	// dropdown click away; defaulting to Classic while the banner says
+	// "Custom Levels / Edit Mode" is the wrong first impression.
 	function openLevelPicker()
 	{
-		var startVer = (testLevelInfo.fromPlayData > 0) ? testLevelInfo.fromPlayData
-		             : (playVersionInfo[0] ? playVersionInfo[0].id : playData);
-		var startLv  = (testLevelInfo.fromLevel > 0) ? testLevelInfo.fromLevel : 1;
-
 		levelSelect.open({
-			current: startLv,
-			startPlayData: startVer,
+			current: 1,
+			startPlayData: PLAY_DATA_USERDEF,
 			browseOnly: true,
 			onPick: function(level, versionId) {
 				ensurePlayVersionLoaded(versionId, function() {

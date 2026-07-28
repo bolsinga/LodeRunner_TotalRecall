@@ -118,7 +118,7 @@ var gameSettings = {
 		idx = Math.max(0, Math.min(speedMode.length - 1, idx | 0));
 		if(idx === speed) return;
 		speed = idx;
-		createjs.Ticker.setFPS(speedMode[speed]);
+		setClockFps(speedMode[speed]);
 		this._notify("speed", speed);
 	},
 

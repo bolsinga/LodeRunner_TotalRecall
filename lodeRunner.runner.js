@@ -338,7 +338,7 @@ function decGold()
 function removeGold(x,y)
 {
 	map[x][y].base = EMPTY_T;
-	mainStage.removeChild(map[x][y].bitmap);
+	worldDisplay.remove(map[x][y].bitmap);
 	map[x][y].bitmap = null;
 }
 
@@ -349,7 +349,7 @@ function addGold(x, y)
 	map[x][y].base = GOLD_T;
 	tile = map[x][y].bitmap = getThemeBitmap("gold");
 	tile.setTransform(x * tileWScale, y * tileHScale,tileScale, tileScale); //x,y, scaleX, scaleY 
-	mainStage.addChild(tile); 
+	worldDisplay.add(tile); 
 	
 	moveSprite2Top(); //reset runner, guard & fill hole object order
 }
@@ -515,7 +515,7 @@ function digHole(action)
 		holeObj.curFrameIdx = 0;
 	}
 
-	mainStage.addChild(holeObj.sprite);
+	worldDisplay.add(holeObj.sprite);
 }
 
 var DEBUG_DIG=0;
@@ -568,7 +568,7 @@ function stopDigging(x,y)
 	//(1) remove holeObj
 	holeObj.sprite.removeAllEventListeners ("animationend");
 	holeObj.action = ACT_STOP; //no digging
-	mainStage.removeChild(holeObj.sprite); 
+	worldDisplay.remove(holeObj.sprite); 
 
 	//(2) fill hole
 	y++;
@@ -601,7 +601,7 @@ function digComplete()
 	map[x][y].act = EMPTY_T;
 	holeObj.sprite.removeAllEventListeners ("animationend");
 	holeObj.action = ACT_STOP; //no digging
-	mainStage.removeChild(holeObj.sprite); 
+	worldDisplay.remove(holeObj.sprite); 
 	
 	if(DEBUG_TIME) loadingTxt.text = "DigTime = " + (recordCount - digTimeStart);
 	
@@ -624,7 +624,7 @@ function fillHole(x, y)
 		fillSprite.curFrameTime =  -1;
 		fillSprite.gotoAndStop(fillHoleFrame[0]);
 	}
-	mainStage.addChild(fillSprite); 
+	worldDisplay.add(fillSprite); 
 	fillHoleObj.push(fillSprite);
 	
 	fillHoleTimeStart = recordCount; //for debug
@@ -633,7 +633,7 @@ function fillHole(x, y)
 function moveFillHoleObj2Top()
 {
 	for(var i = 0; i < fillHoleObj.length; i++) {
-		moveChild2Top(mainStage, fillHoleObj[i]);
+		moveChild2Top(fillHoleObj[i]);
 	}
 }
 
@@ -649,7 +649,7 @@ function fillComplete(evt, data)
 
 	map[x][y].bitmap.set({alpha:1}); //display block
 	fillObj.removeAllEventListeners ("animationend");
-	mainStage.removeChild(fillObj);
+	worldDisplay.remove(fillObj);
 	removeFillHoleObj(fillObj);
 	
 	switch(map[x][y].act) {

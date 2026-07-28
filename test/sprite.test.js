@@ -24,15 +24,12 @@ describe("sprite migration (characterization)", () => {
 		}
 	});
 
-	it("sprite.js is wired into both HTML shells", () => {
-		assert.match(
-			fs.readFileSync(path.join(ROOT, "lodeRunner.sprite.js"), "utf8"),
-			/function makeSpriteSheet/
-		);
-		assert.match(
-			fs.readFileSync(path.join(ROOT, "lodeRunner.sprite.js"), "utf8"),
-			/function GameSprite/
-		);
+	it("sprite.js is createjs-free CanvasObject and wired into both HTML shells", () => {
+		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.sprite.js"), "utf8");
+		assert.match(text, /function makeSpriteSheet/);
+		assert.match(text, /function GameSprite/);
+		assert.match(text, /CanvasObject\.call/);
+		assert.doesNotMatch(text, /createjs\./);
 		for (const shell of ["lodeRunner.html", "test/golden-browser.html"]) {
 			const html = fs.readFileSync(path.join(ROOT, shell), "utf8");
 			assert.match(html, /src="lodeRunner\.sprite\.js"/, shell);
@@ -41,30 +38,7 @@ describe("sprite migration (characterization)", () => {
 });
 
 describe("makeSpriteSheet / GameSprite (behavior)", () => {
-	// EaselJS DisplayObject builds a 1x1 hit-test canvas at load time.
-	function stubCanvas() {
-		return {
-			width: 1,
-			height: 1,
-			getContext: function () {
-				return {
-					setTransform: function () {},
-					clearRect: function () {},
-					drawImage: function () {},
-					getImageData: function () {
-						return { data: [0, 0, 0, 0] };
-					}
-				};
-			}
-		};
-	}
-	const ctx = loadScripts(
-		["lib/easeljs-0.7.1.min.js", "lodeRunner.sprite.js"],
-		{
-			document: { createElement: function (tag) { return tag === "canvas" ? stubCanvas() : {}; } },
-			performance: { now: function () { return Date.now(); } }
-		}
-	);
+	const ctx = loadScripts(["lodeRunner.canvasObj.js", "lodeRunner.sprite.js"]);
 
 	it("parses range + object animations like CreateJS 0.7.1", () => {
 		const img = { width: 120, height: 44 }; // 3 frames of 40x44

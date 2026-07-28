@@ -157,33 +157,41 @@ function canvasReSize()
 
 function createStage() 
 {
-	mainStage = new createjs.Stage(canvas);
+	// Stage removed: mainStage is a thin stub for callers that still read .canvas
+	// (tips, name entry). All painting goes through worldDisplay + canvasOverlay.
+	mainStage = { canvas: canvas };
 
-	loadingTxt = new createjs.Text(" ", "36px Arial", "#FF0000");
+	loadingTxt = new CanvasText(" ", "36px Arial", "#FF0000");
 	loadingTxt.x = (canvas.width - loadingTxt.getBounds().width) / 2 | 0;
 	loadingTxt.y = (canvas.height - loadingTxt.getBounds().height) / 2 | 0;
-	mainStage.addChild(loadingTxt);
+	worldDisplay.add(loadingTxt);
 	stagePresent();
 }
 
 //==========================================================================
-// single frame-present seam: stage repaint + owned overlay pass.
-// All repaints go through here so owned CanvasObjects (lodeRunner.canvasObj)
-// always paint on top of the stage; later the stage update inside becomes
-// the owned render loop and callers do not change.
+// single frame-present seam: clear + world + overlay.
 //==========================================================================
 function stagePresent()
 {
-	mainStage.update();
-	canvasOverlay.paint(canvas.getContext("2d"));
+	var ctx = canvas.getContext("2d");
+	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	ctx.globalAlpha = 1;
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	worldDisplay.paint(ctx);
+	canvasOverlay.paint(ctx);
+}
+
+// Name-entry blink: same present (no Stage tick path remains).
+function overlayPresent()
+{
+	stagePresent();
 }
 
 function setBackground()
 {
-	//set background color
-	var background = new createjs.Shape();
-	background.graphics.beginFill("#000000").drawRect(0, 0, canvas.width, canvas.height);
-	mainStage.addChild(background);
+	var background = new CanvasShape();
+	background.fillRect("#000000", 0, 0, canvas.width, canvas.height);
+	worldDisplay.add(background);
 	document.body.style.background = backgroundColor;
 }
 
@@ -195,15 +203,16 @@ function showCoverPage()
 		clearIdleDemoTimer();
 		return;
 	}
+	abortActiveNameInput();
 	document.body.style.background = backgroundColor;
 	menuIconDisable(1);
 	clearIdleDemoTimer();
-	mainStage.removeAllChildren();
-	canvasOverlay.clear(); //owned overlay follows the world teardown
-	mainStage.addChild(titleBackground); //colorful background
-	mainStage.addChild(coverBitmap);
-	mainStage.addChild(signetBitmap);
-	mainStage.addChild(remakeBitmap);
+	worldDisplay.clear();
+	canvasOverlay.clear();
+	worldDisplay.add(titleBackground);
+	worldDisplay.add(coverBitmap);
+	worldDisplay.add(signetBitmap);
+	worldDisplay.add(remakeBitmap);
 	stagePresent();
 	waitIdleDemo(3000);
 }
@@ -267,9 +276,7 @@ function stageClickHandler(evt) { stopDemoAndPlay(); }
 function enableStageClickEvent()
 {
 	disableStageClickEvent();
-
-	//createjs.Touch.enable(mainStage);
-	mainStage.addEventListener("click", stageClickHandler);
+	canvas.addEventListener("click", stageClickHandler);
 	stageClickListenerEnabled = true;
 }
 
@@ -277,9 +284,8 @@ function disableStageClickEvent()
 {
 	var rc = 0;
 
-	if(stageClickListenerEnabled) { rc = 1; mainStage.removeEventListener("click", stageClickHandler); }
+	if(stageClickListenerEnabled) { rc = 1; canvas.removeEventListener("click", stageClickHandler); }
 	stageClickListenerEnabled = false;
-	//createjs.Touch.disable(mainStage);
 
 	return rc;
 }
@@ -397,20 +403,19 @@ var changingLevel = 0;
 function startPlayTicker()
 {
 	stopPlayTicker();
-	//createjs.Ticker.timingMode = createjs.Ticker.RAF;
 	if(playMode == PLAY_AUTO || playMode == PLAY_DEMO || playMode == PLAY_DEMO_ONCE) {
-		createjs.Ticker.setFPS(demoSpeed); //06/12/2014
+		setClockFps(demoSpeed); //06/12/2014
 	} else {
-		createjs.Ticker.setFPS(speedMode[speed]);
+		setClockFps(speedMode[speed]);
 	}
-	createjs.Ticker.addEventListener("tick", mainTick);
 	gameTicker = mainTick;
+	addClockListener(gameTicker);
 }
 
 function stopPlayTicker()
 {
 	if(gameTicker) {
-		createjs.Ticker.removeEventListener("tick", gameTicker);
+		removeClockListener(gameTicker);
 		gameTicker = null;
 	}
 }
@@ -418,6 +423,7 @@ function stopPlayTicker()
 function startGame(noCycle)
 {
 	var levelMap;
+	abortActiveNameInput();
 	gameState = GAME_WAITING;
 	startPlayTicker();
 	changingLevel = 1;
@@ -574,7 +580,7 @@ function buildLevelMap(levelMap)
 				break;	
 			}
 			curTile.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale); //x,y, scaleX, scaleY 
-			mainStage.addChild(curTile); 
+			worldDisplay.add(curTile);
 		}
 	}
 	moveSprite2Top();
@@ -584,29 +590,29 @@ function moveSprite2Top()
 {
 	//move guard to top (z index)
 	for(var i = 0; i < guardCount; i++) {
-		moveChild2Top(mainStage, guard[i].sprite); 
+		worldDisplay.moveToTop(guard[i].sprite); 
 	}
 	
 	if(runner == null) {
 		error("Without runner ???");
 	} else {
 		//move runner to top (z index)
-		moveChild2Top(mainStage, runner.sprite); 
+		worldDisplay.moveToTop(runner.sprite); 
 	}
 	
 	//move fill hole object to top
 	moveFillHoleObj2Top();
 	
 	//move debug text to top
-	moveChild2Top(mainStage, loadingTxt); //for debug
+	worldDisplay.moveToTop(loadingTxt); //for debug
 
 	// move on-board banners to top: rebuildMap re-adds every tile and addChild
 	// appends, so a banner up during a rebuild ends up buried. Rect before text.
 	// Null until the first banner, and a recolor can happen before that.
-	if(tipsRect  != null) moveChild2Top(mainStage, tipsRect);
-	if(tipsText  != null) moveChild2Top(mainStage, tipsText);
-	if(tipsRect1 != null) moveChild2Top(mainStage, tipsRect1);
-	if(tipsText1 != null) moveChild2Top(mainStage, tipsText1);
+	if(tipsRect  != null) worldDisplay.moveToTop(tipsRect);
+	if(tipsText  != null) worldDisplay.moveToTop(tipsText);
+	if(tipsRect1 != null) worldDisplay.moveToTop(tipsRect1);
+	if(tipsText1 != null) worldDisplay.moveToTop(tipsText1);
 }
 
 function buildGroundInfo()
@@ -622,7 +628,7 @@ function drawGround()
 	for(var x = 0; x < NO_OF_TILES_X; x++) {
 		groundTile[x] = getThemeBitmap("ground");
 		groundTile[x].setTransform(x * tileWScale, NO_OF_TILES_Y * tileHScale, tileScale, tileScale);
-		mainStage.addChild(groundTile[x]); 
+		worldDisplay.add(groundTile[x]); 
 	}
 }
 
@@ -712,41 +718,41 @@ function drawInfo()
 //for classic & auto demo mode
 function drawScoreTxt()
 {
-	scoreTxt = drawText(0, infoY, "SCORE", mainStage);
+	scoreTxt = drawText(0, infoY, "SCORE");
 }
 
 function drawLifeTxt()
 {
-	lifeTxt = drawText(13*tileWScale, infoY, "MEN", mainStage);
+	lifeTxt = drawText(13*tileWScale, infoY, "MEN");
 }
 
 function drawLevelTxt()
 {
 	var xOffset = 20;
 	
-	levelTxt = drawText(xOffset*tileWScale, infoY, "LEVEL", mainStage);
+	levelTxt = drawText(xOffset*tileWScale, infoY, "LEVEL");
 }
 
 //for demo mode
 function drawDemoTxt()
 {
-	demoTxt = drawText(14*tileWScale, infoY, "DEMO", mainStage);
+	demoTxt = drawText(14*tileWScale, infoY, "DEMO");
 }
 
 //for time & edit mode
 function drawGoldTxt()
 {
-	goldTxt = drawText(0*tileWScale, infoY, "@", mainStage);
+	goldTxt = drawText(0*tileWScale, infoY, "@");
 }
 
 function drawGuardTxt()
 {
-	guardTxt = drawText((5+2/3)*tileWScale, infoY, "#", mainStage);
+	guardTxt = drawText((5+2/3)*tileWScale, infoY, "#");
 }
 
 function drawTimeTxt()
 {
-	timeTxt = drawText((11+1/3)*tileWScale, infoY, "TIME", mainStage);
+	timeTxt = drawText((11+1/3)*tileWScale, infoY, "TIME");
 }
 
 // draw score number 
@@ -756,31 +762,31 @@ function drawScore(addScore)
 	
 	curScore += addScore;
 	for(var i = 0; i < scoreTile.length; i++) 
-		mainStage.removeChild(scoreTile[i]);
+		worldDisplay.remove(scoreTile[i]);
 	
-	scoreTile = drawText(5*tileWScale, infoY, ("000000"+curScore).slice(-7), mainStage);
+	scoreTile = drawText(5*tileWScale, infoY, ("000000"+curScore).slice(-7));
 }
 
 function drawLife()
 {
 	for(var i = 0; i < lifeTile.length; i++) 
-		mainStage.removeChild(lifeTile[i]);
+		worldDisplay.remove(lifeTile[i]);
 
-	lifeTile = drawText(16*tileWScale, infoY, ("00"+runnerLife).slice(-3), mainStage);
+	lifeTile = drawText(16*tileWScale, infoY, ("00"+runnerLife).slice(-3));
 }
 
 function drawLevel()
 {
 	for(var i = 0; i < levelTile.length; i++) 
-		mainStage.removeChild(levelTile[i]);
+		worldDisplay.remove(levelTile[i]);
 	
 	switch(playMode) {
 	case PLAY_AUTO:	
-		levelTile = drawText(25*tileWScale, infoY, ("00"+demoLevel).slice(-3), mainStage);
+		levelTile = drawText(25*tileWScale, infoY, ("00"+demoLevel).slice(-3));
 		break;	
 	case PLAY_CLASSIC: 
 	default:		
-		levelTile = drawText(25*tileWScale, infoY, ("00"+curLevel).slice(-3), mainStage);
+		levelTile = drawText(25*tileWScale, infoY, ("00"+curLevel).slice(-3));
 		break;	
 	}
 }
@@ -789,9 +795,9 @@ function drawGold(addGold)
 {
 	curGetGold += addGold;
 	for(var i = 0; i < goldTile.length; i++) 
-		mainStage.removeChild(goldTile[i]);
+		worldDisplay.remove(goldTile[i]);
 	
-	goldTile = drawText(1*tileWScale, infoY, ("00"+curGetGold).slice(-3), mainStage);
+	goldTile = drawText(1*tileWScale, infoY, ("00"+curGetGold).slice(-3));
 }
 
 function drawGuard(addGuard)
@@ -799,9 +805,9 @@ function drawGuard(addGuard)
 	curGuardDeadNo += addGuard;
 	if(curGuardDeadNo > 100) curGuardDeadNo = 100;
 	for(var i = 0; i < guardTile.length; i++) 
-		mainStage.removeChild(guardTile[i]);
+		worldDisplay.remove(guardTile[i]);
 	
-	guardTile = drawText((6+2/3)*tileWScale, infoY, ("00"+curGuardDeadNo).slice(-3), mainStage);
+	guardTile = drawText((6+2/3)*tileWScale, infoY, ("00"+curGuardDeadNo).slice(-3));
 }
 
 
@@ -816,43 +822,43 @@ function drawTime(addTime)
 {
 	countTime(addTime);
 	for(var i = 0; i < timeTile.length; i++) 
-		mainStage.removeChild(timeTile[i]);
+		worldDisplay.remove(timeTile[i]);
 
-	timeTile = drawText((15+1/3)*tileWScale, infoY, ("00"+curTime).slice(-3), mainStage);
+	timeTile = drawText((15+1/3)*tileWScale, infoY, ("00"+curTime).slice(-3));
 }
 
 function setGroundInfoOrder()
 {
 	var i;
 
-	for(i = 0; i < groundTile.length; i++) moveChild2Top(mainStage, groundTile[i]);
+	for(i = 0; i < groundTile.length; i++) moveChild2Top(groundTile[i]);
 	
 	if(playMode == PLAY_CLASSIC || playMode == PLAY_AUTO || playMode == PLAY_DEMO) {
-		for(i = 0; i < scoreTxt.length; i++) moveChild2Top(mainStage, scoreTxt[i]);
-		for(i = 0; i < scoreTile.length; i++) moveChild2Top(mainStage, scoreTile[i]);
+		for(i = 0; i < scoreTxt.length; i++) moveChild2Top(scoreTxt[i]);
+		for(i = 0; i < scoreTile.length; i++) moveChild2Top(scoreTile[i]);
 
 		if(playMode == PLAY_DEMO) {
-			for(i = 0; i < demoTxt.length; i++) moveChild2Top(mainStage, demoTxt[i]);
+			for(i = 0; i < demoTxt.length; i++) moveChild2Top(demoTxt[i]);
 		} else {
-			for(i = 0; i < lifeTxt.length; i++) moveChild2Top(mainStage, lifeTxt[i]);
-			for(i = 0; i < lifeTile.length; i++) moveChild2Top(mainStage, lifeTile[i]);
+			for(i = 0; i < lifeTxt.length; i++) moveChild2Top(lifeTxt[i]);
+			for(i = 0; i < lifeTile.length; i++) moveChild2Top(lifeTile[i]);
 		}
 	} else { //PLAY_MODERN, PLAY_DEMO_ONCE
-		for(i = 0; i < goldTxt.length; i++) moveChild2Top(mainStage, goldTxt[i]);
-		for(i = 0; i < goldTile.length; i++) moveChild2Top(mainStage, goldTile[i]);
+		for(i = 0; i < goldTxt.length; i++) moveChild2Top(goldTxt[i]);
+		for(i = 0; i < goldTile.length; i++) moveChild2Top(goldTile[i]);
 
-		for(i = 0; i < guardTxt.length; i++) moveChild2Top(mainStage, guardTxt[i]);
-		for(i = 0; i < guardTile.length; i++) moveChild2Top(mainStage, guardTile[i]);
+		for(i = 0; i < guardTxt.length; i++) moveChild2Top(guardTxt[i]);
+		for(i = 0; i < guardTile.length; i++) moveChild2Top(guardTile[i]);
 
-		for(i = 0; i < timeTxt.length; i++) moveChild2Top(mainStage, timeTxt[i]);
-		for(i = 0; i < timeTile.length; i++) moveChild2Top(mainStage, timeTile[i]);
+		for(i = 0; i < timeTxt.length; i++) moveChild2Top(timeTxt[i]);
+		for(i = 0; i < timeTile.length; i++) moveChild2Top(timeTile[i]);
 	}
 	
-	for(i = 0; i < levelTxt.length; i++) moveChild2Top(mainStage, levelTxt[i]);
-	for(i = 0; i < levelTile.length; i++) moveChild2Top(mainStage, levelTile[i]);
+	for(i = 0; i < levelTxt.length; i++) moveChild2Top(levelTxt[i]);
+	for(i = 0; i < levelTile.length; i++) moveChild2Top(levelTile[i]);
 }
 
-function drawText(x, y, str, parentObj, numberType)
+function drawText(x, y, str, numberType)
 {
 	var text = str.toUpperCase();
 	var textTile = [];
@@ -898,7 +904,7 @@ function drawText(x, y, str, parentObj, numberType)
 			break;
 		}
 		textTile[i].setTransform(x + i*tileWScale, y, tileScale, tileScale).stop();
-		parentObj.addChild(textTile[i]); 
+		worldDisplay.add(textTile[i]);
 	}
 	return textTile;	
 }
@@ -941,12 +947,12 @@ function playGame(deltaS)
 //***********************
 function showLevel(levelMap)
 {
-	mainStage.removeAllChildren();
-	canvasOverlay.clear(); //owned overlay follows the world teardown
+	worldDisplay.clear();
+	canvasOverlay.clear();
 
 	loadingTxt.text = "";
 	//loadingTxt.text = tileScale;  //for debug
-	mainStage.addChild(loadingTxt); //for debug
+	worldDisplay.add(loadingTxt); //for debug
 
 	initVariable();	
 	setBackground();
@@ -962,25 +968,12 @@ function showTipsText(text, time, text1)
 {
 	var x, y, width, height;
 	
-	if(tipsText != null) {
-		mainStage.removeChild(tipsText);
-	}
-	if(tipsRect != null) {
-		mainStage.removeChild(tipsRect);
-	}	
-
-	if(tipsText1 != null) {
-		mainStage.removeChild(tipsText1);
-		tipsText1 = null;
-	}
+	if(tipsText != null) worldDisplay.remove(tipsText);
+	if(tipsRect != null) worldDisplay.remove(tipsRect);
+	if(tipsText1 != null) { worldDisplay.remove(tipsText1); tipsText1 = null; }
+	if(tipsRect1 != null) { worldDisplay.remove(tipsRect1); tipsRect1 = null; }
 	
-	if(tipsRect1 != null) {
-		mainStage.removeChild(tipsRect1);
-		tipsRect1 = null;
-	}	
-	
-	tipsText = new createjs.Text("test", "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
-	tipsText.text = text;
+	tipsText = new CanvasText(text, "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
 	tipsText.set({alpha:1});
 	if(text.length) {
 		width = tipsText.getBounds().width;
@@ -990,15 +983,14 @@ function showTipsText(text, time, text1)
 	}
 	x = tipsText.x = (canvas.width - width) / 2 | 0;
 	y = tipsText.y = (NO_OF_TILES_Y*tileHScale - height) / 2 | 0;
-	tipsText.shadow = new createjs.Shadow("white", 2, 2, 1);
+	tipsText.setShadow("white", 2, 2, 1);
 	
-	tipsRect = new createjs.Shape();
-    tipsRect.graphics.beginFill("#020722");
-    tipsRect.graphics.drawRect(-1, -1,width+2, height+2);	
+	tipsRect = new CanvasShape();
+	tipsRect.fillRect("#020722", -1, -1, width+2, height+2);
 	tipsRect.setTransform(x, y).set({alpha:0.8});
 
-	mainStage.addChild(tipsRect);
-	mainStage.addChild(tipsText);
+	worldDisplay.add(tipsRect);
+	worldDisplay.add(tipsText);
 	
 	if(time){
 		tweenGet(tipsRect,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
@@ -1006,8 +998,7 @@ function showTipsText(text, time, text1)
 	}
 	
 	if(text1 != null) { //second tips 
-		tipsText1 = new createjs.Text("test", "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
-		tipsText1.text = text1;
+		tipsText1 = new CanvasText(text1, "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
 		tipsText1.set({alpha:1});
 		if(text1.length) {
 			width = tipsText1.getBounds().width;
@@ -1017,15 +1008,14 @@ function showTipsText(text, time, text1)
 		}
 		x = tipsText1.x = (canvas.width - width) / 2 | 0;
 		y = tipsText1.y = (NO_OF_TILES_Y*tileHScale - height) / 2  + tipsText.getBounds().height*2 | 0;
-		tipsText1.shadow = new createjs.Shadow("white", 2, 2, 1);
+		tipsText1.setShadow("white", 2, 2, 1);
 	
-		tipsRect1 = new createjs.Shape();
-    	tipsRect1.graphics.beginFill("#020722");
-    	tipsRect1.graphics.drawRect(-1, -1,width+2, height+2);	
+		tipsRect1 = new CanvasShape();
+		tipsRect1.fillRect("#020722", -1, -1, width+2, height+2);
 		tipsRect1.setTransform(x, y).set({alpha:0.8});
 
-		mainStage.addChild(tipsRect1);
-		mainStage.addChild(tipsText1);
+		worldDisplay.add(tipsRect1);
+		worldDisplay.add(tipsText1);
 	
 		if(time){
 			tweenGet(tipsRect1,{override:true}).set({alpha:0.8}).to({alpha:0}, time);
@@ -1116,9 +1106,8 @@ function gameOverAnimation()
 	var regY = (bound.height)/2|0;
 	
 	
-	var rectBlock = new createjs.Shape();
-    rectBlock.graphics.beginFill("black");
-    rectBlock.graphics.drawRect(-1, -1,bound.width+2, bound.height+2);
+	var rectBlock = new CanvasShape();
+	rectBlock.fillRect("black", -1, -1, bound.width+2, bound.height+2);
 	
 	rectBlock.setTransform(x, y, tileScale, tileScale).set({regX:regX, regY:regY});
 	
@@ -1154,12 +1143,28 @@ function gameOverAnimation()
 	*/
 	
 	
-	mainStage.addChild(rectBlock);
-	mainStage.addChild(gameOverImage);
+	worldDisplay.add(rectBlock);
+	worldDisplay.add(gameOverImage);
 	//stopAllSpriteObj();
 }
 
 var cycScreen, cycMaxRadius, cycDiff, cycX, cycY
+
+function CycleWipe()
+{
+	CanvasObject.call(this);
+	this.r = 0;
+}
+CycleWipe.prototype = Object.create(CanvasObject.prototype);
+CycleWipe.prototype.constructor = CycleWipe;
+CycleWipe.prototype.draw = function(ctx)
+{
+	ctx.beginPath();
+	ctx.arc(cycX, cycY, this.r, 0, 2*Math.PI, true);
+	ctx.arc(cycX, cycY, cycMaxRadius, 0, 2*Math.PI, false);
+	ctx.fillStyle = "black";
+	ctx.fill("evenodd");
+};
 
 function initCycVariable()
 {
@@ -1171,15 +1176,15 @@ function initCycVariable()
 
 function addCycScreen()
 {
-	cycScreen =  new createjs.Shape();
-	mainStage.addChild(cycScreen);
+	cycScreen = new CycleWipe();
+	worldDisplay.add(cycScreen);
 	
 	setGroundInfoOrder();
 }
 
 function removeCycScreen()
 {
-	mainStage.removeChild(cycScreen);
+	worldDisplay.remove(cycScreen);
 }
 
 function newLevel(r)
@@ -1196,8 +1201,7 @@ function closingScreen(r)
 {
 	removeCycScreen();
 	addCycScreen();
-	cycScreen.graphics.beginFill("black").arc( cycX, cycY, r, 0, 2*Math.PI, true)
-	cycScreen.graphics.arc( cycX, cycY, cycMaxRadius, 0, 2*Math.PI, false);
+	cycScreen.r = r;
 	stagePresent();
 	if(r > 0) {
 		r -= cycDiff;
@@ -1305,8 +1309,7 @@ function openingScreen(r)
 {
 	removeCycScreen();
 	addCycScreen();
-	cycScreen.graphics.beginFill("black").arc( cycX, cycY, r, 0, 2*Math.PI, true)
-	cycScreen.graphics.arc( cycX, cycY, cycMaxRadius, 0, 2*Math.PI, false);
+	cycScreen.r = r;
 	stagePresent();
 	if(r < cycMaxRadius) {
 		r += cycDiff;
@@ -1641,5 +1644,6 @@ function mainTick(event)
 		return;	
 	}
 
+	worldDisplay.advance(event && event.delta);
 	stagePresent();
 }
