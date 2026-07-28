@@ -42,7 +42,7 @@ public struct LevelStartOverlay: View {
                 maxRadius: maxRadius,
                 openDurationSeconds: openDurationSeconds
             )
-            StartScreenMask(radius: radius, width: boardWidth, height: boardHeight)
+            CircularWipeMask(radius: radius, width: boardWidth, height: boardHeight)
         }
     }
 
@@ -73,35 +73,6 @@ public struct LevelStartOverlay: View {
     }
 }
 
-/// The rect-minus-circle Canvas drawing shared by `LevelStartOverlay.body` and
-/// its preview. Structurally identical to `LevelPassOverlay`'s mask; kept
-/// separate so this overlay stays self-contained (and both files remain safe
-/// to grok in isolation).
-private struct StartScreenMask: View {
-    let radius: Double
-    let width: CGFloat
-    let height: CGFloat
-
-    var body: some View {
-        Canvas { ctx, size in
-            var path = Path(CGRect(origin: .zero, size: size))
-            if radius > 0 {
-                let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                path.addEllipse(
-                    in: CGRect(
-                        x: center.x - radius,
-                        y: center.y - radius,
-                        width: radius * 2,
-                        height: radius * 2
-                    )
-                )
-            }
-            ctx.fill(path, with: .color(.black), style: FillStyle(eoFill: true))
-        }
-        .frame(width: width, height: height)
-    }
-}
-
 // MARK: - Preview
 
 /// Static mid-open snapshot using a pinned radius — bypasses `TimelineView`'s
@@ -117,7 +88,7 @@ private struct LevelStartMidOpenPreview: View {
             ZStack(alignment: .topLeading) {
                 Rectangle().fill(Color.orange.opacity(0.3))
                     .frame(width: boardW, height: boardH)
-                StartScreenMask(radius: maxR * 0.4, width: boardW, height: boardH)
+                CircularWipeMask(radius: maxR * 0.4, width: boardW, height: boardH)
             }
         }
         .border(Color.gray)
