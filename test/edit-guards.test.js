@@ -33,4 +33,13 @@ describe("edit attract + unsaved guards", () => {
 		assert.match(text, /function installEditUnloadGuard/);
 		assert.match(text, /function leaveEditMode/);
 	});
+
+	it("edit.js has no createjs (owned Canvas2D editor)", () => {
+		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.edit.js"), "utf8");
+		assert.doesNotMatch(text, /createjs\./);
+		assert.match(text, /canvasOverlay/);
+		assert.match(text, /CanvasShape/);
+		assert.match(text, /CanvasBitmap/);
+		assert.match(text, /makeGlyphText/);
+	});
 });

@@ -67,7 +67,7 @@ function showLoadingPage()
 
 function createRunnerSpriteSheet(runnerImage)
 {
-	runnerData = new createjs.SpriteSheet({
+	runnerData = makeSpriteSheet({
 		images: [runnerImage],
 		
 		frames: { regX:0, height: BASE_TILE_Y,  regY:0, width: BASE_TILE_X},
@@ -173,7 +173,7 @@ function ensureThemeLoaded(themeName, callback)
 
 function preloadResource() 
 {
-	var runnerSprite = new createjs.Sprite(runnerData, "runRight");
+	var runnerSprite = new GameSprite(runnerData, "runRight");
 	var progress = new createjs.Shape(); 
 	var progressBorder = new createjs.Shape();
 	var percentTxt = new createjs.Text("0", (COVER_PROGRESS_BAR_H* tileScale) + "px Arial", "#FF0000");
@@ -422,7 +422,7 @@ function createPreloadSpriteSheet()
 	guardData = createGuardObj("guard");
 	redhatData = createGuardObj("redhat");
 		
-	holeData = new createjs.SpriteSheet( {
+	holeData = makeSpriteSheet( {
 		images: [getThemeBitmap("hole").image],
 		
 		frames: [
@@ -469,7 +469,7 @@ function createPreloadSpriteSheet()
 		}
 	});
 	
-	textData = new createjs.SpriteSheet({
+	textData = makeSpriteSheet({
 		images: [getThemeBitmap("text").image],
 		
 		frames: {regX:0, height: BASE_TILE_Y,  regY: 0, width: BASE_TILE_X},
@@ -502,7 +502,7 @@ function createPreloadSpriteSheet()
 
 function createGuardObj(imageName)
 {
-	var guard = new createjs.SpriteSheet(
+	var guard = makeSpriteSheet(
 	{
 		images: [getThemeBitmap(imageName).image],
 		
@@ -556,7 +556,7 @@ function createGuardObj(imageName)
 	
 function createHoleObj()
 {
-	holeObj.sprite = new createjs.Sprite(holeData, "digHoleLeft");
+	holeObj.sprite = new GameSprite(holeData, "digHoleLeft");
 	
 	if(curAiVersion < 3) {
 		holeObj.digLimit = 6; //for check guard is close to runner when digging

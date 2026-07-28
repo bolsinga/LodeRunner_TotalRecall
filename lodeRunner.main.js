@@ -548,7 +548,7 @@ function buildLevelMap(levelMap)
 					continue;  // culled by maxGuard
 				}
 
-				curTile = new createjs.Sprite(guardData, "runLeft");
+				curTile = new GameSprite(guardData, "runLeft");
 				guard[guardCount] = { 
 					sprite: curTile,
 					pos: { x:x, y:y, xOffset:0, yOffset:0}, 
@@ -565,7 +565,7 @@ function buildLevelMap(levelMap)
 					continue;  // demoted (extra runner)
 				}
 				runner = {};	
-				curTile = runner.sprite = new createjs.Sprite(runnerData, "runRight");
+				curTile = runner.sprite = new GameSprite(runnerData, "runRight");
 				runner.pos = { x:x, y:y, xOffset:0, yOffset:0};	
 				runner.action = ACT_UNKNOWN;	
 				runner.shape = "runRight";	
@@ -864,37 +864,37 @@ function drawText(x, y, str, parentObj, numberType)
 		
 		switch(true) {
 		case (code >=48 && code <=57): //N0 ~ N9 or D0 ~ D9 
-			textTile[i] = new createjs.Sprite(textData, numberType+String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, numberType+String.fromCharCode(code));	
 			break;
 		case (code >=65 && code <= 90):
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		case (code == 46): //'.'
-			textTile[i] = new createjs.Sprite(textData, "DOT");	
+			textTile[i] = new GameSprite(textData, "DOT");	
 			break;
 		case (code == 60): //'<'
-			textTile[i] = new createjs.Sprite(textData, "LT");	
+			textTile[i] = new GameSprite(textData, "LT");	
 			break;
 		case (code == 62): //'>'
-			textTile[i] = new createjs.Sprite(textData, "GT");	
+			textTile[i] = new GameSprite(textData, "GT");	
 			break;
 		case (code == 45): //'-'
-			textTile[i] = new createjs.Sprite(textData, "DASH");	
+			textTile[i] = new GameSprite(textData, "DASH");	
 			break;
 		case (code == 58): //':'
-			textTile[i] = new createjs.Sprite(textData, "COLON");	
+			textTile[i] = new GameSprite(textData, "COLON");	
 			break;
 		case (code == 95): //'_'
-			textTile[i] = new createjs.Sprite(textData, "UNDERLINE");	
+			textTile[i] = new GameSprite(textData, "UNDERLINE");	
 			break;
 		case (code == 35): //'#': guard dead in trap hole
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		case (code == 64): //'@': gold
-			textTile[i] = new createjs.Sprite(textData, String.fromCharCode(code));	
+			textTile[i] = new GameSprite(textData, String.fromCharCode(code));	
 			break;
 		default: //space
-			textTile[i] = new createjs.Sprite(textData, "SPACE");	
+			textTile[i] = new GameSprite(textData, "SPACE");	
 			break;
 		}
 		textTile[i].setTransform(x + i*tileWScale, y, tileScale, tileScale).stop();

@@ -3,7 +3,7 @@
 //
 // The atlas is one image of fixed cells (BASE_TILE_X x BASE_TILE_Y). Each glyph
 // name maps to a frame index; a string maps to a list of frame indices. This is
-// the same mapping the createjs SpriteSheet "textData" and drawText() encode,
+// the same mapping the textData sprite sheet and drawText() encode,
 // pulled into one place so owned Canvas glyphs and the HUD agree on the font.
 //=============================================================================
 
