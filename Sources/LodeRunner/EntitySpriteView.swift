@@ -127,7 +127,7 @@ private struct EntitySpritePreview: View {
 
         FittedBoardView {
             ZStack(alignment: .topLeading) {
-                LevelGridView(tiles: level.slots.map { $0.map(\.current) })
+                LevelGridView(tiles: level.slots.map { $0.map(\.displayTile) })
                 RunnerSpriteView(runner: runningRunner, appearance: runnerAppearance)
                 RunnerSpriteView(runner: stoppedRunner, appearance: stoppedRunnerAppearance)
                 GuardSpriteView(guardState: barGuard, appearance: barGuardAppearance)

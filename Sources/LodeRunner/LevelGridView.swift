@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Renders a full level's terrain as a fixed `LevelGrid.tilesX` x `LevelGrid.tilesY`
 /// grid of `TileCellView`s. Takes a plain `[[TileType]]` (the same `[x][y]` shape as
-/// `RunnerSimulation.slots.map { $0.map(\.current) }`) rather than a `RunnerSimulation`
-/// directly, keeping this view decoupled from anything beyond "what tile is at each
-/// position" — ticking/animation is a later step.
+/// `RunnerSimulation.slots.map { $0.map(\.displayTile) }`) rather than a
+/// `RunnerSimulation` directly, keeping this view decoupled from anything beyond
+/// "what tile is at each position" — ticking/animation is a later step.
 public struct LevelGridView: View {
     let tiles: [[TileType]]
 
@@ -43,7 +43,7 @@ private func previewLevel() -> LevelParseResult {
 
 #Preview("Apple2", traits: .landscapeLeft) {
     FittedBoardView {
-        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
+        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.displayTile) })
     }
     .environment(\.tileTheme, .apple2)
     .background(Color.gray.opacity(0.2))
@@ -52,7 +52,7 @@ private func previewLevel() -> LevelParseResult {
 
 #Preview("C64", traits: .landscapeLeft) {
     FittedBoardView {
-        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.current) })
+        LevelGridView(tiles: previewLevel().slots.map { $0.map(\.displayTile) })
     }
     .environment(\.tileTheme, .c64)
     .background(Color.gray.opacity(0.2))

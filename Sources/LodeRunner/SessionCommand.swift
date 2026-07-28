@@ -50,7 +50,7 @@ public struct SessionCommand: ParsableCommand {
         }
 
         if ascii {
-            let currentTiles = session.simulation.slots.map { column in column.map(\.current) }
+            let currentTiles = session.simulation.slots.map { column in column.map(\.displayTile) }
             print(currentTiles.formatted(.tileGrid))
         }
     }
