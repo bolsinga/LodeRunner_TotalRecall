@@ -611,7 +611,7 @@ function digComplete()
 var fillHoleObj = [];
 function fillHole(x, y)
 {
-	var fillSprite = new createjs.Sprite(holeData, "fillHole");
+	var fillSprite = new GameSprite(holeData, "fillHole");
 	
 	fillSprite.pos = { x:x, y:y }; //save position 11/18/2014
 	fillSprite.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale);
