@@ -11,6 +11,15 @@ public enum RunnerAction: String, Equatable, Codable, Sendable {
 }
 
 public enum RunnerPhase: Equatable, Codable, Sendable {
+    /// Pre-play "waiting for first input" state. Ported from `GAME_START` in
+    /// `lodeRunner.main.js:41` (constant) / `1296, 1306, 1419-1422` (blink +
+    /// transition on keypress). `tick(_:)` no-ops in this phase — call
+    /// `RunnerSimulation.beginPlay()` (the port of `beginPlay` at
+    /// `lodeRunner.main.js:1298-1306`) to advance to `.playing`. Only entered
+    /// by composition-layer code that wants the born-blink pause; direct
+    /// `RunnerSimulation(level:)` starts in `.playing` for backward
+    /// compatibility with the CLI + existing tests.
+    case starting
     case playing
     case finished  // reached row 0, exactly centered, with all gold collected
     case dead  // buried: a dug hole finished refilling while the runner stood in it
