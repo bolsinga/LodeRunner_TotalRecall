@@ -96,6 +96,12 @@ private func walkingPreviewSimulation() throws -> RunnerSimulation {
         // Guard spawns on the platform (one facing the runner, one away)
         (x: 12, y: 9, tile: .guard),
         (x: 18, y: 9, tile: .guard),
+        // Gold pieces — one on the floor within runner reach, one up on the
+        // platform where the guards pace. Exercises the display-tile resolver
+        // in `entityLessTiles` (base=.gold, current=.empty renders as gold).
+        (x: 6, y: 14, tile: .gold),
+        (x: 15, y: 9, tile: .gold),
+        (x: 21, y: 9, tile: .gold),
     ]
     // Mid-height platform, cols 8-22, row 10. (Bottom floor comes from
     // makeLevel's auto-fill of row 15.)
