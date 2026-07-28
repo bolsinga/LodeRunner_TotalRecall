@@ -24,4 +24,15 @@ public struct LevelSlot: Equatable, Codable, Sendable {
         self.base = base
         self.current = current
     }
+
+    /// The `TileType` to draw for this slot in a full-terrain render. Gold's
+    /// authoring intent lives in `.base` (with `.current == .empty` until picked
+    /// up, so runners/guards can walk through the cell — see the type comment).
+    /// Rendering purely from `.current` therefore drops every gold piece; this
+    /// resolver falls back to `.base` for that one case. Entities still occupy
+    /// `.current`, so live gameplay strips them with a separate pass before
+    /// calling this (see `SimulationDriver.entityLessTiles`).
+    public var displayTile: TileType {
+        base == .gold ? .gold : current
+    }
 }

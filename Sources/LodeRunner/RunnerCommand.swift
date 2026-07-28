@@ -47,7 +47,7 @@ public struct RunnerCommand: ParsableCommand {
         }
 
         if ascii {
-            let currentTiles = simulation.slots.map { column in column.map(\.current) }
+            let currentTiles = simulation.slots.map { column in column.map(\.displayTile) }
             print(currentTiles.formatted(.tileGrid))
         }
     }

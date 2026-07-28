@@ -143,12 +143,18 @@ private struct WalkingRunnerPreview: View {
     /// Show `.base` where an entity currently occupies a cell so the static
     /// `runner1`/`guard1` tile in `TileCellView` doesn't ghost behind the
     /// overlaid `RunnerSpriteView`/`GuardSpriteView` during mid-tile motion.
-    /// Everywhere else we show `.current` as usual (e.g. dug/filled brick
-    /// states).
+    /// Everywhere else we defer to `LevelSlot.displayTile`, which resolves
+    /// gold's `.base == .gold, .current == .empty` split back to `.gold`
+    /// (rendering purely from `.current` would drop every gold piece). If an
+    /// entity happens to be standing on a gold cell, `.base == .gold` still
+    /// wins here so the gold stays visible under the overlaid sprite.
     private func entityLessTiles(_ slots: [[LevelSlot]]) -> [[TileType]] {
         slots.map { column in
             column.map { slot in
-                (slot.current == .runner || slot.current == .guard) ? slot.base : slot.current
+                if slot.current == .runner || slot.current == .guard {
+                    return slot.base
+                }
+                return slot.displayTile
             }
         }
     }

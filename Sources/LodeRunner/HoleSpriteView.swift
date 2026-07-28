@@ -72,7 +72,7 @@ private struct DiggingRunnerPreview: View {
     var body: some View {
         FittedBoardView {
             ZStack(alignment: .topLeading) {
-                LevelGridView(tiles: driver.simulation.slots.map { $0.map(\.current) })
+                LevelGridView(tiles: driver.simulation.slots.map { $0.map(\.displayTile) })
                 RunnerSpriteView(
                     runner: driver.simulation.runner,
                     appearance: driver.runnerAppearance
