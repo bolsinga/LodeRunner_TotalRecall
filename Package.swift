@@ -16,7 +16,15 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            resources: [.process("Resources")]
+            resources: [
+                .process("Resources/Tiles.xcassets"),
+                // `.copy` preserves the theme-subdirectory layout so
+                // `Bundle.module.url(..., subdirectory: "Sounds/Apple2")`
+                // resolves — a `.process` rule would flatten every
+                // `<theme>/born.mp3` into a single bundle-root `born.mp3` and
+                // collide across themes.
+                .copy("Resources/Sounds"),
+            ]
         ),
         .testTarget(name: "LodeRunnerTests", dependencies: ["LodeRunner"]),
         .executableTarget(
