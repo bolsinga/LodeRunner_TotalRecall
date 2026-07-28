@@ -49,6 +49,21 @@ public struct GameSession: Equatable, Codable, Sendable {
         phase = .playing
     }
 
+    /// Move the current simulation into `.starting`, gating `tick(_:)` on
+    /// the first input. Opt-in for the composition layer that wants the
+    /// pre-play born blink (`GameSessionDriver` / `GameView`); direct callers
+    /// (CLI, existing tests) skip this and stay in `.playing`.
+    public mutating func armBornBlink() {
+        simulation.phase = .starting
+    }
+
+    /// Passthrough to `RunnerSimulation.beginPlay()` (port of `beginPlay` at
+    /// `lodeRunner.main.js:1298-1306`). Safe to call in any phase; no-op
+    /// unless the current sim is `.starting`.
+    public mutating func beginPlay() {
+        simulation.beginPlay()
+    }
+
     public mutating func tick(_ action: RunnerAction) throws {
         guard phase == .playing else { return }
         simulation.tick(action)
