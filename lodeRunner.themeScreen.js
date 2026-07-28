@@ -69,7 +69,7 @@ function rebuildMap()
 				break;
 			}
 			worldDisplay.remove(map[x][y].bitmap); //remove old
-			curTile.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale); //x,y, scaleX, scaleY
+			curTile.setTransform(x * tileW, y * tileH, 1, 1);
 			worldDisplay.add(curTile);  //add new
 			map[x][y].bitmap = curTile;   //replace bitmap
 		}

@@ -40,7 +40,8 @@ ScoreSurface.prototype.present = function()
 	var ctx = this.ctx;
 	ctx.save();
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.clearRect(0, 0, canvasBaseW, canvasBaseH);
+	applyWorldTransform(ctx);
 	for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
 	ctx.restore();
 };
@@ -53,7 +54,7 @@ function makeGlyphText(x, y, str, numberType)
 	g.setText(str, numberType);
 	g.x = x;
 	g.y = y;
-	g.scaleX = g.scaleY = tileScale;
+	g.scaleX = g.scaleY = 1;
 	return g;
 }
 
@@ -168,13 +169,13 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 	function setScoreBackground()
 	{
 		//full-screen black backdrop
-		surface.add(new CanvasShape().fillRect("black", 0, 0, canvas.width, canvas.height));
+		surface.add(new CanvasShape().fillRect("black", 0, 0, canvasBaseW, canvasBaseH));
 	}
 	
 	function getNameStartPos(nameLength, itemId) 
 	{
-		var x = (3.75+(MAX_HISCORE_NAME_LENGTH-nameLength)/2)*tileWScale;
-		var y = (itemId * 1.2 + 5) * tileHScale;
+		var x = (3.75+(MAX_HISCORE_NAME_LENGTH-nameLength)/2)*tileW;
+		var y = (itemId * 1.2 + 5) * tileH;
 		
 		return { x: x, y: y };
 	}
@@ -185,34 +186,34 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 		var localHighScore = "LOCAL HIGH SCORES";
 
 		//title
-		surface.add(makeGlyphText((NO_OF_TILES_X-title.length)/2*tileWScale, 0*tileHScale, title));
-		surface.add(makeGlyphText((NO_OF_TILES_X-localHighScore.length)/2*tileWScale, 1.5*tileHScale, localHighScore));
-		surface.add(makeGlyphText(0.5*tileWScale, 3*tileHScale, "NO"));
-		surface.add(makeGlyphText(7.75*tileWScale, 3*tileHScale, "NAME"));
-		surface.add(makeGlyphText(15.75*tileWScale, 3*tileHScale, "LEVEL"));
-		surface.add(makeGlyphText(22*tileWScale, 3*tileHScale, "SCORE"));
+		surface.add(makeGlyphText((NO_OF_TILES_X-title.length)/2*tileW, 0*tileH, title));
+		surface.add(makeGlyphText((NO_OF_TILES_X-localHighScore.length)/2*tileW, 1.5*tileH, localHighScore));
+		surface.add(makeGlyphText(0.5*tileW, 3*tileH, "NO"));
+		surface.add(makeGlyphText(7.75*tileW, 3*tileH, "NAME"));
+		surface.add(makeGlyphText(15.75*tileW, 3*tileH, "LEVEL"));
+		surface.add(makeGlyphText(22*tileW, 3*tileH, "SCORE"));
 
 		//bar
 		var groundImg = getThemeBitmapImage("ground");
 		for(var x = 0; x < NO_OF_TILES_X; x++) {
 			var barTile = new CanvasBitmap(groundImg);
-			barTile.x = x * tileWScale;
-			barTile.y = 4.5*tileHScale;
-			barTile.scaleX = barTile.scaleY = tileScale;
+			barTile.x = x * tileW;
+			barTile.y = 4.5*tileH;
+			barTile.scaleX = barTile.scaleY = 1;
 			surface.add(barTile);
 		}
 
 		for(var i = 0; i < MAX_HISCORE_RECORD; i++) {
 			var pos = getNameStartPos(hiScoreInfo[i].n.length, i);
 
-			surface.add(makeGlyphText(0.25*tileWScale, pos.y, ("0"+(i+1)).slice(-2) + ".")); //no
+			surface.add(makeGlyphText(0.25*tileW, pos.y, ("0"+(i+1)).slice(-2) + ".")); //no
 
 			if(hiScoreInfo[i].s > 0) {
 				if(hiScoreInfo[i].n.length > 0) {
 					surface.add(makeGlyphText(pos.x, pos.y, hiScoreInfo[i].n, "D")); //name
 				}
-				surface.add(makeGlyphText(16.75*tileWScale, pos.y, ("00"+hiScoreInfo[i].l).slice(-3))); //level
-				surface.add(makeGlyphText(21*tileWScale, pos.y, ("000000"+hiScoreInfo[i].s).slice(-7))); //score
+				surface.add(makeGlyphText(16.75*tileW, pos.y, ("00"+hiScoreInfo[i].l).slice(-3))); //level
+				surface.add(makeGlyphText(21*tileW, pos.y, ("000000"+hiScoreInfo[i].s).slice(-7))); //score
 			}
 		}
 	}
@@ -255,9 +256,9 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 			var pos = getNameStartPos(name.length, recordId);
 			cursor = new CanvasGlyph(textAtlas);
 			cursor.setAnim(GLYPH_FLASH.frames, GLYPH_FLASH.speed);
-			cursor.x = pos.x - tileWScale/2;
+			cursor.x = pos.x - tileW/2;
 			cursor.y = pos.y;
-			cursor.scaleX = cursor.scaleY = tileScale;
+			cursor.scaleX = cursor.scaleY = 1;
 			surface.add(cursor);
 
 			//copyPlayerName();
@@ -326,8 +327,8 @@ function showScoreTable(_playData, _curScoreInfo, _callbackFun, _waitTime, _forc
 			surface.add(nameText);
 
 			//change cursor position
-			if(name.length > 0) cursor.x = pos.x + curPos * tileWScale;
-			else cursor.x = pos.x - tileWScale/2;
+			if(name.length > 0) cursor.x = pos.x + curPos * tileW;
+			else cursor.x = pos.x - tileW/2;
 
 			//keep cursor on top
 			surface.moveToTop(cursor);
@@ -435,18 +436,18 @@ function inputPlayerName(_stage, _callbackFun)
 	var textBorder = new CanvasShape();
 	var textBackground = new CanvasShape();
 
-	background.fillRect("black", 0, 0, _stage.canvas.width, _stage.canvas.height);
+	background.fillRect("black", 0, 0, canvasBaseW, canvasBaseH);
 	background.alpha = 0.2;
 
-	var x = inputBoardX*tileWScale, y = inputBoardY*tileHScale;
-	var w = totalSizeX*tileWScale, h = totalSizeY*tileHScale;
-	var radius = (tileWScale/4)|0;
+	var x = inputBoardX*tileW, y = inputBoardY*tileH;
+	var w = totalSizeX*tileW, h = totalSizeY*tileH;
+	var radius = (tileW/4)|0;
 	textBorder.fillRoundRect("#f00", x, y, w, h, radius);
 	textBorder.alpha = 0.6;
-	textBorder.setShadow("#111", tileWScale/4, tileHScale/4, 10);
+	textBorder.setShadow("#111", tileW/4, tileH/4, 10);
 
-	x = (inputBoardX+0.5)*tileWScale; y = (inputBoardY+0.5)*tileHScale;
-	w = (totalSizeX-1)*tileWScale; h = (totalSizeY-1)*tileHScale;
+	x = (inputBoardX+0.5)*tileW; y = (inputBoardY+0.5)*tileH;
+	w = (totalSizeX-1)*tileW; h = (totalSizeY-1)*tileH;
 	textBackground.alpha = 0.5;
 	textBackground.fillRoundRect("#111", x, y, w, h, radius/2);
 
@@ -454,11 +455,11 @@ function inputPlayerName(_stage, _callbackFun)
 	canvasOverlay.add(textBorder);
 	canvasOverlay.add(textBackground);
 
-	x = (inputBoardX+1)*tileWScale; y = (inputBoardY+1)*tileHScale;
+	x = (inputBoardX+1)*tileW; y = (inputBoardY+1)*tileH;
 	var constObj = makeGlyphText(x, y, constString, "D");
 	canvasOverlay.add(constObj);
 
-	x = inputStartX*tileWScale; y = inputStartY*tileHScale;
+	x = inputStartX*tileW; y = inputStartY*tileH;
 	inputString(_stage, maxInputSize, x, y, playerName, inputComplete);
 
 	// Wrap the inputString abort so board chrome leaves with the blink ticker.
@@ -532,7 +533,7 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 		cursor.setAnim(GLYPH_FLASH.frames, GLYPH_FLASH.speed);
 		cursor.x = _startX;
 		cursor.y = _startY;
-		cursor.scaleX = cursor.scaleY = tileScale;
+		cursor.scaleX = cursor.scaleY = 1;
 		canvasOverlay.add(cursor);
 
 		drawString();
@@ -556,7 +557,7 @@ function inputString(_stage, _maxSize, _startX, _startY, _defaultString, _callba
 		canvasOverlay.add(inputObj);
 
 		//change cursor position
-		cursor.x = _startX + curPos * tileWScale;
+		cursor.x = _startX + curPos * tileW;
 
 		//keep cursor on top, then repaint the overlay (world underneath is static)
 		canvasOverlay.remove(cursor);

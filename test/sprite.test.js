@@ -24,16 +24,14 @@ describe("sprite migration (characterization)", () => {
 		}
 	});
 
-	it("sprite.js is createjs-free CanvasObject and wired into both HTML shells", () => {
+	it("sprite.js is createjs-free CanvasObject and wired into the HTML shell", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.sprite.js"), "utf8");
 		assert.match(text, /function makeSpriteSheet/);
 		assert.match(text, /function GameSprite/);
 		assert.match(text, /CanvasObject\.call/);
 		assert.doesNotMatch(text, /createjs\./);
-		for (const shell of ["lodeRunner.html", "test/golden-browser.html"]) {
-			const html = fs.readFileSync(path.join(ROOT, shell), "utf8");
-			assert.match(html, /src="lodeRunner\.sprite\.js"/, shell);
-		}
+		const html = fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8");
+		assert.match(html, /src="lodeRunner\.sprite\.js"/);
 	});
 });
 

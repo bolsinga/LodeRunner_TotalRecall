@@ -19,24 +19,20 @@ describe("misc.js CreateJS peel (characterization)", () => {
 		assert.match(text, /canvasOverlay/);
 	});
 
-	it("canvasObj.js has no createjs and is wired into both HTML shells", () => {
+	it("canvasObj.js has no createjs and is wired into the HTML shell", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.canvasObj.js"), "utf8");
 		assert.doesNotMatch(text, /createjs\./);
-		for (const shell of ["lodeRunner.html", "test/golden-browser.html"]) {
-			const html = fs.readFileSync(path.join(ROOT, shell), "utf8");
-			assert.match(html, /src="lodeRunner\.canvasObj\.js"/, shell);
-		}
+		const html = fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8");
+		assert.match(html, /src="lodeRunner\.canvasObj\.js"/);
 	});
 
-	it("glyphFont.js is createjs-free and wired into both HTML shells", () => {
+	it("glyphFont.js is createjs-free and wired into the HTML shell", () => {
 		const text = fs.readFileSync(path.join(ROOT, "lodeRunner.glyphFont.js"), "utf8");
 		assert.doesNotMatch(text, /createjs\./);
 		assert.match(text, /function makeGlyphAtlas/);
 		assert.match(text, /function charToGlyphName/);
-		for (const shell of ["lodeRunner.html", "test/golden-browser.html"]) {
-			const html = fs.readFileSync(path.join(ROOT, shell), "utf8");
-			assert.match(html, /src="lodeRunner\.glyphFont\.js"/, shell);
-		}
+		const html = fs.readFileSync(path.join(ROOT, "lodeRunner.html"), "utf8");
+		assert.match(html, /src="lodeRunner\.glyphFont\.js"/);
 	});
 
 	it("hiscore.js is createjs-free (owned ScoreSurface + clock blink)", () => {
@@ -168,8 +164,8 @@ describe("CanvasObject behavior", () => {
 		g.canvasOverlay.paint(ctx);
 		const drawn = calls.filter((c) => c[0] === "fillText").map((c) => c[1]);
 		assert.deepEqual(drawn, ["B", "A"]);
-		// paint anchors to identity so objects never inherit a stray transform
-		assert.deepEqual(calls[1], ["setTransform", 1, 0, 0, 1, 0, 0]);
+		// paint inherits the caller world transform; does not reset to identity
+		assert.equal(calls.filter((c) => c[0] === "setTransform").length, 0);
 
 		// empty overlay paints nothing (no save/setTransform churn)
 		g.canvasOverlay.clear();

@@ -5,8 +5,8 @@
 // {x, y, width, height} in local units; contains(px, py) hit-tests a
 // parent-space point. Objects never join a createjs display list -- they are
 // painted by canvasOverlay as a pass after the stage repaints (stagePresent
-// in lodeRunner.main.js); the same paint call later moves into the owned
-// render loop unchanged.
+// in lodeRunner.main.js). Objects author in base tile units; stagePresent
+// applies ctx.setTransform(tileScale * dpr) before world/overlay paint.
 //=============================================================================
 
 function CanvasObject()
@@ -345,13 +345,9 @@ var canvasOverlay = {
 	paint: function(ctx)
 	{
 		if(!this.objs.length) return;
-		// paint from a clean base state so objects never inherit a transform or
-		// alpha left on the shared 2D context by the stage's last draw.
-		// Objects author in buffer-pixel space, so identity is the base; if
-		// authoring moves to base units under a tileScale/DPR transform, this
-		// seam applies that transform instead of identity.
+		// Objects author in base units; stagePresent applies tileScale*dpr.
+		// Do not reset the transform here — inherit the world transform.
 		ctx.save();
-		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 1;
 		for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
 		ctx.restore();
@@ -387,7 +383,6 @@ var worldDisplay = {
 	{
 		if(!this.objs.length) return;
 		ctx.save();
-		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 1;
 		for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
 		ctx.restore();

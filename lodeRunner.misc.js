@@ -19,29 +19,9 @@ function error(string)
 	console.log("Error In " + error.caller.name + "( ): " + string);
 }
 
-function getScreenSize() 
+function getScreenSize()
 {
-	var x, y;
-	
-	//----------------------------------------------------------------------
-	// Window size and scrolling:
-	// URL: http://www.howtocreate.co.uk/tutorials/javascript/browserwindow
-	//----------------------------------------------------------------------
-	if (typeof (window.innerWidth) == 'number') {
-		//Non-IE
-		x = window.innerWidth;
-		y = window.innerHeight;
-	} else if ((document.documentElement) &&
-		(document.documentElement.clientWidth || document.documentElement.clientHeight)) {
-		//IE 6+ in 'standards compliant mode'
-		x = document.documentElement.clientWidth;
-		y = document.documentElement.clientHeight;
-	} else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
-		//IE 4 compatible
-		x = document.body.clientWidth;
-		y = document.body.clientHeight;
-	}
-	return {x:x, y:y};
+	return {x: window.innerWidth, y: window.innerHeight};
 }
 
 //================================
@@ -49,14 +29,14 @@ function getScreenSize()
 //===============================
 function showTipsMsg(_tipsTxt, _stage, _scale, _tipsTxt1)
 {
-	var TEXT_SIZE = 72 * _scale;
-	var TEXT1_SIZE = 66 * _scale;
+	var TEXT_SIZE = 72;
+	var TEXT1_SIZE = 66;
 	var TEXT_COLOR = "#FF2020";
 	var TEXT1_COLOR = "#FF2020";
 
 	var tipsText = new CanvasText(_tipsTxt, "bold " +  TEXT_SIZE + "px Helvetica", TEXT_COLOR);
-	var screenX1 = _stage.canvas.width;
-	var screenY1 = _stage.canvas.height;
+	var screenX1 = canvasBaseW;
+	var screenY1 = canvasBaseH;
 
 	tipsText.textAlign = "center";
 	tipsText.setShadow("white", 3, 3, 2);

@@ -55,10 +55,10 @@ function showLoadingPage()
 	function addCover2Screen(image)
 	{
 		coverBitmap = new CanvasBitmap(image);
-		coverBitmap.setTransform(0, 0, tileScale, tileScale); //x,y, scaleX, scaleY 
+		coverBitmap.setTransform(0, 0, 1, 1);
 		
-		addTitleBackground(coverBitmap.getBounds().width*tileScale|0,
-		                   coverBitmap.getBounds().height*tileScale|0);
+		addTitleBackground(coverBitmap.getBounds().width|0,
+		                   coverBitmap.getBounds().height|0);
 		
 		worldDisplay.add(coverBitmap);	
 		stagePresent();
@@ -209,7 +209,7 @@ function preloadResource()
 	var runnerSprite = new GameSprite(runnerData, "runRight");
 	var progress = new CanvasShape();
 	var progressBorder = new CanvasShape();
-	var percentTxt = new CanvasText("0", (COVER_PROGRESS_BAR_H* tileScale) + "px Arial", "#FF0000");
+	var percentTxt = new CanvasText("0", COVER_PROGRESS_BAR_H + "px Arial", "#FF0000");
 
 	// Shared UI / SFX + active theme only (other theme loads on first toggle).
 	var resource = [
@@ -242,23 +242,23 @@ function preloadResource()
 	addClockListener(coverPresentTick);
 
 	//Set runner sprite size & position
-	runnerSprite.setTransform(COVER_SIDE_X* tileScale, 
-							  (BASE_SCREEN_Y - COVER_RUNNER_UNDER_Y)* tileScale,
-							  tileScale, 
-							  tileScale);
+	runnerSprite.setTransform(COVER_SIDE_X,
+							  (BASE_SCREEN_Y - COVER_RUNNER_UNDER_Y),
+							  1,
+							  1);
 	runnerSprite.gotoAndPlay();	
 
-	var width = canvas.width - 2*COVER_SIDE_X* tileScale;
-	var height = COVER_PROGRESS_BAR_H * tileScale;
+	var width = canvasBaseW - 2*COVER_SIDE_X;
+	var height = COVER_PROGRESS_BAR_H;
 
 	//Set progress & progressborder size & position
 	progressBorder.strokeRect("gold", 1, 0, 0, width, height);
-	progress.x = progressBorder.x = COVER_SIDE_X * tileScale;
-	progress.y = progressBorder.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) * tileScale;
+	progress.x = progressBorder.x = COVER_SIDE_X;
+	progress.y = progressBorder.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y);
 	
 	//Set percentTxt position
-	percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
-	percentTxt.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) * tileScale + height/12;  // move percent number Lower
+	percentTxt.x = (canvasBaseW - percentTxt.getBounds().width) / 2 | 0;
+	percentTxt.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) + height/12;  // move percent number Lower
 	
 	worldDisplay.add(runnerSprite);
 	worldDisplay.add(progress);
@@ -273,7 +273,7 @@ function preloadResource()
 		var ratio = totalW ? ((imgProgress * imgW) + (soundProgress * soundW)) / totalW : 1;
 		progress.clearOps().fillRect("gold", 0, 0, width*ratio, height);
 		percentTxt.text = (100*ratio|0) + "%";
-		percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
+		percentTxt.x = (canvasBaseW - percentTxt.getBounds().width) / 2 | 0;
 	}
 
 	function maybeHandleComplete()
@@ -354,9 +354,9 @@ function preloadResource()
 	{
 		var x, y;
 		signetBitmap = new CanvasBitmap(preload.getResult("signet"));
-		x = (BASE_SCREEN_X - SIGNET_UNDER_X - signetBitmap.getBounds().width )* tileScale;
-		y = (BASE_SCREEN_Y - SIGNET_UNDER_Y - signetBitmap.getBounds().height)* tileScale;
-		signetBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
+		x = (BASE_SCREEN_X - SIGNET_UNDER_X - signetBitmap.getBounds().width );
+		y = (BASE_SCREEN_Y - SIGNET_UNDER_Y - signetBitmap.getBounds().height);
+		signetBitmap.setTransform(x, y, 1, 1);
 		signetBitmap.set({alpha:0.8});
 		tweenGet(signetBitmap).set({alpha:0.8}).to({alpha:1}, 500);
 	}	
@@ -364,10 +364,10 @@ function preloadResource()
 	//create remake image 
 	function showRemakeBitmap()
 	{
-		var x = 372 * tileScale;
-		var y = 130 * tileScale;
+		var x = 372;
+		var y = 130;
 		remakeBitmap = new CanvasBitmap(preload.getResult("remake"));
-		remakeBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
+		remakeBitmap.setTransform(x, y, 1, 1);
 		remakeBitmap.rotation = -5;
 		remakeBitmap.set({alpha:0.6});
 		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);

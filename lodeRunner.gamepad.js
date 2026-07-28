@@ -116,7 +116,7 @@ var keyCodeMapping  = [
 	[[KEYCODE_X,     0, 0],   [KEYCODE_ENTER, 0, 0]], //dig-right
 	[[KEYCODE_ESC,   0, 0],   [KEYCODE_ENTER, 0, 0]], //pause
 	[[KEYCODE_ENTER, 0, 0],   [KEYCODE_ENTER, 0, 0]], //enter
-	[[KEYCODE_X,     1, 0],   [KEYCODE_ENTER, 0, 0]]  //exit game
+	[[KEYCODE_R,     1, 0],   [KEYCODE_ENTER, 0, 0]]  //end game (Ctrl-R)
 ];
 
 var gameButtonMapping = [ 

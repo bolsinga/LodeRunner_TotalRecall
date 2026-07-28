@@ -4,8 +4,8 @@
  *
  * This program is a HTML5 remake of the Lode Runner games (APPLE II & C64 version).
  *
- * The program code base on CreateJS JavaScript libraries !
- * http://www.createjs.com/
+ * Rendering, sound, tweening and asset loading are owned by this project and
+ * built on plain browser APIs (Canvas2D, Web Audio, rAF). No runtime libraries.
  *
  * The AI algorithm reference book:
  * http://www.kingstone.com.tw/book/book_page.asp?kmcode=2014710650538
@@ -21,11 +21,12 @@
 window.name = 'lodeRunnerParent'; //for world high score switch back 5/31/2015
 
 var screenX1, screenY1;
-var canvasX, canvasY;
+var canvasX, canvasY; // CSS layout size of the game canvas
+var canvasBaseW, canvasBaseH; // authoring extents (CSS / tileScale)
+var canvasDpr = 1;
 var screenBorder;
 
-var tileW, tileH; //tile width & tile height
-var tileWScale, tileHScale; //tile width/height with scale
+var tileW, tileH; //tile width & tile height (base units; also used for authoring)
 var W2, W4;       //W2: 1/2 tile-width,  W4: 1/4 tile width
 var H2, H4;       //H2: 1/2 tile-height, H4: 1/4 tile height
 
@@ -38,6 +39,36 @@ var loadingTxt;
 
 var gameState, lastGameState;
 var tileScale, xMove, yMove;
+
+// Size the game canvas: CSS layout pixels for the element; backing store × DPR.
+// World paint applies setTransform(tileScale * dpr) so objects author in base units.
+function applyCanvasSize(cssW, cssH)
+{
+	canvasX = cssW;
+	canvasY = cssH;
+	canvasDpr = window.devicePixelRatio || 1;
+	if(canvasDpr < 1) canvasDpr = 1;
+	canvas.width = Math.round(cssW * canvasDpr);
+	canvas.height = Math.round(cssH * canvasDpr);
+	canvas.style.width = cssW + "px";
+	canvas.style.height = cssH + "px";
+	canvasBaseW = cssW / tileScale;
+	canvasBaseH = cssH / tileScale;
+}
+
+function applyWorldTransform(ctx)
+{
+	var s = tileScale * canvasDpr;
+	ctx.setTransform(s, 0, 0, s, 0, 0);
+}
+
+// The one crossing between CSS layout px and base authoring units. Page furniture
+// sized in CSS px (editor gutters) keeps a constant on-screen width at any scale,
+// so it must be divided down before use in base-unit drawing.
+function cssPxToBase(px)
+{
+	return px / tileScale;
+}
 
 var speedMode = [14, 18, 23, 29, 35]; //slow   normal  fast , slow down all speed 6/2/2016
 
@@ -104,11 +135,9 @@ function canvasReSize()
 	// exactly; the other follows from the fixed 28x16 aspect and its leftover
 	// space is wasted to the right and bottom.
 	//
-	// Tiles are PLACED at x * tileWScale but DRAWN at scaleX = tileScale, so the
-	// two have to agree to the pixel or adjacent bricks show seams. An arbitrary
-	// scale (0.9766 -> 42.96875px tiles) accumulates rounding error down the
-	// grid; the original stepped by 0.05 for exactly this reason. Keep a step,
-	// but fit closed-form and snap down to it rather than looping.
+	// World paint uses one ctx.setTransform(tileScale * dpr), so placement and
+	// bitmap size share the same scale. Keep the 0.05 snap until a dedicated
+	// re-test proves seams stay gone without it (plan: Scale fit).
 	var availX = screenX1 - BOARD_MARGIN_LEFT - BOARD_MARGIN_RIGHT;
 	var availY = screenY1 - BOARD_MARGIN_TOP - BOARD_MARGIN_BOTTOM;
 	var STEP = 0.05;
@@ -119,20 +148,18 @@ function canvasReSize()
 	if(tileScale > MAX_SCALE) tileScale = MAX_SCALE;
 	if(tileScale < MIN_SCALE) tileScale = MIN_SCALE;
 
-	canvasX = BASE_SCREEN_X * tileScale;
-	canvasY = BASE_SCREEN_Y * tileScale;
+	var cssW = BASE_SCREEN_X * tileScale;
+	var cssH = BASE_SCREEN_Y * tileScale;
 	var iconSizeX = BASE_ICON_X * 2 * tileScale;
-	debug("SCALE=" + tileScale);
+	debug("SCALE=" + tileScale + " DPR=" + (window.devicePixelRatio || 1));
 
-	screenBorder = (screenX1 - (canvasX+iconSizeX))/2;
+	screenBorder = (screenX1 - (cssW+iconSizeX))/2;
 	if(screenBorder > ICON_BORDER*2) screenBorder = ICON_BORDER*2; 
 	else if (screenBorder < 0) screenBorder = 0;
 	screenBorder = (screenBorder * tileScale) | 0;
 	
 	canvas = document.getElementById('canvas');
-
-	canvas.width = canvasX;
-	canvas.height = canvasY;
+	applyCanvasSize(cssW, cssH);
 	
 	// Centre leftover space, but never sit closer than the fit margins on
 	// left/top (so the chrome band stays clear and the right/bottom mins from
@@ -144,9 +171,7 @@ function canvasReSize()
 	
 	tileW = BASE_TILE_X; //tileW and tileH for detection so don't change scale
 	tileH = BASE_TILE_Y;
-	tileWScale = BASE_TILE_X * tileScale;
-	tileHScale = BASE_TILE_Y * tileScale;
-	
+
 	W2 = (tileW/2|0); //20, 15, 10,
 	H2 = (tileH/2|0); //22, 16, 11 
 	
@@ -162,14 +187,14 @@ function createStage()
 	mainStage = { canvas: canvas };
 
 	loadingTxt = new CanvasText(" ", "36px Arial", "#FF0000");
-	loadingTxt.x = (canvas.width - loadingTxt.getBounds().width) / 2 | 0;
-	loadingTxt.y = (canvas.height - loadingTxt.getBounds().height) / 2 | 0;
+	loadingTxt.x = (canvasBaseW - loadingTxt.getBounds().width) / 2 | 0;
+	loadingTxt.y = (canvasBaseH - loadingTxt.getBounds().height) / 2 | 0;
 	worldDisplay.add(loadingTxt);
 	stagePresent();
 }
 
 //==========================================================================
-// single frame-present seam: clear + world + overlay.
+// single frame-present seam: clear (device px) + world transform + paint.
 //==========================================================================
 function stagePresent()
 {
@@ -177,6 +202,7 @@ function stagePresent()
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
 	ctx.globalAlpha = 1;
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	applyWorldTransform(ctx);
 	worldDisplay.paint(ctx);
 	canvasOverlay.paint(ctx);
 }
@@ -190,7 +216,7 @@ function overlayPresent()
 function setBackground()
 {
 	var background = new CanvasShape();
-	background.fillRect("#000000", 0, 0, canvas.width, canvas.height);
+	background.fillRect("#000000", 0, 0, canvasBaseW, canvasBaseH);
 	worldDisplay.add(background);
 	document.body.style.background = backgroundColor;
 }
@@ -500,7 +526,7 @@ function initVariable()
 function buildLevelMap(levelMap) 
 {
 	// Resolve base/act (incl. maxGuard culling + first-&-wins) in pure helper;
-	// this function only attaches CreateJS bitmaps/sprites.
+	// this function only attaches the owned bitmaps/sprites.
 	var resolved = resolveLevelMap(levelMap, maxGuard);
 	var index = 0;
 
@@ -579,7 +605,7 @@ function buildLevelMap(levelMap)
 				curTile.stop();	
 				break;	
 			}
-			curTile.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale); //x,y, scaleX, scaleY 
+			curTile.setTransform(x * tileW, y * tileH, 1, 1); // base units; world transform scales
 			worldDisplay.add(curTile);
 		}
 	}
@@ -627,7 +653,7 @@ function drawGround()
 	groundTile = [];
 	for(var x = 0; x < NO_OF_TILES_X; x++) {
 		groundTile[x] = getThemeBitmap("ground");
-		groundTile[x].setTransform(x * tileWScale, NO_OF_TILES_Y * tileHScale, tileScale, tileScale);
+		groundTile[x].setTransform(x * tileW, NO_OF_TILES_Y * tileH, 1, 1);
 		worldDisplay.add(groundTile[x]); 
 	}
 }
@@ -659,7 +685,7 @@ function initModernVariable()
 
 function initInfoVariable()
 {
-	infoY =  (NO_OF_TILES_Y * BASE_TILE_Y + GROUND_TILE_Y) * tileScale;
+	infoY =  (NO_OF_TILES_Y * BASE_TILE_Y + GROUND_TILE_Y);
 	
 	scoreTxt = []; 
 	scoreTile = [];
@@ -723,36 +749,36 @@ function drawScoreTxt()
 
 function drawLifeTxt()
 {
-	lifeTxt = drawText(13*tileWScale, infoY, "MEN");
+	lifeTxt = drawText(13*tileW, infoY, "MEN");
 }
 
 function drawLevelTxt()
 {
 	var xOffset = 20;
 	
-	levelTxt = drawText(xOffset*tileWScale, infoY, "LEVEL");
+	levelTxt = drawText(xOffset*tileW, infoY, "LEVEL");
 }
 
 //for demo mode
 function drawDemoTxt()
 {
-	demoTxt = drawText(14*tileWScale, infoY, "DEMO");
+	demoTxt = drawText(14*tileW, infoY, "DEMO");
 }
 
 //for time & edit mode
 function drawGoldTxt()
 {
-	goldTxt = drawText(0*tileWScale, infoY, "@");
+	goldTxt = drawText(0*tileW, infoY, "@");
 }
 
 function drawGuardTxt()
 {
-	guardTxt = drawText((5+2/3)*tileWScale, infoY, "#");
+	guardTxt = drawText((5+2/3)*tileW, infoY, "#");
 }
 
 function drawTimeTxt()
 {
-	timeTxt = drawText((11+1/3)*tileWScale, infoY, "TIME");
+	timeTxt = drawText((11+1/3)*tileW, infoY, "TIME");
 }
 
 // draw score number 
@@ -764,7 +790,7 @@ function drawScore(addScore)
 	for(var i = 0; i < scoreTile.length; i++) 
 		worldDisplay.remove(scoreTile[i]);
 	
-	scoreTile = drawText(5*tileWScale, infoY, ("000000"+curScore).slice(-7));
+	scoreTile = drawText(5*tileW, infoY, ("000000"+curScore).slice(-7));
 }
 
 function drawLife()
@@ -772,7 +798,7 @@ function drawLife()
 	for(var i = 0; i < lifeTile.length; i++) 
 		worldDisplay.remove(lifeTile[i]);
 
-	lifeTile = drawText(16*tileWScale, infoY, ("00"+runnerLife).slice(-3));
+	lifeTile = drawText(16*tileW, infoY, ("00"+runnerLife).slice(-3));
 }
 
 function drawLevel()
@@ -782,11 +808,11 @@ function drawLevel()
 	
 	switch(playMode) {
 	case PLAY_AUTO:	
-		levelTile = drawText(25*tileWScale, infoY, ("00"+demoLevel).slice(-3));
+		levelTile = drawText(25*tileW, infoY, ("00"+demoLevel).slice(-3));
 		break;	
 	case PLAY_CLASSIC: 
 	default:		
-		levelTile = drawText(25*tileWScale, infoY, ("00"+curLevel).slice(-3));
+		levelTile = drawText(25*tileW, infoY, ("00"+curLevel).slice(-3));
 		break;	
 	}
 }
@@ -797,7 +823,7 @@ function drawGold(addGold)
 	for(var i = 0; i < goldTile.length; i++) 
 		worldDisplay.remove(goldTile[i]);
 	
-	goldTile = drawText(1*tileWScale, infoY, ("00"+curGetGold).slice(-3));
+	goldTile = drawText(1*tileW, infoY, ("00"+curGetGold).slice(-3));
 }
 
 function drawGuard(addGuard)
@@ -807,7 +833,7 @@ function drawGuard(addGuard)
 	for(var i = 0; i < guardTile.length; i++) 
 		worldDisplay.remove(guardTile[i]);
 	
-	guardTile = drawText((6+2/3)*tileWScale, infoY, ("00"+curGuardDeadNo).slice(-3));
+	guardTile = drawText((6+2/3)*tileW, infoY, ("00"+curGuardDeadNo).slice(-3));
 }
 
 
@@ -824,7 +850,7 @@ function drawTime(addTime)
 	for(var i = 0; i < timeTile.length; i++) 
 		worldDisplay.remove(timeTile[i]);
 
-	timeTile = drawText((15+1/3)*tileWScale, infoY, ("00"+curTime).slice(-3));
+	timeTile = drawText((15+1/3)*tileW, infoY, ("00"+curTime).slice(-3));
 }
 
 function setGroundInfoOrder()
@@ -903,7 +929,7 @@ function drawText(x, y, str, numberType)
 			textTile[i] = new GameSprite(textData, "SPACE");	
 			break;
 		}
-		textTile[i].setTransform(x + i*tileWScale, y, tileScale, tileScale).stop();
+		textTile[i].setTransform(x + i*tileW, y, 1, 1).stop();
 		worldDisplay.add(textTile[i]);
 	}
 	return textTile;	
@@ -973,7 +999,7 @@ function showTipsText(text, time, text1)
 	if(tipsText1 != null) { worldDisplay.remove(tipsText1); tipsText1 = null; }
 	if(tipsRect1 != null) { worldDisplay.remove(tipsRect1); tipsRect1 = null; }
 	
-	tipsText = new CanvasText(text, "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
+	tipsText = new CanvasText(text, "bold 48px Helvetica", "#ee1122");
 	tipsText.set({alpha:1});
 	if(text.length) {
 		width = tipsText.getBounds().width;
@@ -981,8 +1007,8 @@ function showTipsText(text, time, text1)
 	} else {
 		width = height = 0;
 	}
-	x = tipsText.x = (canvas.width - width) / 2 | 0;
-	y = tipsText.y = (NO_OF_TILES_Y*tileHScale - height) / 2 | 0;
+	x = tipsText.x = (canvasBaseW - width) / 2 | 0;
+	y = tipsText.y = (NO_OF_TILES_Y*tileH - height) / 2 | 0;
 	tipsText.setShadow("white", 2, 2, 1);
 	
 	tipsRect = new CanvasShape();
@@ -998,7 +1024,7 @@ function showTipsText(text, time, text1)
 	}
 	
 	if(text1 != null) { //second tips 
-		tipsText1 = new CanvasText(text1, "bold " +  (48*tileScale) + "px Helvetica", "#ee1122");
+		tipsText1 = new CanvasText(text1, "bold 48px Helvetica", "#ee1122");
 		tipsText1.set({alpha:1});
 		if(text1.length) {
 			width = tipsText1.getBounds().width;
@@ -1006,8 +1032,8 @@ function showTipsText(text, time, text1)
 		} else {
 			width = height = 0;
 		}
-		x = tipsText1.x = (canvas.width - width) / 2 | 0;
-		y = tipsText1.y = (NO_OF_TILES_Y*tileHScale - height) / 2  + tipsText.getBounds().height*2 | 0;
+		x = tipsText1.x = (canvasBaseW - width) / 2 | 0;
+		y = tipsText1.y = (NO_OF_TILES_Y*tileH - height) / 2  + tipsText.getBounds().height*2 | 0;
 		tipsText1.setShadow("white", 2, 2, 1);
 	
 		tipsRect1 = new CanvasShape();
@@ -1100,8 +1126,8 @@ function gameOverAnimation()
 {
 	var gameOverImage = getThemeBitmap("over");
 	var bound = gameOverImage.getBounds();
-	var x = (NO_OF_TILES_X*tileWScale)/2|0;
-	var y = (NO_OF_TILES_Y*tileHScale)/2|0;
+	var x = (NO_OF_TILES_X*tileW)/2|0;
+	var y = (NO_OF_TILES_Y*tileH)/2|0;
 	var regX = (bound.width)/2|0;
 	var regY = (bound.height)/2|0;
 	
@@ -1109,22 +1135,22 @@ function gameOverAnimation()
 	var rectBlock = new CanvasShape();
 	rectBlock.fillRect("black", -1, -1, bound.width+2, bound.height+2);
 	
-	rectBlock.setTransform(x, y, tileScale, tileScale).set({regX:regX, regY:regY});
+	rectBlock.setTransform(x, y, 1, 1).set({regX:regX, regY:regY});
 	
-	gameOverImage.setTransform(x, y, tileScale, tileScale).set({regX:regX, regY:regY});
+	gameOverImage.setTransform(x, y, 1, 1).set({regX:regX, regY:regY});
 	tweenGet(gameOverImage)
-			.to({scaleY:-tileScale},80)
-			.to({scaleY:tileScale},80)
-			.to({scaleY:-tileScale},100)
-			.to({scaleY:tileScale},100)
-			.to({scaleY:-tileScale},150)
-			.to({scaleY:tileScale},150)
-			.to({scaleY:-tileScale},300)
-			.to({scaleY:tileScale},300)
-			.to({scaleY:-tileScale},450)
-			.to({scaleY:tileScale},450)
-			.to({scaleY:-tileScale},750)
-			.to({scaleY:tileScale},750)
+			.to({scaleY:-1},80)
+			.to({scaleY:1},80)
+			.to({scaleY:-1},100)
+			.to({scaleY:1},100)
+			.to({scaleY:-1},150)
+			.to({scaleY:1},150)
+			.to({scaleY:-1},300)
+			.to({scaleY:1},300)
+			.to({scaleY:-1},450)
+			.to({scaleY:1},450)
+			.to({scaleY:-1},750)
+			.to({scaleY:1},750)
 			.wait(1500)
 			.call(function(){ if(gameState == GAME_OVER_ANIMATION) gameState = GAME_OVER;});
 	/* 
@@ -1168,8 +1194,8 @@ CycleWipe.prototype.draw = function(ctx)
 
 function initCycVariable()
 {
-	cycX = NO_OF_TILES_X * tileWScale/2;
-	cycY = NO_OF_TILES_Y * tileHScale/2;
+	cycX = NO_OF_TILES_X * tileW/2;
+	cycY = NO_OF_TILES_Y * tileH/2;
 	cycMaxRadius = Math.sqrt(cycX*cycX+cycY*cycY)|0+1;
 	cycDiff = (cycMaxRadius/CLOSE_SCREEN_SPEED)|0;
 }

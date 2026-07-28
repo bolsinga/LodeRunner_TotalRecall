@@ -336,8 +336,8 @@ function guardMoveStep( id, action)
 		}
 	} else {
 		if(curGuard.action == ACT_CLIMB_OUT) action = ACT_CLIMB_OUT;
-		curGuard.sprite.x = (x * tileW + xOffset) * tileScale | 0;
-		curGuard.sprite.y = (y * tileH + yOffset) * tileScale | 0;
+		curGuard.sprite.x = (x * tileW + xOffset) | 0;
+		curGuard.sprite.y = (y * tileH + yOffset) | 0;
 		curGuard.pos = { x:x, y:y, xOffset:xOffset, yOffset:yOffset};	
 		if(curShape != newShape) {
 			curGuard.sprite.gotoAndPlay(newShape);
@@ -882,8 +882,8 @@ function guardReborn(x, y)
 	var curGuard = guard[id];
 	
 	curGuard.pos = { x:bornX, y:bornY, xOffset:0, yOffset: 0 };
-	curGuard.sprite.x = bornX * tileWScale | 0;
-	curGuard.sprite.y = bornY * tileHScale | 0;
+	curGuard.sprite.x = bornX * tileW | 0;
+	curGuard.sprite.y = bornY * tileH | 0;
 	
 	rebornTimeStart = recordCount;
 	if(curAiVersion < 3) {

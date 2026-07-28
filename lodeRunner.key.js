@@ -36,7 +36,7 @@ function pressShiftKey(code)
 function pressCtrlKey(code)
 {
 	switch(code) {
-	case KEYCODE_R: //CTRL-R : restart level, at the cost of one life
+	case KEYCODE_A: //CTRL-A : sacrifice the current man, restarting the level
 		gameState = GAME_RUNNER_DEAD;
 		break;
 	case KEYCODE_C: //CTRL-C : copy current level
@@ -51,8 +51,8 @@ function pressCtrlKey(code)
 	case KEYCODE_K: //CTRL-K : repeat actions On/Off
 		toggleRepeatAction();
 		break;
-	case KEYCODE_X: //CTRL-X : exit the game -- spend the last life, so the death
-		runnerLife = 1;         //that follows ends the run and returns to level 1
+	case KEYCODE_R: //CTRL-R : end the game -- spend the last life, so the death
+		runnerLife = 1;         //that follows runs game over and returns to demo
 		gameState = GAME_RUNNER_DEAD;
 		break;
 	case KEYCODE_T: //CTRL-T : reveal trap blocks

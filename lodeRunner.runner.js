@@ -274,8 +274,8 @@ function runnerMoveStep(action, stayCurrPos )
 			runner.action = ACT_STOP;
 		}
 	} else {
-		runner.sprite.x = (x * tileW + xOffset) * tileScale | 0;
-		runner.sprite.y = (y * tileH + yOffset) * tileScale | 0;
+		runner.sprite.x = (x * tileW + xOffset) | 0;
+		runner.sprite.y = (y * tileH + yOffset) | 0;
 		runner.pos = { x:x, y:y, xOffset:xOffset, yOffset:yOffset};	
 		if(curShape != newShape) {
 			runner.sprite.gotoAndPlay(newShape);
@@ -348,7 +348,7 @@ function addGold(x, y)
 	
 	map[x][y].base = GOLD_T;
 	tile = map[x][y].bitmap = getThemeBitmap("gold");
-	tile.setTransform(x * tileWScale, y * tileHScale,tileScale, tileScale); //x,y, scaleX, scaleY 
+	tile.setTransform(x * tileW, y * tileH, 1, 1); 
 	worldDisplay.add(tile); 
 	
 	moveSprite2Top(); //reset runner, guard & fill hole object order
@@ -499,7 +499,7 @@ function digHole(action)
 		
 	holeObj.action = ACT_DIGGING;
 	holeObj.pos = { x: x, y: y };
-	holeObj.sprite.setTransform(x * tileWScale, y * tileHScale,tileScale, tileScale);
+	holeObj.sprite.setTransform(x * tileW, y * tileH, 1, 1);
 	
 	digTimeStart = recordCount; //for debug
 	
@@ -614,7 +614,7 @@ function fillHole(x, y)
 	var fillSprite = new GameSprite(holeData, "fillHole");
 	
 	fillSprite.pos = { x:x, y:y }; //save position 11/18/2014
-	fillSprite.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale);
+	fillSprite.setTransform(x * tileW, y * tileH, 1, 1);
 	
 	if(curAiVersion < 3) {
 		fillSprite.addEventListener("animationend", fillComplete);
@@ -639,10 +639,6 @@ function moveFillHoleObj2Top()
 
 function fillComplete(evt, data)
 {
-	//don't use "divide command", it will cause loss of accuracy while scale changed (ex: tileScale = 0.6...)
-	//var x = this.x / tileWScale | 0; //this : scope default to the dispatcher
-	//var y = this.y / tileHScale | 0;
-
 	//AI<3 animationend passes evt (target = sprite); AI>=3 processFillHole passes {obj:sprite}
 	var fillObj = data ? data.obj : evt.target;
 	var x = fillObj.pos.x, y = fillObj.pos.y; //get position
