@@ -29,4 +29,4 @@ jobs:
     - name: Test LodeRunner package
       run: swift test -v -Xswiftc -warnings-as-errors
     - name: Build LodeRunnerApp (iOS / macOS)
-      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerApp -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS"
+      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerApp -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS=""
