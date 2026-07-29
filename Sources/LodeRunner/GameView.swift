@@ -63,7 +63,16 @@ public struct GameView: View {
         .task {
             driver.input = keyboard
             sound.theme = theme
-            driver.soundHandler = { [sound] effect in sound.play(effect) }
+            driver.soundHandler = { [sound] effect in
+                // Landing/death/level-pass all cut the fall clip in the JS
+                // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
+                // ~4s, so without this it rings well past the actual fall.
+                switch effect {
+                case .down, .dead, .pass: sound.stop(.fall)
+                default: break
+                }
+                sound.play(effect)
+            }
             await driver.run()
         }
         .onChange(of: theme) { _, newValue in sound.theme = newValue }

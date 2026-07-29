@@ -18,8 +18,10 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     /// Runner landing after a fall (`runner.js:270`, `runner.js:287`,
     /// `themeSoundPlay("down")` — the thump on transition out of `.fall`).
     case down
-    /// Runner starts falling (`runner.js:289`, `soundPlay(soundFall)` — a
-    /// looped/persistent sound in the JS, one-shot here for v1).
+    /// Runner starts falling (`runner.js:289`, `soundPlay(soundFall)`). The
+    /// clip is stopped via `SoundPlayer.stop(.fall)` on the landing/death/
+    /// level-pass edges to match the JS `soundStop(soundFall)` calls at
+    /// `runner.js:269,286`, `main.js:1465,1615,1621`.
     case fall
     /// Gold pickup (`runner.js:310`, `themeSoundPlay("getGold")`).
     case getGold
