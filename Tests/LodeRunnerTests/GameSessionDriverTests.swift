@@ -131,6 +131,69 @@ struct GameSessionDriverTests {
         #expect(sink.effects.contains(.dead))
     }
 
+    @Test("runner fall fires .fall on takeoff and .down on landing")
+    func fallAndDownFireOnRunnerFallCycle() throws {
+        // Runner one row above the auto-brick floor. First tick: action
+        // .stop → .fall (fires .fall). Enough later ticks: runner lands on
+        // (5, 14) with .brick below and action leaves .fall (fires .down).
+        let level = makeLevel(stamps: [(x: 5, y: 13, tile: .runner)])
+        let session = try GameSession(levels: [level])
+        let input = StubInput(currentAction: .stop)
+        let driver = GameSessionDriver(
+            session: session, input: input, startInBornBlink: false)
+        let sink = EffectSink()
+        driver.soundHandler = { sink.record($0) }
+
+        for _ in 0..<20 {
+            driver.tick()
+            if sink.effects.contains(.down) { break }
+        }
+        // .fall is edge-detected (nothing → .fall) so a fall cycle fires it
+        // exactly once, not on every tick spent airborne.
+        #expect(sink.effects.filter { $0 == .fall }.count == 1)
+        #expect(sink.effects.contains(.down))
+    }
+
+    @Test("guard trap fires .trap; buried guard fires .born on rebirth")
+    func trapAndBornFireAcrossHoleLifecycle() throws {
+        // Runner at (4, 13), guard far right at (22, 13). Row 14 is all
+        // brick so both walk row 13 (with brick support below); row 15 is
+        // the usual auto-brick. Runner digs right → hole opens at (5, 14)
+        // at t=11; fill completes ~186 ticks later at t≈197.
+        //
+        // The guard has to walk 17 tiles left at ~8 ticks/tile before it
+        // can reach column 5, so it falls into the hole at t≈140 — firing
+        // .trap via the shakingGuards delta. Guard shake runs 66 ticks
+        // (ends t≈206), so the guard is still inside the hole cell at
+        // t≈197 when the fill completes: `fillComplete` sees `.guard` at
+        // the cell, calls `guardReborn`, which appends to `rebornGuards`
+        // and fires .born. Runner stays at (4, 13); guard falls at column
+        // 5 before crossing into column 4, so no collision-death.
+        var stamps: [(x: Int, y: Int, tile: TileType)] = [
+            (x: 4, y: 13, tile: .runner),
+            (x: 22, y: 13, tile: .guard),
+        ]
+        for x in 0..<LevelGrid.tilesX {
+            stamps.append((x: x, y: 14, tile: .brick))
+        }
+        let level = makeLevel(stamps: stamps)
+        let session = try GameSession(levels: [level])
+        let input = StubInput(currentAction: .digRight)
+        let driver = GameSessionDriver(
+            session: session, input: input, startInBornBlink: false)
+        let sink = EffectSink()
+        driver.soundHandler = { sink.record($0) }
+
+        driver.tick()  // t=0: kick off the dig.
+        input.currentAction = .stop
+        for _ in 0..<300 {
+            driver.tick()
+            if sink.effects.contains(.born) { break }
+        }
+        #expect(sink.effects.contains(.trap))
+        #expect(sink.effects.contains(.born))
+    }
+
     @Test("level pass fires .pass via passedLevelCount incrementing")
     func passFiresOnLevelComplete() throws {
         // Same "walk right onto gold, climb ladder to row 0" shape used in

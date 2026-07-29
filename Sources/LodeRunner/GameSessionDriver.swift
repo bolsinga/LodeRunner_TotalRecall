@@ -76,10 +76,7 @@ public final class GameSessionDriver {
     }
 
     /// Diff session state before/after a tick and fire sound triggers for
-    /// each detected event. Reliably-detectable events only for v1: gold
-    /// pickup, dig start, level pass, runner death. `fall`, `down`, `trap`,
-    /// and `born` (guard reborn) need runner-action / guard-state diffing —
-    /// deferred to a follow-up.
+    /// each detected event.
     private func fireSoundEvents(before: TickSnapshot) {
         guard let soundHandler else { return }
         let sim = session.simulation
@@ -106,6 +103,39 @@ public final class GameSessionDriver {
         if session.passedLevelCount > before.passedLevelCount {
             soundHandler(.pass)
         }
+
+        // The remaining events sample sim state after the tick. Skip them if
+        // the sim was replaced this tick (death or level advance): GameSession
+        // seeds a fresh sim with `runner.action == .stop` and empty
+        // shake/reborn queues, which would look like spurious edges.
+        let simReplaced =
+            session.lives < before.lives
+            || session.passedLevelCount > before.passedLevelCount
+        guard !simReplaced else { return }
+
+        // Runner starts falling — `runner.js:289`, `soundPlay(soundFall)`.
+        // Edge into `.fall`.
+        if before.runnerAction != .fall, sim.runner.action == .fall {
+            soundHandler(.fall)
+        }
+        // Runner lands — `runner.js:270,287`, `themeSoundPlay("down")`. Edge
+        // out of `.fall`.
+        if before.runnerAction == .fall, sim.runner.action != .fall {
+            soundHandler(.down)
+        }
+        // Guard trapped in hole — `guard.js:245`. `enqueueShake` (the only
+        // path that appends to `shakingGuards`) fires exactly when the guard
+        // lands in the hole, so a new index in the set is the trap edge.
+        let nowShaking = Set(sim.shakingGuards.map(\.guardIndex))
+        if !nowShaking.subtracting(before.shakingGuardIDs).isEmpty {
+            soundHandler(.trap)
+        }
+        // Guard reborn — `guard.js:913`. `guardReborn` appends to
+        // `rebornGuards` when a buried guard respawns; new index = the edge.
+        let nowReborn = Set(sim.rebornGuards.map(\.guardIndex))
+        if !nowReborn.subtracting(before.rebornGuardIDs).isEmpty {
+            soundHandler(.born)
+        }
     }
 
     private struct TickSnapshot {
@@ -113,12 +143,18 @@ public final class GameSessionDriver {
         let hasDigState: Bool
         let lives: Int
         let passedLevelCount: Int
+        let runnerAction: RunnerAction
+        let shakingGuardIDs: Set<Int>
+        let rebornGuardIDs: Set<Int>
 
         init(session: GameSession) {
             goldRemaining = session.simulation.goldRemaining
             hasDigState = session.simulation.digState != nil
             lives = session.lives
             passedLevelCount = session.passedLevelCount
+            runnerAction = session.simulation.runner.action
+            shakingGuardIDs = Set(session.simulation.shakingGuards.map(\.guardIndex))
+            rebornGuardIDs = Set(session.simulation.rebornGuards.map(\.guardIndex))
         }
     }
 
