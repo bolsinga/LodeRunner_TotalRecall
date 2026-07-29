@@ -8,12 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		FE610716301A8BF200E74F74 /* LodeRunner in Frameworks */ = {isa = PBXBuildFile; productRef = FE610715301A8BF200E74F74 /* LodeRunner */; };
-		FE61071A301A8FCA00E74F74 /* LodeRunnerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE610719301A8FCA00E74F74 /* LodeRunnerApp.swift */; };
+		FE61071F301A910400E74F74 /* LodeRunnerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE61071D301A910400E74F74 /* LodeRunnerApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		FE6106EA301A89CC00E74F74 /* LodeRunnerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LodeRunnerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FE610719301A8FCA00E74F74 /* LodeRunnerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LodeRunnerApp.swift; sourceTree = "<group>"; };
+		FE61071D301A910400E74F74 /* LodeRunnerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LodeRunnerApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -31,7 +31,7 @@
 		FE6106E1301A89CC00E74F74 = {
 			isa = PBXGroup;
 			children = (
-				FE610719301A8FCA00E74F74 /* LodeRunnerApp.swift */,
+				FE61071E301A910400E74F74 /* LodeRunner */,
 				FE6106EB301A89CC00E74F74 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -42,6 +42,14 @@
 				FE6106EA301A89CC00E74F74 /* LodeRunnerApp.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FE61071E301A910400E74F74 /* LodeRunner */ = {
+			isa = PBXGroup;
+			children = (
+				FE61071D301A910400E74F74 /* LodeRunnerApp.swift */,
+			);
+			path = LodeRunner;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -120,7 +128,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FE61071A301A8FCA00E74F74 /* LodeRunnerApp.swift in Sources */,
+				FE61071F301A910400E74F74 /* LodeRunnerApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
