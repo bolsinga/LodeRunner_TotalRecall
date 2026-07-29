@@ -24,6 +24,9 @@ let package = Package(
                 // `<theme>/born.mp3` into a single bundle-root `born.mp3` and
                 // collide across themes.
                 .copy("Resources/Sounds"),
+                // Same reason: `Bundle.module.url(..., subdirectory: "Levels")`
+                // in `LevelPack.load()` needs the directory preserved.
+                .copy("Resources/Levels"),
             ]
         ),
         .testTarget(name: "LodeRunnerTests", dependencies: ["LodeRunner"]),
