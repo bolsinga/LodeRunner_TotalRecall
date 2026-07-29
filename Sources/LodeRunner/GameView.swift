@@ -17,6 +17,7 @@ public struct GameView: View {
     @State private var keyboard = KeyboardInput()
     @State private var sound = SoundPlayer()
     @Environment(\.tileTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
 
     public init(session: GameSession) {
         _driver = State(initialValue: GameSessionDriver(session: session))
@@ -48,7 +49,10 @@ public struct GameView: View {
                         LevelPassOverlay()
                     }
                     if driver.session.phase == .gameOver {
-                        GameOverOverlay()
+                        // Analog to JS `showCoverPage()` at `main.js:1522`
+                        // (the terminal step of the `GAME_OVER` state): after
+                        // the flip finishes, dismiss back to `PackChooserView`.
+                        GameOverOverlay(onFinished: { dismiss() })
                     }
                 }
                 ScoreHUD(
