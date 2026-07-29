@@ -48,6 +48,17 @@ public final class SoundPlayer {
         player.play()
     }
 
+    /// Stop a currently-playing effect. Mirrors `soundStop(soundFall)` in the
+    /// JS — used to cut the fall clip on landing so it doesn't ring past the
+    /// end of the actual fall (fall.mp3 is ~4s; most falls are a fraction of
+    /// that). No-op if the effect was never played or is already stopped.
+    public func stop(_ effect: SoundEffect) {
+        let key = CacheKey(theme: theme, effect: effect)
+        guard let player = players[key] else { return }
+        player.stop()
+        player.currentTime = 0
+    }
+
     /// Bundle URL for `effect`'s `theme` variant, or `nil` if the file isn't
     /// shipped. Exposed for tests to verify the resource layout without
     /// touching AVFoundation. `nonisolated` because it reads only from the
