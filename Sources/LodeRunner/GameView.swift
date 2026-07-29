@@ -118,23 +118,10 @@ public struct GameView: View {
 
 // MARK: - Preview
 
-/// Single-level session for the preview: same layout as
-/// `SimulationDriver`'s walking preview (floor + platform + two guards + a
-/// few gold pieces), wrapped in a `GameSession` so the overlays and HUD
-/// have something to react to.
+/// Full 150-level classic pack, loaded from the bundled `Levels/classic.txt`
+/// so the preview shows the real game rather than a synthetic layout.
 private func previewSession() throws -> GameSession {
-    var stamps: [(x: Int, y: Int, tile: TileType)] = [
-        (x: 3, y: 14, tile: .runner),
-        (x: 12, y: 9, tile: .guard),
-        (x: 18, y: 9, tile: .guard),
-        (x: 6, y: 14, tile: .gold),
-        (x: 15, y: 9, tile: .gold),
-        (x: 21, y: 9, tile: .gold),
-    ]
-    for x in 8...22 {
-        stamps.append((x: x, y: 10, tile: .brick))
-    }
-    return try GameSession(levels: [makeLevel(stamps: stamps)])
+    try GameSession(levels: LevelPack.classic.load())
 }
 
 #Preview("Game view — Apple2", traits: .landscapeLeft) {
