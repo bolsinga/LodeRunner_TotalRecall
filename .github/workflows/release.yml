@@ -17,7 +17,7 @@ jobs:
     - name: Available Xcodes
       run: ls /Applications | grep Xcode
     - name: Switch to Xcode 26
-      run: sudo xcode-select -s "/Applications/Xcode_26.4.app/Contents/Developer"
+      run: sudo xcode-select -s "/Applications/Xcode_26.5.app/Contents/Developer"
     - name: Xcode Version
       run: xcodebuild -version
     - name: Install iOS
@@ -25,8 +25,8 @@ jobs:
     - name: Show SDKs
       run: xcodebuild -showsdks
     - name: Show Destinations
-      run: xcodebuild -scheme LodeRunner -showdestinations
-    - name: Build / Test
+      run: xcodebuild -scheme LodeRunnerApp -showdestinations
+    - name: Test LodeRunner package
       run: swift test -v -Xswiftc -warnings-as-errors
-    - name: Build iOS / macOS
-      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunner -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS"
+    - name: Build LodeRunnerApp (iOS / macOS)
+      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerApp -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS=""
