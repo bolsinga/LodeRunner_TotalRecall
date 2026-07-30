@@ -21,14 +21,21 @@ public struct GameOverOverlay: View {
 
     let boardWidth: CGFloat
     let boardHeight: CGFloat
+    /// Fired when the flip tween's terminal `.wait(1500).call(...)` would run
+    /// in the JS (`main.js:1140`) — or immediately on tap. Callers wire this
+    /// to a navigation pop back to the chooser, our analog to the JS
+    /// `showCoverPage()` at `main.js:1522`.
+    let onFinished: () -> Void
     @State private var startDate = Date()
 
     public init(
         boardWidth: CGFloat = CGFloat(LevelGrid.tilesX * TileGeometry.tileWidth),
-        boardHeight: CGFloat = CGFloat(LevelGrid.tilesY * TileGeometry.tileHeight)
+        boardHeight: CGFloat = CGFloat(LevelGrid.tilesY * TileGeometry.tileHeight),
+        onFinished: @escaping () -> Void = {}
     ) {
         self.boardWidth = boardWidth
         self.boardHeight = boardHeight
+        self.onFinished = onFinished
     }
 
     public var body: some View {
@@ -48,7 +55,18 @@ public struct GameOverOverlay: View {
             .position(x: boardWidth / 2, y: boardHeight / 2)
         }
         .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
+        .contentShape(Rectangle())
+        .onTapGesture { onFinished() }
+        .task {
+            try? await Task.sleep(for: .milliseconds(Int(Self.totalDurationSeconds * 1000)))
+            onFinished()
+        }
     }
+
+    /// Total flip + terminal-wait duration in seconds — matches the sum of
+    /// `flipSegments` (3660 ms) plus the JS's `.wait(1500)` at `main.js:1139`.
+    static let totalDurationSeconds: Double =
+        flipSegments.reduce(0) { $0 + $1.ms } / 1000 + 1.5
 
     /// Native pixel size of `over.png` — identical for both themes.
     private static let bannerWidth: CGFloat = 356
