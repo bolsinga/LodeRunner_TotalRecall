@@ -30,6 +30,10 @@ struct GameSessionTests {
         for action in completeActions {
             try session.tick(action)
         }
+        // Level complete now parks the session in `.transitioning(.levelAdvance)`
+        // pending the composition layer's iris close/open. Tests operate on the
+        // post-swap state, so finalize inline.
+        try session.finalizeTransition()
     }
 
     @Test("init: starting lives/score/level/phase, and empty levels throws")
@@ -61,6 +65,8 @@ struct GameSessionTests {
             try session.tick(.right)
             if session.lives < 5 { break }
         }
+        #expect(session.phase == .transitioning(.death))
+        try session.finalizeTransition()
 
         #expect(session.lives == 4)
         #expect(session.score == 0)
@@ -80,9 +86,15 @@ struct GameSessionTests {
         ])
         var session = try GameSession(levels: [deathLevel])
 
+        // Each death now parks in `.transitioning(.death)`; the caller finalizes
+        // to drop lives and swap the sim, matching how `GameSessionDriver.run`
+        // drives it around the iris wipe.
         for _ in 0..<200 {
+            if case .transitioning = session.phase {
+                try session.finalizeTransition()
+            }
+            if session.phase == .gameOver { break }
             try session.tick(.right)
-            if session.phase != .playing { break }
         }
         #expect(session.phase == .gameOver)
         #expect(session.lives == 0)
@@ -133,6 +145,53 @@ struct GameSessionTests {
         let frozen = session
         try session.tick(.stop)
         #expect(session == frozen)
+    }
+
+    @Test("death parks in .transitioning until finalize; sim frozen mid-death")
+    func deathParksInTransitioningUntilFinalize() throws {
+        let deathLevel = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
+        var session = try GameSession(levels: [deathLevel])
+
+        for _ in 0..<10 {
+            try session.tick(.right)
+            if case .transitioning = session.phase { break }
+        }
+        // Bookkeeping applied at the transition edge; sim swap deferred.
+        #expect(session.phase == .transitioning(.death))
+        #expect(session.lives == 4)
+        #expect(session.simulation.phase == .dead)
+
+        // Additional ticks are no-ops while transitioning — matches JS
+        // `GAME_WAITING` at `main.js:1479-1480`.
+        let frozen = session
+        try session.tick(.right)
+        #expect(session == frozen)
+
+        try session.finalizeTransition()
+        #expect(session.phase == .playing)
+        #expect(session.simulation.phase == .playing)
+    }
+
+    @Test("level complete parks in .transitioning(.levelAdvance) until finalize")
+    func levelCompleteParksInTransitioning() throws {
+        var session = try GameSession(levels: [
+            completableLevel(offsetX: 0),
+            completableLevel(offsetX: 10),
+        ])
+
+        for action in completeActions {
+            try session.tick(action)
+        }
+        #expect(session.phase == .transitioning(.levelAdvance))
+        #expect(session.passedLevelCount == 1)
+        #expect(session.currentLevelIndex == 1)
+
+        try session.finalizeTransition()
+        #expect(session.phase == .playing)
+        #expect(session.simulation.runner.position == GridPoint(x: 13, y: 1))
     }
 
     @Test("GameSession round-trips through JSON")
