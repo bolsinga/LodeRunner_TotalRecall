@@ -8,11 +8,25 @@ import SwiftUI
 /// to per-tick work while the session is `GAME_PLAYING`, plus the
 /// `GAME_START → GAME_PLAYING` transition (`main.js:1298-1306`) triggered
 /// here when the first non-`.stop` input arrives.
+/// Which half of the level-transition iris wipe is currently on screen —
+/// `nil` when no transition is in flight. Ported from the JS `closingScreen`
+/// / `openingScreen` pair (`main.js:1195-1230,1304-1319`), which frame the
+/// `newLevel()` swap on every regular death respawn and level advance.
+public enum LevelTransitionPhase: Equatable, Sendable {
+    case closing
+    case opening
+}
+
 @Observable @MainActor
 public final class GameSessionDriver {
     public private(set) var session: GameSession
     public private(set) var runnerAppearance: RunnerAppearance
     public private(set) var guardAppearances: [GuardAppearance]
+    /// Iris state for the composition layer. `run()` drives it around the
+    /// `session.finalizeTransition()` call so the closing wipe covers the old
+    /// level, the swap happens at fully-black, and the opening wipe reveals
+    /// the new level — matching `main.js:1195-1230,1304-1319`.
+    public private(set) var transitionPhase: LevelTransitionPhase?
 
     /// Live input source, polled once per `tick()`.
     public var input: (any RunnerInput)?
@@ -27,6 +41,13 @@ public final class GameSessionDriver {
     /// 30 Hz to match the JS default (`lodeRunner.preload.js:242`), same as
     /// `SimulationDriver`.
     public let tickPeriod: Duration = .microseconds(1_000_000 / 30)
+
+    /// Iris close/open duration each — matches the JS `CLOSE_SCREEN_SPEED = 35`
+    /// at 5 ms/step (`lodeRunner.def.js:148`, `main.js:1205,1314`) ≈ 175 ms
+    /// per half. Same nominal value as `LevelPassOverlay.jsCloseDurationSeconds`
+    /// / `LevelStartOverlay.jsOpenDurationSeconds`, held here as the single
+    /// source of truth for the wait between `run()`'s state transitions.
+    public let wipeDurationSeconds: Double = 5.0 * 35 / 1000
 
     private var isRunning = false
 
@@ -52,8 +73,26 @@ public final class GameSessionDriver {
         defer { isRunning = false }
         while !Task.isCancelled {
             tick()
+            if case .transitioning = session.phase {
+                await runLevelTransition()
+                continue
+            }
             try? await Task.sleep(for: tickPeriod)
         }
+    }
+
+    /// Drive one full iris cycle around a pending sim swap. The tick loop is
+    /// paused for the whole cycle — matches the JS's `GAME_WAITING` gate at
+    /// `main.js:1479-1480,1499-1500`, which parks the state machine while
+    /// `newLevel()`'s `closingScreen`/`openingScreen` recursion runs.
+    private func runLevelTransition() async {
+        transitionPhase = .closing
+        try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
+        try? session.finalizeTransition()
+        refreshAppearances()
+        transitionPhase = .opening
+        try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
+        transitionPhase = nil
     }
 
     /// One tick — hand off from `.starting` on first input, advance the

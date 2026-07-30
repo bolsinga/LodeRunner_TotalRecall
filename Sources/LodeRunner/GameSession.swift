@@ -4,8 +4,23 @@ private let maxLives = 100
 
 public enum GameSessionPhase: Equatable, Codable, Sendable {
     case playing
+    /// Held between the tick that produced a `.dead`/`.finished` sim and the
+    /// caller's `finalizeTransition()` — the JS's `GAME_WAITING` between
+    /// `GAME_RUNNER_DEAD`/`GAME_FINISH` and `GAME_NEW_LEVEL` (`main.js:1479-
+    /// 1480,1499-1500`). Score/lives/level bookkeeping has already been
+    /// applied; only the `simulation` swap is deferred, so the composition
+    /// layer can play the iris close/open around the swap.
+    case transitioning(TransitionKind)
     case gameOver  // ran out of lives
     case won  // passed every level at least once
+}
+
+/// Which cause routed us into `.transitioning`. `currentLevelIndex` is
+/// unchanged for `.death` and already-incremented for `.levelAdvance` by the
+/// time this phase is entered.
+public enum TransitionKind: Equatable, Codable, Sendable {
+    case death
+    case levelAdvance
 }
 
 public enum GameSessionError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -83,7 +98,7 @@ public struct GameSession: Equatable, Codable, Sendable {
         if lives <= 0 {
             phase = .gameOver
         } else {
-            simulation = try RunnerSimulation(level: levels[currentLevelIndex])
+            phase = .transitioning(.death)
         }
     }
 
@@ -98,7 +113,18 @@ public struct GameSession: Equatable, Codable, Sendable {
         if currentLevelIndex == 0 && passedLevelCount >= levels.count {
             phase = .won
         } else {
-            simulation = try RunnerSimulation(level: levels[currentLevelIndex])
+            phase = .transitioning(.levelAdvance)
         }
+    }
+
+    /// Swap `simulation` for a fresh instance of the current level and return
+    /// to `.playing`. Ports the swap side of `newLevel()` / `initForPlay()`
+    /// (`main.js:1185-1230,1298-1319`) — the piece that the JS runs at the
+    /// moment the closing iris hits `r == 0`. No-op unless `phase` is
+    /// `.transitioning`.
+    public mutating func finalizeTransition() throws {
+        guard case .transitioning = phase else { return }
+        simulation = try RunnerSimulation(level: levels[currentLevelIndex])
+        phase = .playing
     }
 }

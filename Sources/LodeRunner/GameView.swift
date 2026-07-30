@@ -41,10 +41,19 @@ public struct GameView: View {
                     ForEach(Array(driver.session.simulation.guards.enumerated()), id: \.offset) { index, guardState in
                         guardView(index: index, guardState: guardState)
                     }
-                    if driver.session.simulation.phase == .starting {
+                    // Initial-level opening reveal (`armBornBlink` path) and
+                    // mid-game post-transition opening reveal share the same
+                    // JS `openingScreen` (`main.js:1304-1319`).
+                    if driver.session.simulation.phase == .starting
+                        || driver.transitionPhase == .opening {
                         LevelStartOverlay()
                     }
-                    if driver.session.simulation.phase == .finished {
+                    // Mid-game closing wipe over the last frame of the old
+                    // level (`main.js:1195-1206`). Driven by the driver's
+                    // transition state, not the sim's own `.finished` phase,
+                    // because the sim now sits in that terminal state until
+                    // `finalizeTransition()` fires at fully-black.
+                    if driver.transitionPhase == .closing {
                         LevelPassOverlay()
                     }
                     if driver.session.phase == .gameOver {
