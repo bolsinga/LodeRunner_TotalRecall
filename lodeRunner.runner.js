@@ -274,8 +274,8 @@ function runnerMoveStep(action, stayCurrPos )
 			runner.action = ACT_STOP;
 		}
 	} else {
-		runner.sprite.x = (x * tileW + xOffset) * tileScale | 0;
-		runner.sprite.y = (y * tileH + yOffset) * tileScale | 0;
+		runner.sprite.x = (x * tileW + xOffset) | 0;
+		runner.sprite.y = (y * tileH + yOffset) | 0;
 		runner.pos = { x:x, y:y, xOffset:xOffset, yOffset:yOffset};	
 		if(curShape != newShape) {
 			runner.sprite.gotoAndPlay(newShape);
@@ -338,7 +338,7 @@ function decGold()
 function removeGold(x,y)
 {
 	map[x][y].base = EMPTY_T;
-	mainStage.removeChild(map[x][y].bitmap);
+	worldDisplay.remove(map[x][y].bitmap);
 	map[x][y].bitmap = null;
 }
 
@@ -348,8 +348,8 @@ function addGold(x, y)
 	
 	map[x][y].base = GOLD_T;
 	tile = map[x][y].bitmap = getThemeBitmap("gold");
-	tile.setTransform(x * tileWScale, y * tileHScale,tileScale, tileScale); //x,y, scaleX, scaleY 
-	mainStage.addChild(tile); 
+	tile.setTransform(x * tileW, y * tileH, 1, 1); 
+	worldDisplay.add(tile); 
 	
 	moveSprite2Top(); //reset runner, guard & fill hole object order
 }
@@ -499,7 +499,7 @@ function digHole(action)
 		
 	holeObj.action = ACT_DIGGING;
 	holeObj.pos = { x: x, y: y };
-	holeObj.sprite.setTransform(x * tileWScale, y * tileHScale,tileScale, tileScale);
+	holeObj.sprite.setTransform(x * tileW, y * tileH, 1, 1);
 	
 	digTimeStart = recordCount; //for debug
 	
@@ -515,7 +515,7 @@ function digHole(action)
 		holeObj.curFrameIdx = 0;
 	}
 
-	mainStage.addChild(holeObj.sprite);
+	worldDisplay.add(holeObj.sprite);
 }
 
 var DEBUG_DIG=0;
@@ -568,7 +568,7 @@ function stopDigging(x,y)
 	//(1) remove holeObj
 	holeObj.sprite.removeAllEventListeners ("animationend");
 	holeObj.action = ACT_STOP; //no digging
-	mainStage.removeChild(holeObj.sprite); 
+	worldDisplay.remove(holeObj.sprite); 
 
 	//(2) fill hole
 	y++;
@@ -601,7 +601,7 @@ function digComplete()
 	map[x][y].act = EMPTY_T;
 	holeObj.sprite.removeAllEventListeners ("animationend");
 	holeObj.action = ACT_STOP; //no digging
-	mainStage.removeChild(holeObj.sprite); 
+	worldDisplay.remove(holeObj.sprite); 
 	
 	if(DEBUG_TIME) loadingTxt.text = "DigTime = " + (recordCount - digTimeStart);
 	
@@ -614,7 +614,7 @@ function fillHole(x, y)
 	var fillSprite = new GameSprite(holeData, "fillHole");
 	
 	fillSprite.pos = { x:x, y:y }; //save position 11/18/2014
-	fillSprite.setTransform(x * tileWScale, y * tileHScale, tileScale, tileScale);
+	fillSprite.setTransform(x * tileW, y * tileH, 1, 1);
 	
 	if(curAiVersion < 3) {
 		fillSprite.addEventListener("animationend", fillComplete);
@@ -624,7 +624,7 @@ function fillHole(x, y)
 		fillSprite.curFrameTime =  -1;
 		fillSprite.gotoAndStop(fillHoleFrame[0]);
 	}
-	mainStage.addChild(fillSprite); 
+	worldDisplay.add(fillSprite); 
 	fillHoleObj.push(fillSprite);
 	
 	fillHoleTimeStart = recordCount; //for debug
@@ -633,23 +633,19 @@ function fillHole(x, y)
 function moveFillHoleObj2Top()
 {
 	for(var i = 0; i < fillHoleObj.length; i++) {
-		moveChild2Top(mainStage, fillHoleObj[i]);
+		moveChild2Top(fillHoleObj[i]);
 	}
 }
 
 function fillComplete(evt, data)
 {
-	//don't use "divide command", it will cause loss of accuracy while scale changed (ex: tileScale = 0.6...)
-	//var x = this.x / tileWScale | 0; //this : scope default to the dispatcher
-	//var y = this.y / tileHScale | 0;
-
 	//AI<3 animationend passes evt (target = sprite); AI>=3 processFillHole passes {obj:sprite}
 	var fillObj = data ? data.obj : evt.target;
 	var x = fillObj.pos.x, y = fillObj.pos.y; //get position
 
 	map[x][y].bitmap.set({alpha:1}); //display block
 	fillObj.removeAllEventListeners ("animationend");
-	mainStage.removeChild(fillObj);
+	worldDisplay.remove(fillObj);
 	removeFillHoleObj(fillObj);
 	
 	switch(map[x][y].act) {

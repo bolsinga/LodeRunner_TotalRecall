@@ -121,7 +121,10 @@ var levelSelect = (function() {
 	function renderGrid() {
 		gridEl.innerHTML = "";
 		if(!levelData.length) {                 // say so rather than show an empty box
-			gridEl.appendChild(el("p", "lv-empty", "No levels in this version."));
+			var emptyMsg = (effectivePlayData() == PLAY_DATA_USERDEF)
+				? "No custom levels yet — pick a shipped pack above, or draw a new one."
+				: "No levels in this version.";
+			gridEl.appendChild(el("p", "lv-empty", emptyMsg));
 			return;
 		}
 		for(var lv = 1; lv <= levelData.length; lv++) gridEl.appendChild(makeCell(lv));
@@ -241,9 +244,13 @@ var levelSelect = (function() {
 		activeFun = opts.onPick;
 		postFun = opts.onClose;
 
-		populate();
+		// showModal before populate: Custom (and any already-loaded pack) calls
+		// finish() synchronously via ensurePlayVersionLoaded, and finish bails
+		// when !dialog.open — otherwise the header count updates but the grid
+		// stays empty.
 		dialog.showModal();
 		document.dispatchEvent(new CustomEvent("menu-open"));
+		populate();
 		showCurrent();
 	}
 

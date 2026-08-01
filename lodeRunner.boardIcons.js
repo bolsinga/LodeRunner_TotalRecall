@@ -66,6 +66,10 @@ var boardIcons = (function() {
 		b.innerHTML = svg;
 		b.title = title;
 		b.setAttribute("aria-label", title);
+		// These never hold focus, same rule as the settings toggle: clicking one
+		// focuses it, and a dialog it opened hands focus back on close -- either
+		// way the board would be left with a focused button eating its keys.
+		b.addEventListener("focus", function(){ focusGame(); });
 		return b;
 	}
 

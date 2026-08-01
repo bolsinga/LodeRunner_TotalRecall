@@ -74,7 +74,10 @@ function getClassicInfo()
 		} else {
 			if(!infoObj.hasOwnProperty('g')) infoObj.g = 0; //god-mode
 			if(!infoObj.hasOwnProperty('p')) infoObj.p = infoObj.l-1; //passed level
-		
+			//records predating 'r' left runnerLife undefined: the MEN field rendered
+			//as text and --runnerLife went NaN, so game over never fired
+			if(typeof infoObj.r != "number" || !isFinite(infoObj.r)) infoObj.r = RUNNER_LIFE;
+
 			curScore = infoObj.s;
 			curLevel = infoObj.l;
 			maxLevel = infoObj.m;

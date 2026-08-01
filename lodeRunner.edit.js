@@ -4,7 +4,7 @@ var editMap;
 	
 var MAX_EDIT_GUARD = 5;     //maximum number of guards
 var EMPTY_ID = 0, GUARD_ID = 8, RUNNER_ID = 9;
-var EDIT_PADDING = 1;
+var EDIT_PADDING = 1; // CSS-px gutter between edit cells (scale-independent)
 
 //value | Character | Type
 //------+-----------+-----------
@@ -37,7 +37,7 @@ var tileInfo = [
 var baseTile=[];	
 var lastRunner = null;
 var lastGuardList = [];	
-var editBorder, editStartX;
+var editBorder, editStartX, editPad; // editPad = EDIT_PADDING in base units
 var testLevelInfo = {level: -1};
 
 var mouseInStage = 1;
@@ -60,7 +60,7 @@ function startEditMode()
 	disableAutoDemoTimer();
 	clearIdleDemoTimer();
 	stopPlayTicker();
-	mainStage.removeAllChildren();
+	worldDisplay.clear();
 	canvasOverlay.clear();
 	setKeyHandler(editHandleKeyDown);
 	focusGame();
@@ -108,41 +108,40 @@ function canvasEditReSize()
 	var narrowScreen = 0;
 	
 	//(1) try use scale same as play mode 
-	canvasX = (BASE_SCREEN_X+toolAreaX) * tileScale + EDIT_PADDING * (NO_OF_TILES_X+1);
-	canvasY =  BASE_SCREEN_Y * tileScale + EDIT_PADDING * (NO_OF_TILES_Y+1);
+	var cssW = (BASE_SCREEN_X+toolAreaX) * tileScale + EDIT_PADDING * (NO_OF_TILES_X+1);
+	var cssH =  BASE_SCREEN_Y * tileScale + EDIT_PADDING * (NO_OF_TILES_Y+1);
 	
-	if(canvasX > (screenX1 - menuIconAreaX) || canvasY > screenY1) {
+	if(cssW > (screenX1 - menuIconAreaX) || cssH > screenY1) {
 		//(2) can not fit, find new scale 
 		for (var scale = MAX_SCALE*100; scale >= MIN_SCALE*100; scale -= 10) {
 			tileScale = scale/100; //new scale 
-			canvasX = (BASE_SCREEN_X+toolAreaX) * tileScale + EDIT_PADDING * (NO_OF_TILES_X+1);
-			canvasY =  BASE_SCREEN_Y * tileScale + EDIT_PADDING * (NO_OF_TILES_Y+1);
-			if (canvasX <= (screenX1 - menuIconAreaX) && canvasY <= screenY1 || tileScale <= MIN_SCALE) break;
+			cssW = (BASE_SCREEN_X+toolAreaX) * tileScale + EDIT_PADDING * (NO_OF_TILES_X+1);
+			cssH =  BASE_SCREEN_Y * tileScale + EDIT_PADDING * (NO_OF_TILES_Y+1);
+			if (cssW <= (screenX1 - menuIconAreaX) && cssH <= screenY1 || tileScale <= MIN_SCALE) break;
 		}
 	}
-	debug("EDIT SCALE = " + tileScale);
+	debug("EDIT SCALE = " + tileScale + " DPR=" + (window.devicePixelRatio || 1));
 
-	var left = ((screenX1 - canvasX)/2|0),
-		top  = ((screenY1 - canvasY)/2|0);
+	var left = ((screenX1 - cssW)/2|0),
+		top  = ((screenY1 - cssH)/2|0);
 	
 	if(left < menuIconAreaX) {
 		narrowScreen = 1;
-		left = ((screenX1 - canvasX - menuIconAreaX)/2|0);
+		left = ((screenX1 - cssW - menuIconAreaX)/2|0);
 	}
 
-	canvas.width = canvasX;
-	canvas.height = canvasY;
+	applyCanvasSize(cssW, cssH);
 	
 	canvas.style.left = (left>0?left:0) + "px";
 	canvas.style.top =  (top>0?top:0) + "px";
 	canvas.style.position = "absolute";
 	canvas.style.cursor = "default";
 	
-	tileWScale = BASE_TILE_X * tileScale;
-	tileHScale = BASE_TILE_Y * tileScale;
-	
-	editBorder = 4 * tileScale;	
-	editStartX = (tileWScale + W2 * tileScale);
+	tileW = BASE_TILE_X;
+	tileH = BASE_TILE_Y;
+	editPad = cssPxToBase(EDIT_PADDING);
+	editBorder = 4;
+	editStartX = (tileW + W2);
 	
 	return narrowScreen;
 }
@@ -163,8 +162,8 @@ function createEditMap()
 		
 	setCanvasBackground();
 	setEditBackground(editStartX,0, 
-				 (tileWScale+EDIT_PADDING)*NO_OF_TILES_X+EDIT_PADDING,
-				 (tileHScale+EDIT_PADDING)*NO_OF_TILES_Y+EDIT_PADDING
+				 (tileW+editPad)*NO_OF_TILES_X+editPad,
+				 (tileH+editPad)*NO_OF_TILES_Y+editPad
 	);
 	initMapInfo();
 	getTestLevel(testLevelInfo);
@@ -181,13 +180,13 @@ function createEditMap()
 	for(var y = 0; y < NO_OF_TILES_Y; y++) {
 		for(var x = 0; x < NO_OF_TILES_X; x++) {
 			var id = tile2Id(testLevelInfo.levelMap.charAt(index++));
-			var px = (tileWScale + EDIT_PADDING) * x+EDIT_PADDING + editStartX;
-			var py = (tileHScale + EDIT_PADDING) * y+EDIT_PADDING;
-			var back = new CanvasShape().fillRect("black", px, py, tileWScale, tileHScale);
+			var px = (tileW + editPad) * x+editPad + editStartX;
+			var py = (tileH + editPad) * y+editPad;
+			var back = new CanvasShape().fillRect("black", px, py, tileW, tileH);
 			bmp = new CanvasBitmap(id == 0 ? emptyTile.image : baseTile[id].image);
 			bmp.x = px;
 			bmp.y = py;
-			bmp.scaleX = bmp.scaleY = tileScale;
+			bmp.scaleX = bmp.scaleY = 1;
 			editMap[x][y] = { bmp: bmp, id: id };
 			canvasOverlay.add(back);
 			canvasOverlay.add(bmp);
@@ -196,8 +195,8 @@ function createEditMap()
 	}
 	
 	drawEditGround();
-	drawEditBlock(editStartX,0, canvasX-editStartX-1,
-				 (tileHScale+EDIT_PADDING)*NO_OF_TILES_Y+EDIT_PADDING
+	drawEditBlock(editStartX,0, canvasBaseW-editStartX,
+				 (tileH+editPad)*NO_OF_TILES_Y+editPad
 	);
 	
 	addSelectIcon();
@@ -236,7 +235,7 @@ function tile2Id(tileChar)
 
 function setCanvasBackground()
 {
-	canvasOverlay.add(new CanvasShape().fillRect("black", 0, 0, canvas.width, canvas.height));
+	canvasOverlay.add(new CanvasShape().fillRect("black", 0, 0, canvasBaseW, canvasBaseH));
 	document.body.style.background = backgroundColor;
 }
 
@@ -256,30 +255,30 @@ function drawEditBlock(startX, startY, width, height)
 
 function drawEditGround()
 {
-	var x = (tileWScale + EDIT_PADDING) * NO_OF_TILES_X+EDIT_PADDING + editStartX;
-	var y = (tileHScale + EDIT_PADDING) * NO_OF_TILES_Y+EDIT_PADDING;
+	var x = (tileW + editPad) * NO_OF_TILES_X+editPad + editStartX;
+	var y = (tileH + editPad) * NO_OF_TILES_Y+editPad;
 	
-	var groundTile = new CanvasShape().fillRect(getThemeTileColor(), 0, y, x, 10*tileScale);
+	var groundTile = new CanvasShape().fillRect(getThemeTileColor(), 0, y, x, 10);
 	canvasOverlay.add(groundTile); 
 }
 
 function addSelectIcon()
 {
-	var x = W4 * tileScale;
+	var x = W4;
 	var y;
 	for(var i = 1; i < baseTile.length; i++) {
-		y = (tileHScale*5/3)*(i-1) + tileHScale/10;
+		y = (tileH*5/3)*(i-1) + tileH/10;
 		drawSelectIcon(i, x, y);
 	}
-	y = (tileHScale*5/3)*(i-1) + tileHScale/10;
+	y = (tileH*5/3)*(i-1) + tileH/10;
 	drawSelectIcon(0, x, y);
 }
 	
 function addCursorTile()
 {
-	var back = new CanvasShape().fillRect("black", 0, 0, tileWScale, tileHScale);
+	var back = new CanvasShape().fillRect("black", 0, 0, tileW, tileH);
 	var bmp = new CanvasBitmap(actTile.image);
-	bmp.scaleX = bmp.scaleY = tileScale;
+	bmp.scaleX = bmp.scaleY = 1;
 	back.alpha = 0;
 	bmp.alpha = 0;
 	canvasOverlay.add(back);
@@ -317,11 +316,10 @@ function editCanvasLocalXY(e)
 {
 	var canvas = document.getElementById("canvas");
 	var rect = canvas.getBoundingClientRect();
-	var sx = canvas.width / rect.width;
-	var sy = canvas.height / rect.height;
+	// CSS layout px → base authoring units (world transform is tileScale*dpr)
 	return {
-		x: (e.clientX - rect.left) * sx,
-		y: (e.clientY - rect.top) * sy
+		x: (e.clientX - rect.left) / tileScale,
+		y: (e.clientY - rect.top) / tileScale
 	};
 }
 
@@ -416,19 +414,19 @@ function drawSelectIcon(id, x, y)
 {
 	var selColor = (id == actTile.id) ? "red" : "black";
 	var border = new CanvasShape().fillRect(selColor, x - editBorder, y - editBorder,
-		tileWScale + editBorder * 2, tileHScale + editBorder * 2);
-	var back = new CanvasShape().fillRect("black", x, y, tileWScale, tileHScale);
+		tileW + editBorder * 2, tileH + editBorder * 2);
+	var back = new CanvasShape().fillRect("black", x, y, tileW, tileH);
 	var bmp = new CanvasBitmap(id == 0 ? preload.getResult("eraser") : baseTile[id].image);
 	bmp.x = x;
 	bmp.y = y;
-	bmp.scaleX = bmp.scaleY = tileScale;
+	bmp.scaleX = bmp.scaleY = 1;
 
 	canvasOverlay.add(border);
 	canvasOverlay.add(back);
 	canvasOverlay.add(bmp);
 
 	var tile = {
-		x: x, y: y, x1: x + tileWScale, y1: y + tileHScale,
+		x: x, y: y, x1: x + tileW, y1: y + tileH,
 		myId: id, border: border, back: back, bmp: bmp
 	};
 	if(id == actTile.id) selectedTile = tile;
@@ -439,10 +437,10 @@ function selectTileClick(tile)
 {
 	editShapeFill(selectedTile.border, "black",
 		selectedTile.x - editBorder, selectedTile.y - editBorder,
-		tileWScale + editBorder * 2, tileHScale + editBorder * 2);
+		tileW + editBorder * 2, tileH + editBorder * 2);
 	editShapeFill(tile.border, "red",
 		tile.x - editBorder, tile.y - editBorder,
-		tileWScale + editBorder * 2, tileHScale + editBorder * 2);
+		tileW + editBorder * 2, tileH + editBorder * 2);
 
 	actTile = baseTile[tile.myId];
 	setCursorTileImage(actTile.image);
@@ -451,11 +449,11 @@ function selectTileClick(tile)
 	
 function drawEditLevel()
 {
-	var x = 17.2*(tileWScale+EDIT_PADDING)+EDIT_PADDING;	
-	var y = canvas.height - tileHScale - editBorder;
+	var x = 17.2*(tileW+editPad)+editPad;	
+	var y = canvasBaseH - tileH - editBorder;
 	
 	canvasOverlay.add(makeGlyphText(x, y, "EDIT"));
-	x += 4.3*(tileWScale+EDIT_PADDING);
+	x += 4.3*(tileW+editPad);
 	canvasOverlay.add(makeGlyphText(x, y, "LEVEL"));
 	drawEditLevelNo();
 }
@@ -463,12 +461,12 @@ function drawEditLevel()
 var editLevelNoObj = [];
 function drawEditLevelNo()
 {
-	var y = canvas.height - tileHScale - editBorder;
+	var y = canvasBaseH - tileH - editBorder;
 	
 	for(var i = 0; i < editLevelNoObj.length; i++) 
 		canvasOverlay.remove(editLevelNoObj[i]);
 	
-	editLevelNoObj = [makeGlyphText(26.5*(tileWScale+EDIT_PADDING), y, ("00"+(testLevelInfo.level)).slice(-3))];
+	editLevelNoObj = [makeGlyphText(26.5*(tileW+editPad), y, ("00"+(testLevelInfo.level)).slice(-3))];
 	canvasOverlay.add(editLevelNoObj[0]);
 }
 
@@ -487,16 +485,16 @@ function addEditorButton()
 
 function makeEditorButton(label, x, y, onClick)
 {
-	var width = label.length * tileWScale;
+	var width = label.length * tileW;
 	var border = new CanvasShape().fillRect("#40F",
-		x - editBorder, y - editBorder, width + editBorder * 2, tileHScale + editBorder * 2);
-	var back = new CanvasShape().fillRect("#FFF", x, y, width, tileHScale);
+		x - editBorder, y - editBorder, width + editBorder * 2, tileH + editBorder * 2);
+	var back = new CanvasShape().fillRect("#FFF", x, y, width, tileH);
 	var text = makeGlyphText(x, y, label);
 	canvasOverlay.add(border);
 	canvasOverlay.add(back);
 	canvasOverlay.add(text);
 	var button = {
-		x: x, y: y, x1: x + width, y1: y + tileHScale,
+		x: x, y: y, x1: x + width, y1: y + tileH,
 		border: border, back: back, label: text,
 		alpha: 1, onClick: onClick
 	};
@@ -506,8 +504,8 @@ function makeEditorButton(label, x, y, onClick)
 
 function drawNewButton()
 {
-	var x = 0.5*(tileWScale+EDIT_PADDING)+EDIT_PADDING;
-	var y = canvas.height - tileHScale - editBorder;
+	var x = 0.5*(tileW+editPad)+editPad;
+	var y = canvasBaseH - tileH - editBorder;
 	
 	newButton = makeEditorButton("NEW", x, y, newButtonClick);
 	
@@ -547,8 +545,8 @@ function drawNewButton()
 
 function drawLoadButton()
 {
-	var x = 4*(tileWScale+EDIT_PADDING)+EDIT_PADDING;
-	var y = canvas.height - tileHScale - editBorder;
+	var x = 4*(tileW+editPad)+editPad;
+	var y = canvasBaseH - tileH - editBorder;
 
 	loadButton = makeEditorButton("LOAD", x, y, loadButtonClick);
 
@@ -564,18 +562,14 @@ function drawLoadButton()
 		gameResume();
 	}
 
-	// Simon's Load was: version menuDialog, then level select for that pack.
-	// The DOM level selector already picks version at the top, so Load opens it
-	// directly (browseOnly: switching packs must not call setVersion / eject edit).
+	// Editor Load always opens on Custom Levels. Shipped packs stay one
+	// dropdown click away; defaulting to Classic while the banner says
+	// "Custom Levels / Edit Mode" is the wrong first impression.
 	function openLevelPicker()
 	{
-		var startVer = (testLevelInfo.fromPlayData > 0) ? testLevelInfo.fromPlayData
-		             : (playVersionInfo[0] ? playVersionInfo[0].id : playData);
-		var startLv  = (testLevelInfo.fromLevel > 0) ? testLevelInfo.fromLevel : 1;
-
 		levelSelect.open({
-			current: startLv,
-			startPlayData: startVer,
+			current: 1,
+			startPlayData: PLAY_DATA_USERDEF,
 			browseOnly: true,
 			onPick: function(level, versionId) {
 				ensurePlayVersionLoaded(versionId, function() {
@@ -617,8 +611,8 @@ function drawLoadButton()
 
 function drawTestButton()
 {
-	var x = 8.5*(tileWScale+EDIT_PADDING)+EDIT_PADDING;
-	var y = canvas.height - tileHScale - editBorder;
+	var x = 8.5*(tileW+editPad)+editPad;
+	var y = canvasBaseH - tileH - editBorder;
 	
 	testButton = makeEditorButton("TEST", x, y, testButtonClick);
 	setEditorButtonAlpha(testButton, 0);
@@ -631,8 +625,8 @@ function drawTestButton()
 
 function drawSaveButton()
 {
-	var x = 13*(tileWScale+EDIT_PADDING)+EDIT_PADDING;
-	var y = canvas.height - tileHScale - editBorder;
+	var x = 13*(tileW+editPad)+editPad;
+	var y = canvasBaseH - tileH - editBorder;
 	
 	saveButton = makeEditorButton("SAVE", x, y, saveButtonClick);
 	setEditorButtonAlpha(saveButton, 0);
@@ -1021,15 +1015,15 @@ function editWarningMsg(hidden)
 
 	if(editWarningText == null) {
 		editWarningText = new CanvasText("Too many custom levels !",
-			"bold " + (64 * tileScale) + "px Helvetica", "#fc5c1c");
-		editWarningText.setShadow("white", tileScale, 2 * tileScale, 1);
+			"bold 64px Helvetica", "#fc5c1c");
+		editWarningText.setShadow("white", 1, 2, 1);
 	}
 	
 	var bounds = editWarningText.getBounds();
 	width = bounds.width;
 	height = bounds.height;
-	editWarningText.x = ((NO_OF_TILES_X+2)*(tileWScale+EDIT_PADDING) - width) / 2 | 0;
-	editWarningText.y = (NO_OF_TILES_Y*tileHScale - height) / 2 | 0;
+	editWarningText.x = ((NO_OF_TILES_X+2)*(tileW+editPad) - width) / 2 | 0;
+	editWarningText.y = (NO_OF_TILES_Y*tileH - height) / 2 | 0;
 	
 	if(hidden) {
 		canvasOverlay.remove(editWarningText);
@@ -1100,7 +1094,7 @@ function selectTileMouseOver(tile)
 { 
 	editShapeFill(tile.border, "gold",
 		tile.x - editBorder, tile.y - editBorder,
-		tileWScale + editBorder * 2, tileHScale + editBorder * 2);
+		tileW + editBorder * 2, tileH + editBorder * 2);
 	canvas.style.cursor = "pointer";
 }
 	
@@ -1109,7 +1103,7 @@ function selectTileMouseOut(tile)
 	var color = (actTile.id == tile.myId) ? "red" : "black";
 	editShapeFill(tile.border, color,
 		tile.x - editBorder, tile.y - editBorder,
-		tileWScale + editBorder * 2, tileHScale + editBorder * 2);
+		tileW + editBorder * 2, tileH + editBorder * 2);
 	canvas.style.cursor = "default";
 }
 
@@ -1135,8 +1129,8 @@ function editorButtonMouseOver(button)
 	var width = button.x1 - button.x;
 	editShapeFill(button.border, "red",
 		button.x - editBorder, button.y - editBorder,
-		width + editBorder * 2, tileHScale + editBorder * 2);
-	editShapeFill(button.back, "#ffa", button.x, button.y, width, tileHScale);
+		width + editBorder * 2, tileH + editBorder * 2);
+	editShapeFill(button.back, "#ffa", button.x, button.y, width, tileH);
 	if (button.alpha)
 		canvas.style.cursor = "pointer";	
 }
@@ -1146,8 +1140,8 @@ function editorButtonMouseOut(button)
 	var width = button.x1 - button.x;
 	editShapeFill(button.border, "#40F",
 		button.x - editBorder, button.y - editBorder,
-		width + editBorder * 2, tileHScale + editBorder * 2);
-	editShapeFill(button.back, "#fff", button.x, button.y, width, tileHScale);
+		width + editBorder * 2, tileH + editBorder * 2);
+	editShapeFill(button.back, "#fff", button.x, button.y, width, tileH);
 	canvas.style.cursor = "default";	
 }	
 
@@ -1182,9 +1176,9 @@ function setButtonState()
 /** Process editor pointer at stage/canvas coordinates (replaces editTick poll). */
 function editPointerAt(stageX, stageY)
 {
-	var x = ((stageX-EDIT_PADDING - editStartX)/(tileWScale+EDIT_PADDING));
+	var x = ((stageX-editPad - editStartX)/(tileW+editPad));
 	x = (x < 0)?-1:(x|0);
-	var y = ((stageY-EDIT_PADDING) / (tileHScale+EDIT_PADDING) )| 0;
+	var y = ((stageY-editPad) / (tileH+editPad) )| 0;
 	var dirty = 0;
 	
 	if(testLevelInfo.level <= MAX_EDIT_LEVEL) {
@@ -1194,8 +1188,8 @@ function editPointerAt(stageX, stageY)
 
 			if( x != lastDown.x || y != lastDown.y) {
 				setCursorTileXY(
-					(tileWScale + EDIT_PADDING) * x+EDIT_PADDING + editStartX,
-					(tileHScale + EDIT_PADDING) * y+EDIT_PADDING
+					(tileW + editPad) * x+editPad + editStartX,
+					(tileH + editPad) * y+editPad
 				);
 				setCursorTileAlpha(1);
 				dirty = 1;

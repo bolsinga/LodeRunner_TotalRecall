@@ -3,7 +3,7 @@
   SNES-style gamepad, line art.
 
   Source: "SNES controller.svg" by DhulKarnain (Open Clip Art Library), via
-  Wikimedia Commons, released under CC0 1.0 Universal -- public domain, no
+  Wikimedia Commons, released under CC0 1.0 Universal - public domain, no
   attribution required. Kept here anyway so the provenance is not lost.
 
   Converted from the filled original: gradients and fills stripped, paths
@@ -15,13 +15,16 @@
   Y(674,295) X(741,227) B(754,371) A(822,303); shoulder caps at y=141.
   The viewBox is widened past the art on both sides to make room for them.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-40 0 1080 560"
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+     viewBox="-40 0 1080 560"
      class="gp-art" role="img"
      aria-label="SNES-style gamepad with the game's controls marked">
 
 	<g class="gp-body" fill="none" stroke="currentColor" stroke-width="3"
 	   stroke-linejoin="round" stroke-linecap="round">
-	</sodipodi:namedview>
 	<g
 	inkscape:groupmode="layer"
 	id="layer3"
@@ -260,12 +263,12 @@
 	inkscape:label="Text"
 	sodipodi:insensitive="true">
 	
-		<text x="447.2" y="382.5" class="gp-label" font-size="20" text-anchor="middle" dominant-baseline="central">SELECT</text>
-		<text x="539.6" y="377.4" class="gp-label" font-size="20" text-anchor="middle" dominant-baseline="central">START</text>
-		<text x="867.3" y="265.9" class="gp-label" font-size="30" text-anchor="middle" dominant-baseline="central">A</text>
-		<text x="715.1" y="408.3" class="gp-label" font-size="30" text-anchor="middle" dominant-baseline="central">B</text>
-		<text x="632.6" y="332.8" class="gp-label" font-size="30" text-anchor="middle" dominant-baseline="central">Y</text>
-		<text x="785.7" y="192.2" class="gp-label" font-size="30" text-anchor="middle" dominant-baseline="central">X</text>
+		<text x="439" y="380" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="middle" dominant-baseline="central">SELECT</text>
+		<text x="534" y="380" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="18" font-weight="400" text-anchor="middle" dominant-baseline="central">START</text>
+		<text x="867.3" y="265.9" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="30" font-weight="400" text-anchor="middle" dominant-baseline="central">A</text>
+		<text x="715.1" y="408.3" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="30" font-weight="400" text-anchor="middle" dominant-baseline="central">B</text>
+		<text x="632.6" y="332.8" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="30" font-weight="400" text-anchor="middle" dominant-baseline="central">Y</text>
+		<text x="785.7" y="192.2" class="gp-label gp-label-ss" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="30" font-weight="400" text-anchor="middle" dominant-baseline="central">X</text>
 	  </g>
 	</g>
 

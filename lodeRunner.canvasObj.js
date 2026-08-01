@@ -5,8 +5,8 @@
 // {x, y, width, height} in local units; contains(px, py) hit-tests a
 // parent-space point. Objects never join a createjs display list -- they are
 // painted by canvasOverlay as a pass after the stage repaints (stagePresent
-// in lodeRunner.main.js); the same paint call later moves into the owned
-// render loop unchanged.
+// in lodeRunner.main.js). Objects author in base tile units; stagePresent
+// applies ctx.setTransform(tileScale * dpr) before world/overlay paint.
 //=============================================================================
 
 function CanvasObject()
@@ -17,6 +17,9 @@ function CanvasObject()
 	this.scaleY = 1;
 	this.alpha = 1;
 	this.visible = true;
+	this.regX = 0;
+	this.regY = 0;
+	this.rotation = 0; // degrees (CreateJS-compatible)
 }
 
 //subclass hook: render at the local origin
@@ -24,6 +27,24 @@ CanvasObject.prototype.draw = function(ctx) {};
 
 //subclass hook: local-space bounds {x, y, width, height}
 CanvasObject.prototype.getBounds = function() { return null; };
+
+// CreateJS DisplayObject.setTransform / .set compatibility for callers.
+CanvasObject.prototype.setTransform = function(x, y, scaleX, scaleY)
+{
+	this.x = x;
+	this.y = y;
+	if(scaleX != null) this.scaleX = scaleX;
+	if(scaleY != null) this.scaleY = scaleY;
+	return this;
+};
+
+CanvasObject.prototype.set = function(props)
+{
+	for(var k in props) {
+		if(props.hasOwnProperty(k)) this[k] = props[k];
+	}
+	return this;
+};
 
 //hit-test a parent-space point against local bounds
 CanvasObject.prototype.contains = function(px, py)
@@ -35,14 +56,16 @@ CanvasObject.prototype.contains = function(px, py)
 	return lx >= b.x && lx < b.x + b.width && ly >= b.y && ly < b.y + b.height;
 };
 
-//apply transform + alpha, then subclass draw
+//apply transform + alpha, then subclass draw (regX/regY/rotation like CreateJS)
 CanvasObject.prototype.paint = function(ctx)
 {
 	if(!this.visible || this.alpha <= 0) return;
 	ctx.save();
 	ctx.globalAlpha = this.alpha;
 	ctx.translate(this.x, this.y);
+	if(this.rotation) ctx.rotate(this.rotation * Math.PI / 180);
 	ctx.scale(this.scaleX, this.scaleY);
+	if(this.regX || this.regY) ctx.translate(-this.regX, -this.regY);
 	this.draw(ctx);
 	ctx.restore();
 };
@@ -126,6 +149,12 @@ CanvasShape.prototype.setShadow = function(color, offsetX, offsetY, blur)
 CanvasShape.prototype.fillRect = function(color, x, y, w, h)
 {
 	this.ops.push({op:"fillRect", color:color, x:x, y:y, w:w, h:h});
+	return this;
+};
+
+CanvasShape.prototype.clearOps = function()
+{
+	this.ops.length = 0;
 	return this;
 };
 
@@ -269,6 +298,21 @@ CanvasBitmap.prototype.getBounds = function()
 	                  height:this.image.naturalHeight || this.image.height};
 };
 
+CanvasBitmap.prototype.clone = function()
+{
+	var c = new CanvasBitmap(this.image);
+	if(this.srcRect) {
+		c.srcRect = { x:this.srcRect.x, y:this.srcRect.y,
+			width:this.srcRect.width, height:this.srcRect.height };
+	}
+	c.x = this.x; c.y = this.y;
+	c.scaleX = this.scaleX; c.scaleY = this.scaleY;
+	c.alpha = this.alpha; c.visible = this.visible;
+	c.regX = this.regX; c.regY = this.regY;
+	c.rotation = this.rotation;
+	return c;
+};
+
 CanvasBitmap.prototype.draw = function(ctx)
 {
 	if(!this.image) return;
@@ -301,15 +345,54 @@ var canvasOverlay = {
 	paint: function(ctx)
 	{
 		if(!this.objs.length) return;
-		// paint from a clean base state so objects never inherit a transform or
-		// alpha left on the shared 2D context by the stage's last draw.
-		// Objects author in buffer-pixel space, so identity is the base; if
-		// authoring moves to base units under a tileScale/DPR transform, this
-		// seam applies that transform instead of identity.
+		// Objects author in base units; stagePresent applies tileScale*dpr.
+		// Do not reset the transform here — inherit the world transform.
 		ctx.save();
-		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.globalAlpha = 1;
 		for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
 		ctx.restore();
+	}
+};
+
+//==========================================================================
+// World actors (GameSprites) painted after Stage tiles, before canvasOverlay.
+// Replaces Stage membership for sprites while theme Bitmaps still use Stage.
+//==========================================================================
+var worldDisplay = {
+	objs: [],
+	add: function(obj)
+	{
+		this.remove(obj);
+		this.objs.push(obj);
+	},
+	remove: function(obj)
+	{
+		var i = this.objs.indexOf(obj);
+		if(i >= 0) this.objs.splice(i, 1);
+	},
+	clear: function()
+	{
+		this.objs.length = 0;
+	},
+	moveToTop: function(obj)
+	{
+		this.remove(obj);
+		this.objs.push(obj);
+	},
+	paint: function(ctx)
+	{
+		if(!this.objs.length) return;
+		ctx.save();
+		ctx.globalAlpha = 1;
+		for(var i = 0; i < this.objs.length; i++) this.objs[i].paint(ctx);
+		ctx.restore();
+	},
+	// Advance playing GameSprites once per sim step (not per Stage.update).
+	advance: function(delta)
+	{
+		for(var i = 0; i < this.objs.length; i++) {
+			var o = this.objs[i];
+			if(o && typeof o.advance === "function" && !o.paused) o.advance(delta);
+		}
 	}
 };

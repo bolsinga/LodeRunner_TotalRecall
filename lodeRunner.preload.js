@@ -13,6 +13,13 @@ var COVER_SIDE_X = 56;
 var SIGNET_UNDER_X = 30;
 var SIGNET_UNDER_Y = 30;
 
+// Cover load clock: Stage used to be the Ticker listener; owned clock presents instead.
+function coverPresentTick()
+{
+	worldDisplay.advance(null);
+	stagePresent();
+}
+
 //*********************
 // preload cover page
 //*********************
@@ -47,23 +54,49 @@ function showLoadingPage()
 		
 	function addCover2Screen(image)
 	{
-		coverBitmap = new createjs.Bitmap(image);
-		coverBitmap.setTransform(0, 0, tileScale, tileScale); //x,y, scaleX, scaleY 
+		coverBitmap = new CanvasBitmap(image);
+		coverBitmap.setTransform(0, 0, 1, 1);
 		
-		addTitleBackground(coverBitmap.getBounds().width*tileScale|0,
-		                   coverBitmap.getBounds().height*tileScale|0);
+		addTitleBackground(coverBitmap.getBounds().width|0,
+		                   coverBitmap.getBounds().height|0);
 		
-		mainStage.addChild(coverBitmap);	
+		worldDisplay.add(coverBitmap);	
 		stagePresent();
 	}
 	
 	function addTitleBackground(width, height)
 	{
-		titleBackground = new createjs.Shape();
-		titleBackground.graphics.beginFill("white").drawRect(0, 0, width, height);
-		mainStage.addChild(titleBackground);
+		titleBackground = new TitleBackground(width, height);
+		worldDisplay.add(titleBackground);
 	}
 }
+
+function TitleBackground(width, height)
+{
+	CanvasObject.call(this);
+	this.w = width;
+	this.h = height;
+	this.rainbow = false;
+}
+TitleBackground.prototype = Object.create(CanvasObject.prototype);
+TitleBackground.prototype.constructor = TitleBackground;
+TitleBackground.prototype.getBounds = function()
+{
+	return { x:0, y:0, width:this.w, height:this.h };
+};
+TitleBackground.prototype.draw = function(ctx)
+{
+	if(this.rainbow) {
+		var g = ctx.createLinearGradient(0, this.h/5, this.w*6/5, this.h*2/5);
+		var colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#8B00FF"];
+		var stops = [0, .14, .28, .42, .56, .70, .84];
+		for(var i = 0; i < colors.length; i++) g.addColorStop(stops[i], colors[i]);
+		ctx.fillStyle = g;
+	} else {
+		ctx.fillStyle = "white";
+	}
+	ctx.fillRect(0, 0, this.w, this.h);
+};
 
 function createRunnerSpriteSheet(runnerImage)
 {
@@ -174,9 +207,9 @@ function ensureThemeLoaded(themeName, callback)
 function preloadResource() 
 {
 	var runnerSprite = new GameSprite(runnerData, "runRight");
-	var progress = new createjs.Shape(); 
-	var progressBorder = new createjs.Shape();
-	var percentTxt = new createjs.Text("0", (COVER_PROGRESS_BAR_H* tileScale) + "px Arial", "#FF0000");
+	var progress = new CanvasShape();
+	var progressBorder = new CanvasShape();
+	var percentTxt = new CanvasText("0", COVER_PROGRESS_BAR_H + "px Arial", "#FF0000");
 
 	// Shared UI / SFX + active theme only (other theme loads on first toggle).
 	var resource = [
@@ -205,29 +238,32 @@ function preloadResource()
 	var soundsDone = parts.sounds.length === 0;
 	var loadCompleted = false;
 
-	createjs.Ticker.setFPS(30);
-	createjs.Ticker.addEventListener("tick", mainStage);
+	setClockFps(30);
+	addClockListener(coverPresentTick);
 
 	//Set runner sprite size & position
-	runnerSprite.setTransform(COVER_SIDE_X* tileScale, 
-							  (BASE_SCREEN_Y - COVER_RUNNER_UNDER_Y)* tileScale,
-							  tileScale, 
-							  tileScale);
+	runnerSprite.setTransform(COVER_SIDE_X,
+							  (BASE_SCREEN_Y - COVER_RUNNER_UNDER_Y),
+							  1,
+							  1);
 	runnerSprite.gotoAndPlay();	
 
-	var width = canvas.width - 2*COVER_SIDE_X* tileScale;
-	var height = COVER_PROGRESS_BAR_H * tileScale;
+	var width = canvasBaseW - 2*COVER_SIDE_X;
+	var height = COVER_PROGRESS_BAR_H;
 
 	//Set progress & progressborder size & position
-	progressBorder.graphics.beginStroke("gold").drawRect(0,0,width,height);
-	progress.x = progressBorder.x = COVER_SIDE_X * tileScale;
-	progress.y = progressBorder.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) * tileScale;
+	progressBorder.strokeRect("gold", 1, 0, 0, width, height);
+	progress.x = progressBorder.x = COVER_SIDE_X;
+	progress.y = progressBorder.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y);
 	
 	//Set percentTxt position
-	percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
-	percentTxt.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) * tileScale + height/12;  // move percent number Lower
+	percentTxt.x = (canvasBaseW - percentTxt.getBounds().width) / 2 | 0;
+	percentTxt.y = (BASE_SCREEN_Y - COVER_PROGRESS_UNDER_Y) + height/12;  // move percent number Lower
 	
-	mainStage.addChild(runnerSprite, progress, progressBorder, percentTxt);
+	worldDisplay.add(runnerSprite);
+	worldDisplay.add(progress);
+	worldDisplay.add(progressBorder);
+	worldDisplay.add(percentTxt);
 	
 	function updateCombinedProgress()
 	{
@@ -235,10 +271,9 @@ function preloadResource()
 		var soundW = parts.sounds.length;
 		var totalW = imgW + soundW;
 		var ratio = totalW ? ((imgProgress * imgW) + (soundProgress * soundW)) / totalW : 1;
-		progress.graphics.clear();
-		progress.graphics.beginFill("gold").drawRect(0,0,width*ratio,height);
+		progress.clearOps().fillRect("gold", 0, 0, width*ratio, height);
 		percentTxt.text = (100*ratio|0) + "%";
-		percentTxt.x = (canvas.width - percentTxt.getBounds().width) / 2 | 0;
+		percentTxt.x = (canvasBaseW - percentTxt.getBounds().width) / 2 | 0;
 	}
 
 	function maybeHandleComplete()
@@ -297,38 +332,31 @@ function preloadResource()
 	
 	function clearLoadingInfo()
 	{
-		mainStage.removeChild(runnerSprite, progress, progressBorder, percentTxt);
+		worldDisplay.remove(runnerSprite);
+		worldDisplay.remove(progress);
+		worldDisplay.remove(progressBorder);
+		worldDisplay.remove(percentTxt);
 		colorTitleBackground();
 		showSignetBitmap();
-		mainStage.addChild(signetBitmap);
+		worldDisplay.add(signetBitmap);
 		showRemakeBitmap();
-		mainStage.addChild(remakeBitmap);
+		worldDisplay.add(remakeBitmap);
 		stagePresent();
 	}
 	
 	//change title color to rainbow gradient color
 	function colorTitleBackground()
 	{
-		var width = coverBitmap.getBounds().width*tileScale|0;
-	 	var height = coverBitmap.getBounds().height*tileScale|0;
-		
-		//rainbow gradient color
-    	titleBackground.graphics
-		.clear().beginLinearGradientFill(
-			//https://simple.wikipedia.org/wiki/Rainbow
-			["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#8B00FF"], 
-			[0, .14, .28, .42, .56, .70, .84, .98], 
-			0, height/5,width*6/5,height*2/5)
-		.drawRect(0, 0, width, height);
+		titleBackground.rainbow = true;
 	}
 	
 	function showSignetBitmap()
 	{
 		var x, y;
-		signetBitmap = new createjs.Bitmap(preload.getResult("signet"));
-		x = (BASE_SCREEN_X - SIGNET_UNDER_X - signetBitmap.getBounds().width )* tileScale;
-		y = (BASE_SCREEN_Y - SIGNET_UNDER_Y - signetBitmap.getBounds().height)* tileScale;
-		signetBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
+		signetBitmap = new CanvasBitmap(preload.getResult("signet"));
+		x = (BASE_SCREEN_X - SIGNET_UNDER_X - signetBitmap.getBounds().width );
+		y = (BASE_SCREEN_Y - SIGNET_UNDER_Y - signetBitmap.getBounds().height);
+		signetBitmap.setTransform(x, y, 1, 1);
 		signetBitmap.set({alpha:0.8});
 		tweenGet(signetBitmap).set({alpha:0.8}).to({alpha:1}, 500);
 	}	
@@ -336,10 +364,10 @@ function preloadResource()
 	//create remake image 
 	function showRemakeBitmap()
 	{
-		var x = 372 * tileScale;
-		var y = 130 * tileScale;
-		remakeBitmap = new createjs.Bitmap(preload.getResult("remake"));
-		remakeBitmap.setTransform(x, y, tileScale, tileScale); //x,y, scaleX, scaleY 
+		var x = 372;
+		var y = 130;
+		remakeBitmap = new CanvasBitmap(preload.getResult("remake"));
+		remakeBitmap.setTransform(x, y, 1, 1);
 		remakeBitmap.rotation = -5;
 		remakeBitmap.set({alpha:0.6});
 		tweenGet(remakeBitmap).set({alpha:0.6}).to({alpha:1}, 800).call(preloadComplet);
@@ -348,7 +376,7 @@ function preloadResource()
 	function preloadComplet()
 	{
 		getFirstPlayInfo();
-		createjs.Ticker.removeEventListener("tick", mainStage); //remove ticker of cover page
+		removeClockListener(coverPresentTick); //remove ticker of cover page
 		waitIdleDemo(4000); //wait user key or show demo level
 	}
 }

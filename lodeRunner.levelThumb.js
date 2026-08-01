@@ -100,8 +100,8 @@ function renderLevelMapToCanvas(levelMap, scaleX, scaleY, canvasW, canvasH)
 	return canvas;
 }
 
-/** Same flatten, wrapped as a createjs.Bitmap for dialog Stage children. */
+/** Same flatten, wrapped as a CanvasBitmap for callers that expect a paint object. */
 function levelMapToBitmap(levelMap, scaleX, scaleY, canvasW, canvasH)
 {
-	return new createjs.Bitmap(renderLevelMapToCanvas(levelMap, scaleX, scaleY, canvasW, canvasH));
+	return new CanvasBitmap(renderLevelMapToCanvas(levelMap, scaleX, scaleY, canvasW, canvasH));
 }

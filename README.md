@@ -77,12 +77,10 @@ An HTML5 remake of the classic Lode Runner games, built with plain JavaScript an
 <table>
 <tr>
 <td valign="middle">1.</td>
-<td valign="middle"><img src="image/repeatOn.png" height="24" width="24"></td>
 <td valign="middle"><b>Repeat Actions On:</b> Like APPLE-II keyboard behavior</td>
 </tr>
 <tr>
 <td valign="middle">2.</td>
-<td valign="middle"><img src="image/repeatOff.png" height="24" width="24"></td>
 <td valign="middle"><b>Repeat Actions Off:</b> Like NES keyboard behavior</td>
 </tr>
 </table>
@@ -115,8 +113,8 @@ A gamepad can be used as well (toggle with **Ctrl+J**).
 | **Ctrl+K** | Repeat-actions mode (APPLE-II vs NES key behavior) |
 | **Ctrl+H** | Red-hat mode (guards that grab gold wear a red hat) |
 | **Ctrl+J** | Gamepad on/off |
-| **Ctrl+A** | Abort the current level |
-| **Ctrl+R** | Abort the whole game |
+| **Ctrl+A** | Abort the current man (restarts the level, costs a life) |
+| **Ctrl+R** | End the current game (returns to demo mode) |
 
 ### * Play on a Local Machine
 

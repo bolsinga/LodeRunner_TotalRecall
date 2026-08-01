@@ -3,10 +3,9 @@
 //
 // Replaces helpMenuClass and the two help PNGs. Help as a bitmap could not be
 // searched, selected or reflowed, and -- because a picture cannot be diffed
-// against the code it documents -- it drifted: the old art labelled Ctrl A
-// "Abort Game" when Ctrl A only cost a life, and it omitted ten bindings the
-// game actually had. Everything here was read off the handlers in key.js,
-// edit.js, settings.js and gamepad.js.
+// against the code it documents -- it drifted, omitting ten bindings the game
+// actually had. Everything here was read off the handlers in key.js, edit.js,
+// settings.js and gamepad.js.
 //
 // Two tabs. Keyboard leads with the movement and dig clusters, because the
 // SHAPE of those keys is the instruction -- the inverted T, and the alternate
@@ -90,8 +89,8 @@ var helpDialog = (function() {
 				table("", [
 					["Esc",    "Pause / resume", ""],
 					["Enter",  'High scores <span class="hk-tag">(classic)</span>', ""],
-					["Ctrl R", 'Restart level <span class="hk-tag">(costs a life)</span>', ""],
-					["Ctrl X", 'Exit game <span class="hk-tag">(back to level 1)</span>', ""],
+					["Ctrl A", 'Abort man <span class="hk-tag">(costs a life)</span>', ""],
+					["Ctrl R", 'End game <span class="hk-tag">(back to demo)</span>', ""],
 					["Ctrl T", "Reveal trap blocks", ""],
 					["Ctrl &minus;", "Slower", ""],
 					["Ctrl =", "Faster", ""]

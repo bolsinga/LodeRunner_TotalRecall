@@ -213,6 +213,12 @@ dialog.hk-dialog::backdrop {
 .gp-art .gp-body    { color: var(--ls-ink-dim); }
 /* the pad's own button letters -- A B X Y, SELECT, START */
 .gp-art .gp-label { fill: var(--ls-ink-dim); stroke: none; font-family: var(--ls-font); }
+/* Select/Start: regular weight stays crisp when the art is scaled down */
+.gp-art .gp-label-ss {
+	fill: var(--ls-ink);
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-weight: 400;
+}
 .gp-art .gp-nums circle { fill: var(--ls-cyan); stroke: none; }
 .gp-art .gp-nums text   { fill: #14141f; stroke: none; font-family: var(--ls-font); }
 

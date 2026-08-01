@@ -1,14 +1,14 @@
 //=============================================================================
-// Owned SpriteSheet + Sprite (Phase 2).
+// Owned SpriteSheet + Sprite (Phase 2/3).
 //
-// Drop-in replacements for createjs.SpriteSheet / createjs.Sprite with the same
+// Drop-in replacements for EaselJS SpriteSheet / Sprite with the same
 // animation table format and tick advance rules as EaselJS 0.7.1 (framerate 0
-// => advance `speed` frames per tick). GameSprite extends createjs.Bitmap so
-// instances stay on mainStage until Phase 3 removes the Stage.
+// => advance `speed` frames per tick). GameSprite extends CanvasObject and is
+// painted via worldDisplay (not the CreateJS Stage).
 //=============================================================================
 
 /**
- * Build a plain sprite sheet from a CreateJS-style definition:
+ * Build a plain sprite sheet from an EaselJS-style definition:
  *   { images: [img], frames: {width,height,regX,regY} | [[x,y,w,h],...],
  *     animations: { name: number | [start,end,next,speed] | {frames,next,speed} },
  *     framerate?: number }
@@ -106,30 +106,31 @@ function makeSpriteSheet(def)
 
 /**
  * Animated bitmap driven by a makeSpriteSheet() sheet.
- * API surface used by the game: gotoAndPlay/Stop, play/stop, paused,
- * currentAnimation / currentAnimationFrame, spriteSheet, animationend events,
- * plus Bitmap/DisplayObject (x, y, scale, alpha, visible, setTransform, set).
+ * API: gotoAndPlay/Stop, play/stop, paused, currentAnimation/Frame, spriteSheet,
+ * advance(delta), animationend listeners, setTransform/set, draw via CanvasObject.
  */
 function GameSprite(spriteSheet, frameOrAnimation)
 {
-	createjs.Bitmap.call(this, null);
+	CanvasObject.call(this);
 
 	this.paused = true;
 	this.currentAnimation = null;
 	this.currentAnimationFrame = 0;
 	this.currentFrame = 0;
 	this.framerate = 0;
+	this.image = null;
+	this.sourceRect = null;
 	this._animation = null;
 	this._currentFrame = 0;
 	this._spriteSheet = null;
+	this._listeners = {};
 
 	if (spriteSheet) this.spriteSheet = spriteSheet;
 	if (frameOrAnimation != null) this.gotoAndPlay(frameOrAnimation);
 }
 
-GameSprite.prototype = Object.create(createjs.Bitmap.prototype);
+GameSprite.prototype = Object.create(CanvasObject.prototype);
 GameSprite.prototype.constructor = GameSprite;
-GameSprite.prototype._bitmapTick = GameSprite.prototype._tick;
 
 Object.defineProperty(GameSprite.prototype, "spriteSheet", {
 	get: function () { return this._spriteSheet; },
@@ -161,9 +162,37 @@ GameSprite.prototype.advance = function (delta) {
 	this._normalizeFrame();
 };
 
-GameSprite.prototype._tick = function (evtArr) {
-	if (!this.paused) this.advance(evtArr && evtArr[0] && evtArr[0].delta);
-	this._bitmapTick(evtArr);
+GameSprite.prototype.addEventListener = function (type, fn) {
+	if (!this._listeners[type]) this._listeners[type] = [];
+	var list = this._listeners[type];
+	if (list.indexOf(fn) < 0) list.push(fn);
+	return fn;
+};
+
+GameSprite.prototype.removeEventListener = function (type, fn) {
+	var list = this._listeners[type];
+	if (!list) return;
+	var i = list.indexOf(fn);
+	if (i >= 0) list.splice(i, 1);
+};
+
+GameSprite.prototype.removeAllEventListeners = function (type) {
+	if (type == null) this._listeners = {};
+	else delete this._listeners[type];
+};
+
+GameSprite.prototype.hasEventListener = function (type) {
+	var list = this._listeners[type];
+	return !!(list && list.length);
+};
+
+GameSprite.prototype.dispatchEvent = function (evt) {
+	var list = this._listeners[evt.type];
+	if (!list || !list.length) return false;
+	evt.target = this;
+	list = list.slice();
+	for (var i = 0; i < list.length; i++) list[i].call(this, evt);
+	return true;
 };
 
 GameSprite.prototype._goto = function (frameOrAnimation, frameOffset) {
@@ -220,10 +249,7 @@ GameSprite.prototype._normalizeFrame = function () {
 GameSprite.prototype._dispatchAnimationEnd = function (anim, frame, wasPaused, next, endFrame) {
 	var name = anim ? anim.name : null;
 	if (this.hasEventListener("animationend")) {
-		var evt = new createjs.Event("animationend");
-		evt.name = name;
-		evt.next = next;
-		this.dispatchEvent(evt);
+		this.dispatchEvent({ type: "animationend", name: name, next: next });
 	}
 	var changed = this._animation != anim || this._currentFrame != frame;
 	if (!changed && !wasPaused && this.paused) {
@@ -239,7 +265,20 @@ GameSprite.prototype._applyFrame = function () {
 	if (!frame) return;
 	this.image = frame.image;
 	var r = frame.rect;
-	this.sourceRect = new createjs.Rectangle(r.x, r.y, r.width, r.height);
+	this.sourceRect = { x: r.x, y: r.y, width: r.width, height: r.height };
 	this.regX = frame.regX || 0;
 	this.regY = frame.regY || 0;
+};
+
+GameSprite.prototype.getBounds = function () {
+	if (this.sourceRect) {
+		return { x: 0, y: 0, width: this.sourceRect.width, height: this.sourceRect.height };
+	}
+	return null;
+};
+
+GameSprite.prototype.draw = function (ctx) {
+	if (!this.image || !this.sourceRect) return;
+	var r = this.sourceRect;
+	ctx.drawImage(this.image, r.x, r.y, r.width, r.height, 0, 0, r.width, r.height);
 };

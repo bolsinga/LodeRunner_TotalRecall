@@ -47,7 +47,7 @@ node --test test/*.test.js
 - **Behavior change ⇒ update or add tests in the same commit.**
 - Prefer labeling tests as **characterization** (current output) vs **correctness** (intended output). Known-buggy chrome/iris behavior may be locked as characterization until Stage 2 fixes it.
 - Pure helpers live in `lodeRunner.levelParse.js` (`parseLevelChar`, `resolveLevelMap`), `lodeRunner.inputLogic.js`, `lodeRunner.shareCodec.js`, `lodeRunner.storageCore.js` and are loaded in the browser via `lodeRunner.html`.
-- `buildLevelMap` in `main.js` calls `resolveLevelMap(levelMap, maxGuard)` for base/act (including culling), then only attaches CreateJS sprites. Do not re-introduce inline culling in `main.js`.
+- `buildLevelMap` in `main.js` calls `resolveLevelMap(levelMap, maxGuard)` for base/act (including culling), then only attaches the owned sprites. Do not re-introduce inline culling in `main.js`.
 - Default `recordMode` is `RECORD_NONE`. Stop-on-release input runs via `processInputKeyState()`; demo capture requires setting `RECORD_KEY` in `lodeRunner.demo.js`.
 
 ## CI
