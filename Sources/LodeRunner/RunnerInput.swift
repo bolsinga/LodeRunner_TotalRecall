@@ -11,4 +11,10 @@ public protocol RunnerInput: AnyObject {
     /// non-mutating — the input source holds this state internally, updated
     /// asynchronously by its platform's event stream.
     var currentAction: RunnerAction { get }
+
+    /// Clear any latched action back to `.stop`. Called by the driver when the
+    /// sim reports `consumedDigInput` — the JS analog is `keyAction = ACT_STOP`
+    /// at `runner.js:111`, which prevents a held dig key from re-firing once
+    /// the hole finishes refilling.
+    func resetAction()
 }

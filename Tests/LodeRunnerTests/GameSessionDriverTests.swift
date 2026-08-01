@@ -194,6 +194,44 @@ struct GameSessionDriverTests {
         #expect(sink.effects.contains(.born))
     }
 
+    @Test("dig action is one-shot: held dig key doesn't re-fire after the hole refills")
+    func digInputResetsAfterConsumption() throws {
+        // Ports `runner.js:111` (`keyAction = ACT_STOP;`) — a dig is consumed
+        // exactly when `moveRunner` reaches the dig case, whether or not
+        // `ok2Dig` succeeds. Without the reset, a held `.digLeft` fires a
+        // second dig the moment the first hole refills.
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 4, y: 15, tile: .brick),  // diggable tile down-left of the runner
+        ])
+        let session = try GameSession(levels: [level])
+        let input = StubInput(currentAction: .digLeft)
+        let driver = GameSessionDriver(
+            session: session, input: input, startInBornBlink: false)
+
+        // First tick: sim reaches the dig case, sets consumedDigInput, the
+        // driver resets the input. The user-visible signal is: (a) a dig
+        // started, and (b) the input latched back to `.stop`.
+        driver.tick()
+        #expect(driver.session.simulation.digState != nil)
+        #expect(input.currentAction == .stop)
+        #expect(input.resetCount == 1)
+
+        // Even if the caller re-latches `.digLeft` mid-dig (simulating a held
+        // key or a fresh press), a new dig doesn't queue up once the first
+        // completes and refills — because the driver keeps resetting the
+        // input every time moveRunner sees the dig case.
+        input.currentAction = .digLeft
+        for _ in 0..<400 {
+            driver.tick()
+        }
+        // After the fill completes, the sim should be back to no active dig,
+        // and no second dig should have been started while the input was
+        // ".stop" throughout the fill window.
+        #expect(driver.session.simulation.digState == nil)
+        #expect(driver.session.simulation.fillStates.isEmpty)
+    }
+
     @Test("level pass fires .pass via passedLevelCount incrementing")
     func passFiresOnLevelComplete() throws {
         // Same "walk right onto gold, climb ladder to row 0" shape used in
@@ -244,7 +282,16 @@ private final class EffectSink {
 @MainActor
 private final class StubInput: RunnerInput {
     var currentAction: RunnerAction
+    /// Number of times `resetAction()` was invoked — lets tests observe the
+    /// driver's post-tick dig-consume behavior.
+    private(set) var resetCount: Int = 0
+
     init(currentAction: RunnerAction) {
         self.currentAction = currentAction
+    }
+
+    func resetAction() {
+        currentAction = .stop
+        resetCount += 1
     }
 }
