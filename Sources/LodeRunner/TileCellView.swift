@@ -25,7 +25,13 @@ public struct TileCellView: View {
 }
 
 extension TileType {
-    fileprivate var assetName: String {
+    /// The bundled asset base name used to render this tile. Kept `internal`
+    /// (not `fileprivate`) so tests can pin the invariants — particularly
+    /// `.hiddenLadder` mapping to the `empty` asset, matching the JS's
+    /// gameplay-render approach at `buildLevelMap:571-572` (ladder bitmap with
+    /// `alpha: 0`). The port's `hladder` PNG is a visible white ladder authored
+    /// for `lodeRunner.edit.js:31` — it's not the correct look for gameplay.
+    var assetName: String {
         switch self {
         case .empty: "empty"
         case .brick: "brick"
@@ -33,7 +39,7 @@ extension TileType {
         case .ladder: "ladder"
         case .bar: "rope"
         case .trap: "trap"
-        case .hiddenLadder: "hladder"
+        case .hiddenLadder: "empty"
         case .gold: "gold"
         case .guard: "guard1"
         case .runner: "runner1"
