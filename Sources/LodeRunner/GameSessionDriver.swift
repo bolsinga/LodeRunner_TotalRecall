@@ -110,6 +110,12 @@ public final class GameSessionDriver {
         // this is effectively infallible at runtime; a future GameView error
         // affordance can surface it if we ever need to.
         try? session.tick(action)
+        // Mirror `runner.js:111` (`keyAction = ACT_STOP;`): if `moveRunner`
+        // reached the dig case this tick, clear the input so a held dig key
+        // doesn't fire again the moment the hole refills.
+        if session.simulation.consumedDigInput {
+            input?.resetAction()
+        }
         fireSoundEvents(before: snapshot)
         refreshAppearances()
     }

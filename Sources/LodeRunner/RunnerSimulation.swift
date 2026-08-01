@@ -84,6 +84,13 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     public internal(set) var shakingGuards: [ShakeState]
     public internal(set) var rebornGuards: [RebornState]
     var columnPicker: ShuffledColumnPicker
+    /// True for exactly the tick in which `moveRunner` reached a
+    /// `.digLeft`/`.digRight` case (whether or not `ok2Dig` succeeded). Ported
+    /// from `runner.js:111` — the JS clears `keyAction = ACT_STOP` inside the
+    /// dig case so a held dig key can't re-fire once the hole refills. The
+    /// composition layer reads this after `tick()` and resets its own input
+    /// state; the sim can't reach across to the input source itself.
+    public private(set) var consumedDigInput: Bool = false
 
     public init(level: LevelParseResult) throws {
         guard let spawn = level.runner else {
@@ -104,6 +111,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         shakingGuards = []
         rebornGuards = []
         columnPicker = ShuffledColumnPicker(columns: LevelGrid.tilesX)
+        consumedDigInput = false
     }
 
     /// Transition `.starting → .playing`. Ported from `beginPlay` at
@@ -120,6 +128,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     /// in `lodeRunner.main.js:878-908`.
     public mutating func tick(_ requestedAction: RunnerAction) {
         guard phase == .playing else { return }
+        consumedDigInput = false
 
         if goldComplete && runner.position.y == 0 && runner.yOffset == 0 {
             phase = .finished
@@ -237,6 +246,10 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
             } else {
                 runnerMoveStep(.stop, stayCurrPos: stayCurrPos)
             }
+            // Ported from `runner.js:111` (`keyAction = ACT_STOP;`) — matches
+            // JS whether or not `ok2Dig` succeeded, so a held dig key is
+            // consumed exactly when moveRunner reaches this case.
+            consumedDigInput = true
             return
 
         case .stop, .fall, .fallBar:

@@ -44,6 +44,10 @@ public final class KeyboardInput: RunnerInput {
         currentAction = action
         return .handled
     }
+
+    public func resetAction() {
+        currentAction = .stop
+    }
 }
 
 extension View {
