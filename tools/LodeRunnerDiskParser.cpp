@@ -68,7 +68,7 @@ value | Character | Type
 
 	#elif (APPLE_DISK_NO == 2)
 
-		#define FILE_NAME "./apple2.dsk/Lode_Runner_Championship _Apple-II.dsk"
+		#define FILE_NAME "./apple2.dsk/Lode_Runner_Championship_Apple-II.dsk"
 		#define MAX_LEVEL (50)
 		#define TITLE_NAME "Championship Lode Runner (Apple-II 1984)"
 		#define DATA_VAR_NAME "champLevelData"
