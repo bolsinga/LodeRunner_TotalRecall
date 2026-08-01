@@ -278,8 +278,20 @@ extension RunnerSimulation {
             }
         }
 
+        // Pre-scanDown gate — the JS at guard.js:682-684 / 703-705 only skips
+        // scanDown when the tile below is `BLOCK_T` or `SOLID_T`; a ladder
+        // (`LADDR_T`) below is a legitimate descent target. Using `firmFooting`
+        // here (which includes `.ladder`) would block a guard already on a
+        // ladder chain from ever considering `.down` — bug: revenge level 1
+        // left-ladder guards climbed up forever instead of descending.
+        func canScanDown(_ x: Int) -> Bool {
+            guard startY < TileGeometry.maxTileY else { return false }
+            let below = slots[x][startY + 1].base
+            return below != .brick && below != .solid
+        }
+
         x = startX
-        if startY < TileGeometry.maxTileY, !firmFooting(slots[x][startY + 1].base) {
+        if canScanDown(x) {
             scanDown(x, .down)
         }
         if slots[x][startY].base == .ladder {
@@ -297,7 +309,7 @@ extension RunnerSimulation {
                     break
                 }
             }
-            if startY < TileGeometry.maxTileY, !firmFooting(slots[x][startY + 1].base) {
+            if canScanDown(x) {
                 scanDown(x, curPath)
             }
             if slots[x][startY].base == .ladder {
