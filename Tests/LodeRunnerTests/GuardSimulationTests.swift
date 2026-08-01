@@ -204,6 +204,33 @@ struct GuardSimulationTests {
         #expect(caught)
     }
 
+    @Test("guard on a ladder chain with runner at the bottom chooses .down (not stuck going up)")
+    func guardOnLadderDescendsWhenRunnerBelow() throws {
+        // Regression from playing revenge level 1: guards near the tall left
+        // ladder climbed up forever instead of descending toward the runner.
+        // Cause: `scanFloor`'s pre-`scanDown` gate used a `firmFooting` helper
+        // that includes `.ladder`, but the JS at `guard.js:682-684 / 703-705`
+        // only skips scanDown when the tile below is `BLOCK_T`/`SOLID_T` —
+        // a ladder below is a valid descent target. Walls at (4,5)/(6,5) box
+        // the guard so leftEnd == rightEnd == startX and the vertical scans
+        // at column 5 are the only candidates.
+        var stamps: [(x: Int, y: Int, tile: TileType)] = [
+            (x: 4, y: 5, tile: .brick),
+            (x: 6, y: 5, tile: .brick),
+            (x: 5, y: 5, tile: .guard),
+            (x: 5, y: 14, tile: .runner),
+        ]
+        for y in 6...13 {
+            stamps.append((x: 5, y: y, tile: .ladder))
+        }
+        let level = makeLevel(stamps: stamps)
+        var sim = try RunnerSimulation(level: level)
+
+        sim.tick(.stop)  // tick 1: one guard moves on odd ticks.
+
+        #expect(sim.guards[0].action == .down)
+    }
+
     @Test("a guard chasing across a freshly-dug hole falls in, shakes, and climbs back out")
     func guardFallsIntoHoleAndClimbsOut() throws {
         // The guard starts far enough away (x=1, vs. the dig target at column 4) that
