@@ -120,11 +120,15 @@ public struct GameSession: Equatable, Codable, Sendable {
     /// Swap `simulation` for a fresh instance of the current level and return
     /// to `.playing`. Ports the swap side of `newLevel()` / `initForPlay()`
     /// (`main.js:1185-1230,1298-1319`) — the piece that the JS runs at the
-    /// moment the closing iris hits `r == 0`. No-op unless `phase` is
-    /// `.transitioning`.
+    /// moment the closing iris hits `r == 0`. The fresh sim is armed into
+    /// `.starting` so the runner blinks and waits for the player's first move,
+    /// matching the JS's `GAME_START` gate at `main.js:1354,1470-1485`
+    /// (`beginPlay` is called at the tail of `openingScreen`). No-op unless
+    /// `phase` is `.transitioning`.
     public mutating func finalizeTransition() throws {
         guard case .transitioning = phase else { return }
         simulation = try RunnerSimulation(level: levels[currentLevelIndex])
+        simulation.phase = .starting
         phase = .playing
     }
 }
