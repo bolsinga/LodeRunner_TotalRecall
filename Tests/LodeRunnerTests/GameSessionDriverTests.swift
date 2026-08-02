@@ -194,6 +194,40 @@ struct GameSessionDriverTests {
         #expect(sink.effects.contains(.born))
     }
 
+    @Test("post-transition finalize resets input so the born-blink actually blinks")
+    func transitionResetsInputForBornBlink() throws {
+        // Kill the runner with a still-held `.right`, then run the driver's
+        // synchronous transition swap (`performTransitionSwap`, the iris-
+        // fully-closed hook). Ports the JS `keyAction = ACT_STOP` reset at
+        // `main.js:1355` inside `beginPlay`: without it, the latched
+        // direction would lift the fresh sim's `.starting` gate on the next
+        // tick and skip the blink entirely.
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
+        let session = try GameSession(levels: [level])
+        let input = StubInput(currentAction: .right)
+        let driver = GameSessionDriver(
+            session: session, input: input, startInBornBlink: false)
+
+        for _ in 0..<40 {
+            driver.tick()
+            if case .transitioning = driver.session.phase { break }
+        }
+        #expect(driver.session.phase == .transitioning(.death))
+        #expect(input.currentAction == .right)  // still latched from before death
+
+        // Do the swap the async transition would perform at the iris-closed
+        // instant. Verifies the fresh sim is `.starting` and the input was
+        // reset (so `.stop` ticks are no-ops and the runner sits blinking).
+        driver.performTransitionSwap()
+        #expect(driver.session.phase == .playing)
+        #expect(driver.session.simulation.phase == .starting)
+        #expect(input.currentAction == .stop)
+        #expect(input.resetCount == 1)
+    }
+
     @Test("dig action is one-shot: held dig key doesn't re-fire after the hole refills")
     func digInputResetsAfterConsumption() throws {
         // Ports `runner.js:111` (`keyAction = ACT_STOP;`) — a dig is consumed

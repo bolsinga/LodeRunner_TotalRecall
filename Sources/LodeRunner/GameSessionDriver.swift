@@ -88,11 +88,23 @@ public final class GameSessionDriver {
     private func runLevelTransition() async {
         transitionPhase = .closing
         try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
-        try? session.finalizeTransition()
-        refreshAppearances()
+        performTransitionSwap()
         transitionPhase = .opening
         try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
         transitionPhase = nil
+    }
+
+    /// Everything the driver does at the "iris fully closed" instant, factored
+    /// out so tests can invoke it without going through the async sleep in
+    /// `runLevelTransition`. Ports the swap side of `newLevel()` at
+    /// `main.js:1207-1230` plus the `keyAction = ACT_STOP` reset inside
+    /// `beginPlay` at `main.js:1355` — which prevents a still-held direction
+    /// key from lifting the fresh sim's `.starting` gate before the player
+    /// gets to see the blink.
+    func performTransitionSwap() {
+        try? session.finalizeTransition()
+        input?.resetAction()
+        refreshAppearances()
     }
 
     /// One tick — hand off from `.starting` on first input, advance the

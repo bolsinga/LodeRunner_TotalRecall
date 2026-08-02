@@ -27,6 +27,11 @@ struct GameSessionTests {
         Array(repeating: .right, count: 8) + Array(repeating: .up, count: 5) + [.stop]
 
     private func completeCurrentLevel(_ session: inout GameSession) throws {
+        // `finalizeTransition` now arms the fresh sim into `.starting` so the
+        // JS's `GAME_START` blink-wait is preserved. Direct-sim tests bypass
+        // the driver's `.starting → .playing` handoff (which fires on the
+        // first non-stop input), so kick off explicitly before every attempt.
+        session.beginPlay()
         for action in completeActions {
             try session.tick(action)
         }
@@ -72,7 +77,10 @@ struct GameSessionTests {
         #expect(session.score == 0)
         #expect(session.phase == .playing)
         #expect(session.currentLevelIndex == 0)
-        #expect(session.simulation.phase == .playing)
+        // JS's GAME_START blink-wait — the fresh sim is armed into `.starting`
+        // so the runner blinks and holds until the player commits to a first
+        // move (JS `main.js:1354,1470-1485`).
+        #expect(session.simulation.phase == .starting)
         #expect(session.simulation.runner.position == GridPoint(x: 5, y: 14))
         #expect(session.simulation.runner.xOffset == 0)
         #expect(session.simulation.runner.yOffset == 0)
@@ -88,12 +96,15 @@ struct GameSessionTests {
 
         // Each death now parks in `.transitioning(.death)`; the caller finalizes
         // to drop lives and swap the sim, matching how `GameSessionDriver.run`
-        // drives it around the iris wipe.
+        // drives it around the iris wipe. After finalize the fresh sim is
+        // `.starting` (JS `GAME_START` blink-wait) — nudge past the input gate
+        // manually so subsequent ticks land.
         for _ in 0..<200 {
             if case .transitioning = session.phase {
                 try session.finalizeTransition()
             }
             if session.phase == .gameOver { break }
+            session.beginPlay()
             try session.tick(.right)
         }
         #expect(session.phase == .gameOver)
@@ -172,7 +183,8 @@ struct GameSessionTests {
 
         try session.finalizeTransition()
         #expect(session.phase == .playing)
-        #expect(session.simulation.phase == .playing)
+        // Fresh sim is `.starting` (blink-wait) — matches JS `GAME_START`.
+        #expect(session.simulation.phase == .starting)
     }
 
     @Test("level complete parks in .transitioning(.levelAdvance) until finalize")
@@ -192,6 +204,36 @@ struct GameSessionTests {
         try session.finalizeTransition()
         #expect(session.phase == .playing)
         #expect(session.simulation.runner.position == GridPoint(x: 13, y: 1))
+    }
+
+    @Test("after death respawn the sim is armed .starting — matches JS's GAME_START blink-wait")
+    func afterDeathRespawnSimIsStarting() throws {
+        // Kills the runner, finalizes, and confirms the sim is parked in
+        // `.starting` (JS `main.js:1354` sets `gameState = GAME_START` at the
+        // tail of `openingScreen → beginPlay`). Also confirms `.stop` ticks are
+        // no-ops in `.starting`, and that any non-stop input via
+        // `session.beginPlay()` lifts the gate — exactly how the driver
+        // handles the transition on first player input.
+        let deathLevel = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .guard),
+        ])
+        var session = try GameSession(levels: [deathLevel])
+        for _ in 0..<10 {
+            try session.tick(.right)
+            if case .transitioning = session.phase { break }
+        }
+        try session.finalizeTransition()
+        #expect(session.simulation.phase == .starting)
+
+        // .stop is a no-op in .starting; the runner shouldn't drift.
+        let frozen = session
+        try session.tick(.stop)
+        #expect(session == frozen)
+
+        // Simulating the driver's "first non-stop input lifts the gate."
+        session.beginPlay()
+        #expect(session.simulation.phase == .playing)
     }
 
     @Test("GameSession round-trips through JSON")
