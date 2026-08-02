@@ -38,6 +38,12 @@ public final class GameSessionDriver {
     /// booting AVFoundation.
     public var soundHandler: ((SoundEffect) -> Void)?
 
+    /// Active theme. Currently only affects which `goldFinish` variant fires
+    /// on the last-gold reveal — Apple2 has one shared clip, C64 has six
+    /// per-level ones (JS `runner.js:331-333`). The composition layer keeps
+    /// this in sync with the theme it drives `SoundPlayer.theme` from.
+    public var theme: Theme = .apple2
+
     /// 30 Hz to match the JS default (`lodeRunner.preload.js:242`), same as
     /// `SimulationDriver`.
     public let tickPeriod: Duration = .microseconds(1_000_000 / 30)
@@ -143,6 +149,14 @@ public final class GameSessionDriver {
         if sim.goldRemaining < before.goldRemaining {
             soundHandler(.getGold)
         }
+        // Last-gold reveal flourish — `runner.js:329-334`. Fires on the
+        // `!goldComplete → goldComplete` edge, but only when the runner isn't
+        // already at row 0 (JS `runner.pos.y > 0`; otherwise the level-pass
+        // sound is about to fire and the JS suppresses this).
+        if !before.goldComplete, sim.goldComplete, sim.runner.position.y > 0 {
+            soundHandler(SoundEffect.goldFinish(
+                for: theme, levelIndex: session.currentLevelIndex))
+        }
         // Dig start — `runner.js:496`. Fire once on the nil → non-nil edge.
         if !before.hasDigState, sim.digState != nil {
             soundHandler(.dig)
@@ -197,6 +211,7 @@ public final class GameSessionDriver {
 
     private struct TickSnapshot {
         let goldRemaining: Int
+        let goldComplete: Bool
         let hasDigState: Bool
         let lives: Int
         let passedLevelCount: Int
@@ -206,6 +221,7 @@ public final class GameSessionDriver {
 
         init(session: GameSession) {
             goldRemaining = session.simulation.goldRemaining
+            goldComplete = session.simulation.goldComplete
             hasDigState = session.simulation.digState != nil
             lives = session.lives
             passedLevelCount = session.passedLevelCount
