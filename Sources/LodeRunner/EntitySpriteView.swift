@@ -58,6 +58,16 @@ public struct GuardSpriteView: View {
             yOffset: guardState.yOffset
         )
     }
+
+    /// Picks the guard's sprite sheet based on gold-carry state, matching
+    /// `guardWearRedhat` / `guardRemoveRedhat` at `lodeRunner.guard.js:376-385`.
+    /// Carrying gold (`hasGold > 0`) draws with the red-hat sheet; empty-handed
+    /// guards use the default. The JS gates this on a `redhatMode` toggle at
+    /// `key.js:131,172` which defaults to on — we mirror that default and
+    /// defer the toggle to a future settings surface.
+    public static func sheet(forHasGold hasGold: Int) -> SpriteSheetSpec {
+        hasGold > 0 ? .redhat : .guard
+    }
 }
 
 private struct EntitySprite: View {
