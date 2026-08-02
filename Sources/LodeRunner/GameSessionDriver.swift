@@ -89,6 +89,12 @@ public final class GameSessionDriver {
         transitionPhase = .closing
         try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
         try? session.finalizeTransition()
+        // `finalizeTransition` arms the fresh sim into `.starting` so the runner
+        // blinks and waits for the player's first move. Any direction key
+        // still held from the previous life would otherwise lift the input
+        // gate on the next tick and skip the blink entirely — matches the JS
+        // `keyAction = ACT_STOP` reset at `main.js:1355` inside `beginPlay`.
+        input?.resetAction()
         refreshAppearances()
         transitionPhase = .opening
         try? await Task.sleep(for: .milliseconds(Int(wipeDurationSeconds * 1000)))
