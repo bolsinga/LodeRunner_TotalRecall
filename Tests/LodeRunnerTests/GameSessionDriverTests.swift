@@ -81,6 +81,52 @@ struct GameSessionDriverTests {
         #expect(sink.effects.filter { $0 == .getGold }.count == 1)
     }
 
+    @Test("last-gold reveal fires theme-specific goldFinish sound")
+    func goldFinishFiresOnLastGoldReveal() throws {
+        // Walk-into-gold at (5, 14). Picking up the only piece triggers
+        // `showHideLaddr`, which in the JS at `runner.js:329-334` also fires
+        // `soundPlay("goldFinish"...)` — the shared clip for Apple2, one of
+        // six for C64.
+        let level = makeLevel(stamps: [
+            (x: 5, y: 14, tile: .runner),
+            (x: 6, y: 14, tile: .gold),
+        ])
+
+        // Apple2 → single shared clip.
+        do {
+            let session = try GameSession(levels: [level])
+            let input = StubInput(currentAction: .right)
+            let driver = GameSessionDriver(
+                session: session, input: input, startInBornBlink: false)
+            driver.theme = .apple2
+            let sink = EffectSink()
+            driver.soundHandler = { sink.record($0) }
+            for _ in 0..<10 {
+                driver.tick()
+                if driver.session.simulation.goldComplete { break }
+            }
+            #expect(sink.effects.contains(.goldFinish))
+            #expect(sink.effects.filter { $0 == .goldFinish }.count == 1)
+        }
+
+        // C64 → one of the six per-level clips (level 0 → .goldFinish1).
+        do {
+            let session = try GameSession(levels: [level])
+            let input = StubInput(currentAction: .right)
+            let driver = GameSessionDriver(
+                session: session, input: input, startInBornBlink: false)
+            driver.theme = .c64
+            let sink = EffectSink()
+            driver.soundHandler = { sink.record($0) }
+            for _ in 0..<10 {
+                driver.tick()
+                if driver.session.simulation.goldComplete { break }
+            }
+            #expect(sink.effects.contains(.goldFinish1))
+            #expect(!sink.effects.contains(.goldFinish))  // Apple2's clip must not fire
+        }
+    }
+
     @Test("dig start fires .dig on the digState nil → non-nil edge")
     func digFiresOnDigStart() throws {
         // A brick tile at (4, 15) — one tile down-left of the runner at

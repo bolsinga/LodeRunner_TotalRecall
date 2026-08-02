@@ -76,6 +76,7 @@ public struct GameView: View {
         .task {
             driver.input = keyboard
             sound.theme = theme
+            driver.theme = theme
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -88,7 +89,10 @@ public struct GameView: View {
             }
             await driver.run()
         }
-        .onChange(of: theme) { _, newValue in sound.theme = newValue }
+        .onChange(of: theme) { _, newValue in
+            sound.theme = newValue
+            driver.theme = newValue
+        }
     }
 
     @ViewBuilder
