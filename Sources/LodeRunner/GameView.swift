@@ -113,7 +113,11 @@ public struct GameView: View {
         if let reborn = driver.session.simulation.rebornGuards.first(where: { $0.guardIndex == index }) {
             GuardRebornSpriteView(guardState: guardState, rebornState: reborn)
         } else {
-            GuardSpriteView(guardState: guardState, appearance: driver.guardAppearances[index])
+            GuardSpriteView(
+                guardState: guardState,
+                appearance: driver.guardAppearances[index],
+                sheet: GuardSpriteView.sheet(forHasGold: guardState.hasGold)
+            )
         }
     }
 
