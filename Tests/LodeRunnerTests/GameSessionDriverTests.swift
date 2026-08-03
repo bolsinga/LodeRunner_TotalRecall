@@ -347,6 +347,47 @@ struct GameSessionDriverTests {
         // Gold on the completed level should have fired exactly once, too.
         #expect(sink.effects.filter { $0 == .getGold }.count == 1)
     }
+
+    @Test("performTransitionSwap resets appearances so the previous level's pose doesn't ghost in")
+    func performTransitionSwapResetsAppearances() throws {
+        // Same completable shape used above, laid out twice so completing
+        // level 0 routes into `.transitioning(.levelAdvance)` (rather than
+        // the terminal `.won` branch, which never fires the swap).
+        let level = makeLevel(stamps: [
+            (x: 3, y: 1, tile: .runner),
+            (x: 4, y: 1, tile: .gold),
+            (x: 5, y: 0, tile: .ladder),
+            (x: 5, y: 1, tile: .ladder),
+            (x: 3, y: 2, tile: .brick),
+            (x: 4, y: 2, tile: .brick),
+        ])
+        let session = try GameSession(levels: [level, level])
+        let input = StubInput(currentAction: .stop)
+        let driver = GameSessionDriver(
+            session: session, input: input, startInBornBlink: false)
+
+        // Drive to level pass. The last runner action is `.up` (climbing the
+        // ladder to row 0), which caches `.runUpDn` in the appearance.
+        let actions: [RunnerAction] =
+            Array(repeating: .right, count: 8)
+            + Array(repeating: .up, count: 5)
+            + [.stop]
+        for action in actions {
+            input.currentAction = action
+            driver.tick()
+        }
+        #expect(driver.runnerAppearance.lastAnimation == .runUpDn)
+        #expect(driver.session.phase == .transitioning(.levelAdvance))
+
+        // At the iris-fully-closed instant the sim swap fires. The fresh
+        // sim's runner is `.stop` at spawn — `RunnerAnimation.forRunner`
+        // returns nil for `.stop`, so without the explicit reset the
+        // appearance would still cache `.runUpDn` from the previous level.
+        driver.performTransitionSwap()
+
+        #expect(driver.session.simulation.runner.position == GridPoint(x: 3, y: 1))
+        #expect(driver.runnerAppearance == RunnerAppearance())
+    }
 }
 
 /// Records `SoundEffect` invocations from the driver's `soundHandler`. Kept
