@@ -12,6 +12,10 @@ import SwiftUI
 /// `curTheme` / `playMode` on click.
 public struct PackChooserOverlay: View {
     let onPick: (LevelPack, Theme) -> Void
+    /// Optional callback fired when the user taps SELECT LEVEL. When set, the
+    /// button is visible; when `nil`, only PLAY is shown. Callers wire this
+    /// to their `LevelSelectOverlay` routing.
+    let onPickLevel: ((LevelPack, Theme) -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -19,11 +23,13 @@ public struct PackChooserOverlay: View {
     public init(
         initialPack: LevelPack = .classic,
         initialTheme: Theme = .apple2,
-        onPick: @escaping (LevelPack, Theme) -> Void
+        onPick: @escaping (LevelPack, Theme) -> Void,
+        onPickLevel: ((LevelPack, Theme) -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
         self.onPick = onPick
+        self.onPickLevel = onPickLevel
     }
 
     public var body: some View {
@@ -36,7 +42,7 @@ public struct PackChooserOverlay: View {
                 packList
                 Divider().background(Color.white.opacity(0.3))
                 themePicker
-                playButton
+                actionButtons
             }
             .padding(24)
             .background(Color.black)
@@ -106,19 +112,36 @@ public struct PackChooserOverlay: View {
         .buttonStyle(.plain)
     }
 
-    private var playButton: some View {
-        Button {
-            onPick(selectedPack, selectedTheme)
-        } label: {
-            Text("PLAY")
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            actionButton("PLAY", filled: true) {
+                onPick(selectedPack, selectedTheme)
+            }
+            .keyboardShortcut(.return, modifiers: [])
+            if let onPickLevel {
+                actionButton("SELECT LEVEL", filled: false) {
+                    onPickLevel(selectedPack, selectedTheme)
+                }
+            }
+        }
+    }
+
+    /// Shared button chrome for PLAY and SELECT LEVEL. `filled` picks the
+    /// primary (yellow background, black text) vs. secondary (outlined,
+    /// yellow text) styling.
+    private func actionButton(
+        _ title: String, filled: Bool, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 24)
+                .foregroundStyle(filled ? .black : .yellow)
+                .padding(.horizontal, 20)
                 .padding(.vertical, 8)
-                .background(Color.yellow)
+                .background(filled ? Color.yellow : Color.clear)
+                .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .keyboardShortcut(.return, modifiers: [])
     }
 }
 

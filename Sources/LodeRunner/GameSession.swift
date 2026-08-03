@@ -58,10 +58,13 @@ public enum TransitionKind: Equatable, Codable, Sendable {
 
 public enum GameSessionError: Error, Equatable, Sendable, CustomStringConvertible {
     case noLevels
+    case startingLevelOutOfRange(index: Int, count: Int)
 
     public var description: String {
         switch self {
         case .noLevels: return "session requires at least one level"
+        case .startingLevelOutOfRange(let index, let count):
+            return "startingLevelIndex \(index) is out of range for \(count) levels"
         }
     }
 }
@@ -84,16 +87,20 @@ public struct GameSession: Equatable, Codable, Sendable {
     public private(set) var simulation: RunnerSimulation
     public private(set) var phase: GameSessionPhase
 
-    public init(levels: [LevelParseResult]) throws {
+    public init(levels: [LevelParseResult], startingLevelIndex: Int = 0) throws {
         guard !levels.isEmpty else {
             throw GameSessionError.noLevels
         }
+        guard levels.indices.contains(startingLevelIndex) else {
+            throw GameSessionError.startingLevelOutOfRange(
+                index: startingLevelIndex, count: levels.count)
+        }
         self.levels = levels
-        currentLevelIndex = 0
+        currentLevelIndex = startingLevelIndex
         passedLevelCount = 0
         lives = startingLives
         score = 0
-        simulation = try RunnerSimulation(level: levels[0])
+        simulation = try RunnerSimulation(level: levels[startingLevelIndex])
         phase = .playing
     }
 
@@ -164,7 +171,12 @@ public struct GameSession: Equatable, Codable, Sendable {
     /// No-op unless the current phase is `.scoring`.
     public mutating func finalizeScoring() {
         guard case .scoring = phase else { return }
-        if currentLevelIndex == 0 && passedLevelCount >= levels.count {
+        // `passedLevelCount >= levels.count` covers both zero- and non-zero
+        // starting indexes: it means the player has cleared every level in
+        // the pack at least once regardless of where they started. The
+        // pre-level-select check gated on `currentLevelIndex == 0` too,
+        // which only aligns when the player started at level 0.
+        if passedLevelCount >= levels.count {
             phase = .won
         } else {
             phase = .transitioning(.levelAdvance)

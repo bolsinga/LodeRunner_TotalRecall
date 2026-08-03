@@ -270,4 +270,60 @@ struct GameSessionTests {
         let decoded = try JSONDecoder().decode(GameSession.self, from: data)
         #expect(decoded == session)
     }
+
+    @Test("startingLevelIndex seeds currentLevelIndex and the sim for that level")
+    func startingLevelIndexSeedsSession() throws {
+        let session = try GameSession(
+            levels: [
+                completableLevel(offsetX: 0),
+                completableLevel(offsetX: 10),
+                completableLevel(offsetX: 20),
+            ],
+            startingLevelIndex: 2
+        )
+        #expect(session.currentLevelIndex == 2)
+        #expect(session.passedLevelCount == 0)
+        #expect(session.phase == .playing)
+        // Spawn matches the third completableLevel's runner stamp.
+        #expect(session.simulation.runner.position == GridPoint(x: 23, y: 1))
+    }
+
+    @Test("startingLevelIndex out of range throws")
+    func startingLevelIndexOutOfRangeThrows() throws {
+        let levels = [completableLevel(offsetX: 0), completableLevel(offsetX: 10)]
+        #expect(throws: GameSessionError.startingLevelOutOfRange(index: 2, count: 2)) {
+            try GameSession(levels: levels, startingLevelIndex: 2)
+        }
+        #expect(throws: GameSessionError.startingLevelOutOfRange(index: -1, count: 2)) {
+            try GameSession(levels: levels, startingLevelIndex: -1)
+        }
+    }
+
+    @Test("mid-pack start: .won fires once every level has been passed")
+    func midPackStartTriggersWonOnFullClear() throws {
+        // Three levels, start at index 1. Complete: 1 → 2 → 0. After the
+        // third completion `passedLevelCount == 3`, which is the direct
+        // trigger for `.won` under the new formulation (drops the JS-
+        // era `currentLevelIndex == 0` extra guard that only aligned for
+        // zero-based starts).
+        var session = try GameSession(
+            levels: [
+                completableLevel(offsetX: 0),
+                completableLevel(offsetX: 10),
+                completableLevel(offsetX: 20),
+            ],
+            startingLevelIndex: 1
+        )
+        try completeCurrentLevel(&session)
+        #expect(session.phase == .playing)
+        #expect(session.currentLevelIndex == 2)
+
+        try completeCurrentLevel(&session)
+        #expect(session.phase == .playing)
+        #expect(session.currentLevelIndex == 0)
+
+        try completeCurrentLevel(&session)
+        #expect(session.phase == .won)
+        #expect(session.passedLevelCount == 3)
+    }
 }
