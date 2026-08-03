@@ -160,6 +160,16 @@ public final class GameSessionDriver {
     func performTransitionSwap() {
         try? session.finalizeTransition()
         input?.resetAction()
+        // The fresh sim's runner is `.stop` at spawn, so `RunnerAnimation
+        // .forRunner` returns nil (JS `runner.shape` unchanged — freeze
+        // semantics at `runner.js:267-275`) and `refreshAppearances` would
+        // leave `lastAnimation` pointing at the previous level's last pose.
+        // Match the JS's per-level re-init at `main.js:515` (`initVariable`
+        // → new sprite from scratch) by dropping back to defaults before
+        // the first refresh.
+        runnerAppearance = RunnerAppearance()
+        guardAppearances = Array(
+            repeating: GuardAppearance(), count: session.simulation.guards.count)
         refreshAppearances()
     }
 
