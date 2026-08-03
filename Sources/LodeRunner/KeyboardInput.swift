@@ -5,15 +5,20 @@ import SwiftUI
 /// `handleKeyUp` returns without touching `keyAction` unless the repeat-mode
 /// toggle is on.
 ///
-/// v1 key map (trimmed from the JS's fuller alias set at `pressKey` /
-/// `lodeRunner.key.js:211-270`):
+/// Key map, ported from `pressKey` at `lodeRunner.key.js:211-270`:
 ///
-///   - left:      ←,  A
-///   - right:     →,  D
-///   - up:        ↑,  W
-///   - down:      ↓,  S
-///   - dig left:  Z
-///   - dig right: X
+///   - left:      ←,  A,  J
+///   - right:     →,  D,  L
+///   - up:        ↑,  W,  I
+///   - down:      ↓,  S,  K
+///   - dig left:  Z,  Y (QWERTZ dig-left), U, Q, ,
+///   - dig right: X,  O,  E,  .
+///
+/// The JS-parity alias set (J/L/I/K, Y/U/Q/comma, O/E/period) is macOS-only:
+/// the port targets macOS as the hardware-keyboard surface. iOS's soft
+/// keyboard doesn't map to these ergonomics — that platform's input surface
+/// is deferred to a future on-screen d-pad — so we ship just the primary
+/// keys (arrows + WASD + Z/X) there.
 @Observable @MainActor
 public final class KeyboardInput: RunnerInput {
     public private(set) var currentAction: RunnerAction = .stop
@@ -31,8 +36,23 @@ public final class KeyboardInput: RunnerInput {
         case .downArrow, "s", "S": return .down
         case "z", "Z": return .digLeft
         case "x", "X": return .digRight
-        default: return nil
+        default: break
         }
+        #if os(macOS)
+        // JS-parity extended aliases (`key.js:215-245`). Kept macOS-only so
+        // iOS hardware-keyboard users get a lean map — nudge if you want the
+        // aliases everywhere.
+        switch key {
+        case "j", "J": return .left
+        case "l", "L": return .right
+        case "i", "I": return .up
+        case "k", "K": return .down
+        case "y", "Y", "u", "U", "q", "Q", ",": return .digLeft
+        case "o", "O", "e", "E", ".": return .digRight
+        default: break
+        }
+        #endif
+        return nil
     }
 
     /// Consume a key-down and update `currentAction` if the key is bound.
