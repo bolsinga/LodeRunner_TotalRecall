@@ -26,4 +26,25 @@ struct TileAssetNameTests {
         // ladder.
         #expect(TileType.ladder.assetName == "ladder")
     }
+
+    @Test(".trap renders as brick, not as the distinctive editor `trap` graphic")
+    func trapRendersAsBrick() {
+        // Regression: the port's `trap.png` is a distinctive false-brick
+        // authored for `lodeRunner.edit.js` (the editor palette). At
+        // gameplay time the JS picks the brick bitmap for `TRAP_T` at
+        // `themeScreen.js:59-60`; the JS only reveals a distinct trap
+        // look transiently when the runner is falling *through* it, via
+        // a temporary `alpha:0.5` at `runner.js:299`. Rendering trap as
+        // its editor graphic leaks the trap positions to the player
+        // before they've stepped on the cell — the "I can see the fall-
+        // through bricks on classic level 2" report.
+        #expect(TileType.trap.assetName == "brick")
+    }
+
+    @Test(".brick still maps to the visible brick asset")
+    func brickStillRendersAsBrick() {
+        // Sanity check that the trap-as-brick collapse doesn't disturb
+        // real bricks — they need to stay solid-looking regardless.
+        #expect(TileType.brick.assetName == "brick")
+    }
 }
