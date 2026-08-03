@@ -50,20 +50,38 @@ public final class KeyboardInput: RunnerInput {
     }
 }
 
+/// The `keyboardInput(_:)` modifier as a proper `ViewModifier`, so the
+/// `@FocusState` can live inside — a plain `View` extension can't own state,
+/// which is why an earlier version required the user to click the window
+/// before any key press registered. Setting `isFocused = true` inside
+/// `.onAppear` steals focus at first render, matching how macOS games
+/// normally behave.
+private struct KeyboardInputModifier: ViewModifier {
+    let input: KeyboardInput
+    @FocusState private var isFocused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .focusable()
+            .focusEffectDisabled()
+            .focused($isFocused)
+            .onAppear { isFocused = true }
+            .onKeyPress(phases: [.down, .repeat]) { press in
+                input.handle(press)
+            }
+    }
+}
+
 extension View {
-    /// Attach a `KeyboardInput` to this view: makes it focusable and pipes
-    /// hardware key events into `input`. Apply near the top of the game view
-    /// hierarchy so the game surface keeps focus.
+    /// Attach a `KeyboardInput` to this view: makes it focusable, gives it
+    /// focus at first appear (so hardware keys register without a prior
+    /// click), and pipes key events into `input`. Apply near the top of the
+    /// game view hierarchy so the game surface keeps focus.
     ///
     /// Only `.down` and `.repeat` phases are observed (matching the JS default
     /// where held keys persist); `.up` is intentionally ignored so releasing a
     /// key keeps the runner moving until the next direction change.
     public func keyboardInput(_ input: KeyboardInput) -> some View {
-        self
-            .focusable()
-            .focusEffectDisabled()
-            .onKeyPress(phases: [.down, .repeat]) { press in
-                input.handle(press)
-            }
+        modifier(KeyboardInputModifier(input: input))
     }
 }
