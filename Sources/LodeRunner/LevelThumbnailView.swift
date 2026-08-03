@@ -19,10 +19,24 @@ public struct LevelThumbnailView: View {
 
     public var body: some View {
         LevelGridView(tiles: level.slots.map { $0.map(\.displayTile) })
+            // Pin the grid at its natural size so `.scaleEffect` scales a
+            // known-sized view. `LevelGridView`'s `TileCellView` children
+            // have fixed frames, so if the outer `.frame` below proposed a
+            // smaller size directly, the grid would overflow into layout
+            // rather than compress — visible as content drifting to the
+            // left of the intended thumbnail bounds.
+            .frame(width: Self.naturalWidth, height: Self.naturalHeight)
+            // `.scaleEffect` rescales rendered pixels but does not affect
+            // layout. Anchor at `.topLeading` so the rendered content lands
+            // in the same corner as the layout frame below.
             .scaleEffect(scale, anchor: .topLeading)
+            // Report the *scaled* dimensions to the layout system so the
+            // grid cells in `LevelSelectOverlay` size properly. Alignment
+            // matches the scale anchor.
             .frame(
                 width: Self.naturalWidth * scale,
-                height: Self.naturalHeight * scale
+                height: Self.naturalHeight * scale,
+                alignment: .topLeading
             )
     }
 
