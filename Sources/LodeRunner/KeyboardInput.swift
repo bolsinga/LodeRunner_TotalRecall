@@ -51,11 +51,16 @@ public final class KeyboardInput: RunnerInput {
 }
 
 /// The `keyboardInput(_:)` modifier as a proper `ViewModifier`, so the
-/// `@FocusState` can live inside — a plain `View` extension can't own state,
-/// which is why an earlier version required the user to click the window
-/// before any key press registered. Setting `isFocused = true` inside
-/// `.onAppear` steals focus at first render, matching how macOS games
-/// normally behave.
+/// `@FocusState` can live inside — a plain `View` extension can't own state.
+///
+/// On macOS the initial focus grab is timing-sensitive: `NavigationStack`
+/// pushes GameView while its own outer container is still the first
+/// responder, so a `.onAppear { isFocused = true }` fires while SwiftUI is
+/// mid-transition and gets clobbered. Retrying across a handful of runloop
+/// hops (via `.task`, which runs after appear, plus repeated setters with
+/// small delays) covers the transition without needing an AppKit bridge.
+/// Also uses `.defaultFocus`, which SwiftUI honors on the *first* render
+/// of a focusable view — the fast-path when NavigationStack cooperates.
 private struct KeyboardInputModifier: ViewModifier {
     let input: KeyboardInput
     @FocusState private var isFocused: Bool
@@ -65,7 +70,17 @@ private struct KeyboardInputModifier: ViewModifier {
             .focusable()
             .focusEffectDisabled()
             .focused($isFocused)
-            .onAppear { isFocused = true }
+            .defaultFocus($isFocused, true)
+            .task {
+                // Re-assert focus across the NavigationStack push
+                // transition. Six attempts at 50 ms is 300 ms total —
+                // long enough to outlast the animation, short enough
+                // that the user can't type past it.
+                for _ in 0..<6 {
+                    isFocused = true
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+            }
             .onKeyPress(phases: [.down, .repeat]) { press in
                 input.handle(press)
             }
