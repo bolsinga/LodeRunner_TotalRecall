@@ -9,6 +9,13 @@ let runnerYMove = 9
 // digHoleLeft/digHoleRight table length, lodeRunner.runner.js:456-457.
 private let digAnimationFrameCount = 11
 
+// TICK_COUNT_PER_TIME, lodeRunner.def.js:156 — 16 game ticks per +1 of `curTime`.
+// MAX_TIME_COUNT, lodeRunner.def.js:155 — cap for the level-pass "time" row.
+// MAX_GUARD_DEAD_COUNT — implicit cap at `main.js:832`, no matching constant.
+private let ticksPerSecond = 16
+private let maxSecondsElapsed = 999
+private let maxGuardsTrappedCount = 100
+
 // fillHoleTime, lodeRunner.runner.js:699 — genuinely simulation-relevant (not
 // display), since it determines exactly when fillComplete fires and therefore when
 // burial-death can trigger. Total fill duration: 166+8+8+4 = 186 ticks.
@@ -92,6 +99,25 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     /// state; the sim can't reach across to the input source itself.
     public private(set) var consumedDigInput: Bool = false
 
+    /// Play-tick counter, 0..999, incremented once every `ticksPerSecond`
+    /// ticks — port of JS `curTime` at `main.js:84,682,842-844` (via
+    /// `playTickTimer` at `main.js:938,946-950`). Feeds the level-pass "time"
+    /// row and the modern-mode bonus formula
+    /// `(MAX_TIME_COUNT - curTime + gold + guardDead) * SCORE_VALUE_PER_POINT`
+    /// at `main.js:1406`. Resets on level swap because `RunnerSimulation` is
+    /// re-inited per level (matches JS `initModernVariable` in `initVariable`
+    /// at `main.js:515,683`).
+    public private(set) var secondsElapsed: Int = 0
+    /// Guards buried by the runner this level, 0..100 — port of JS
+    /// `curGuardDeadNo` at `main.js:664,831-832`, `runner.js:670`. Feeds the
+    /// level-pass "guards trapped" row. Not tied to score: the port already
+    /// awards `Score.guardDead` at the guard-burial site (`fillComplete`), so
+    /// this counter is purely display state for the modern-mode dialog.
+    public private(set) var guardsTrappedCount: Int = 0
+    /// Sub-second play-tick accumulator (0..`ticksPerSecond`-1). Matches the
+    /// JS's `playTickTimer` at `main.js:938,946-950`.
+    private var tickSubcounter: Int = 0
+
     public init(level: LevelParseResult) throws {
         guard let spawn = level.runner else {
             throw RunnerSimulationError.noRunnerSpawn
@@ -112,6 +138,9 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         rebornGuards = []
         columnPicker = ShuffledColumnPicker(columns: LevelGrid.tilesX)
         consumedDigInput = false
+        secondsElapsed = 0
+        guardsTrappedCount = 0
+        tickSubcounter = 0
     }
 
     /// Transition `.starting → .playing`. Ported from `beginPlay` at
@@ -129,6 +158,15 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     public mutating func tick(_ requestedAction: RunnerAction) {
         guard phase == .playing else { return }
         consumedDigInput = false
+
+        // Elapsed-time counter — `main.js:946-950`. Increments before the
+        // early `.finished` check so a level cleared on the same tick as a
+        // second-boundary crosses still lands on the higher `secondsElapsed`.
+        tickSubcounter += 1
+        if tickSubcounter >= ticksPerSecond {
+            tickSubcounter = 0
+            if secondsElapsed < maxSecondsElapsed { secondsElapsed += 1 }
+        }
 
         if goldComplete && runner.position.y == 0 && runner.yOffset == 0 {
             phase = .finished
@@ -584,6 +622,11 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
             }
             guardReborn(at: cell)
             addScore(.guardDead)  // runner.js:670-671.
+            // Bookkeep the modern-mode "guards trapped" counter alongside the
+            // classic per-kill score add — JS runs one OR the other per mode
+            // (`runner.js:666-671`), but the port supports both surfaces
+            // (running score in the HUD, level-pass tally in the dialog).
+            if guardsTrappedCount < maxGuardsTrappedCount { guardsTrappedCount += 1 }
         }
         slots[cell.x][cell.y].current = .brick
     }

@@ -35,9 +35,11 @@ struct GameSessionTests {
         for action in completeActions {
             try session.tick(action)
         }
-        // Level complete now parks the session in `.transitioning(.levelAdvance)`
-        // pending the composition layer's iris close/open. Tests operate on the
-        // post-swap state, so finalize inline.
+        // Level complete now routes through two waiting states: first
+        // `.scoring` (level-pass dialog), then `.transitioning(.levelAdvance)`
+        // (iris wipe around sim swap). Tests operate on the post-swap state,
+        // so drive both hand-offs inline.
+        session.finalizeScoring()
         try session.finalizeTransition()
     }
 
@@ -187,8 +189,8 @@ struct GameSessionTests {
         #expect(session.simulation.phase == .starting)
     }
 
-    @Test("level complete parks in .transitioning(.levelAdvance) until finalize")
-    func levelCompleteParksInTransitioning() throws {
+    @Test("level complete parks in .scoring, then .transitioning until both finalize")
+    func levelCompleteParksInScoringThenTransitioning() throws {
         var session = try GameSession(levels: [
             completableLevel(offsetX: 0),
             completableLevel(offsetX: 10),
@@ -197,9 +199,29 @@ struct GameSessionTests {
         for action in completeActions {
             try session.tick(action)
         }
-        #expect(session.phase == .transitioning(.levelAdvance))
+        // First wait state: the level-pass dialog animates over the frozen
+        // last frame of the passed level (JS `main.js:1581`, `levelPass.js`).
+        // Bookkeeping (score, lives, currentLevelIndex, passedLevelCount) is
+        // already applied at this edge — only the sim swap is deferred.
+        guard case .scoring(let summary) = session.phase else {
+            Issue.record("expected .scoring, got \(session.phase)")
+            return
+        }
+        #expect(summary.levelNumber == 1)
+        #expect(summary.goldCollected == 1)  // the single gold on completableLevel
+        #expect(summary.guardsTrapped == 0)
         #expect(session.passedLevelCount == 1)
         #expect(session.currentLevelIndex == 1)
+
+        // Additional ticks are no-ops while scoring — matches JS
+        // `GAME_WAITING` at `main.js:1586`.
+        let frozen = session
+        try session.tick(.right)
+        #expect(session == frozen)
+
+        // Dismiss the dialog: advance to the iris-wipe wait state.
+        session.finalizeScoring()
+        #expect(session.phase == .transitioning(.levelAdvance))
 
         try session.finalizeTransition()
         #expect(session.phase == .playing)

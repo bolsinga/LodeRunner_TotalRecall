@@ -4,6 +4,13 @@ private let maxLives = 100
 
 public enum GameSessionPhase: Equatable, Codable, Sendable {
     case playing
+    /// Held after a level-pass while the level-pass dialog animates its
+    /// count-up. Ports the JS's `GAME_WAITING` slice at `main.js:1578-1586`
+    /// (`case PLAY_MODERN` of `GAME_FINISH`), which parks the state machine
+    /// while `levelPass.open()` runs. Cleared by `finalizeScoring()` — which
+    /// then transitions to `.transitioning(.levelAdvance)` so the iris wipe
+    /// can bookend the sim swap.
+    case scoring(LevelPassSummary)
     /// Held between the tick that produced a `.dead`/`.finished` sim and the
     /// caller's `finalizeTransition()` — the JS's `GAME_WAITING` between
     /// `GAME_RUNNER_DEAD`/`GAME_FINISH` and `GAME_NEW_LEVEL` (`main.js:1479-
@@ -13,6 +20,32 @@ public enum GameSessionPhase: Equatable, Codable, Sendable {
     case transitioning(TransitionKind)
     case gameOver  // ran out of lives
     case won  // passed every level at least once
+}
+
+/// Snapshot of the just-finished level's stats, threaded to the level-pass
+/// dialog. Populated at `handleLevelComplete()` from `simulation` + `levels`
+/// before the sim is replaced. Ports the `opts` payload of `levelPass.open()`
+/// at `lodeRunner.main.js:1581-1585`.
+public struct LevelPassSummary: Equatable, Codable, Sendable {
+    /// 1-based level number for display (matches JS `curLevel`). The 0-based
+    /// index is `levelNumber - 1`; kept as 1-based here because the value is
+    /// only ever rendered.
+    public let levelNumber: Int
+    /// Gold pieces the runner picked up on this attempt of this level.
+    public let goldCollected: Int
+    /// Guards buried this attempt, capped at 100 in the sim
+    /// (`RunnerSimulation.fillComplete`, matching `main.js:832`).
+    public let guardsTrapped: Int
+    /// Elapsed time in play "seconds" (16 ticks each), capped at 999
+    /// (`MAX_TIME_COUNT`, `def.js:155`).
+    public let secondsElapsed: Int
+
+    public init(levelNumber: Int, goldCollected: Int, guardsTrapped: Int, secondsElapsed: Int) {
+        self.levelNumber = levelNumber
+        self.goldCollected = goldCollected
+        self.guardsTrapped = guardsTrapped
+        self.secondsElapsed = secondsElapsed
+    }
 }
 
 /// Which cause routed us into `.transitioning`. `currentLevelIndex` is
@@ -106,10 +139,31 @@ public struct GameSession: Equatable, Codable, Sendable {
         score += simulation.score + Score.completeLevel.value
         lives = min(lives + 1, maxLives)
         passedLevelCount += 1
+        // Snapshot dialog inputs before the sim is replaced. `goldCollected`
+        // comes from the level's initial gold count minus what's still on the
+        // board — the sim doesn't retain the parse result so we go through
+        // `levels[currentLevelIndex]` here (still the *old* level; the swap
+        // happens below).
+        let summary = LevelPassSummary(
+            levelNumber: currentLevelIndex + 1,
+            goldCollected: levels[currentLevelIndex].goldCount - simulation.goldRemaining,
+            guardsTrapped: simulation.guardsTrappedCount,
+            secondsElapsed: simulation.secondsElapsed
+        )
         // `currentLevelIndex == 0` here is the 0-based analog of the JS's `wrap`
         // flag from `incLevel` — correct because, with level-select navigation
         // out of scope, completion is the only way this index ever changes.
         currentLevelIndex = (currentLevelIndex + 1) % levels.count
+        phase = .scoring(summary)
+    }
+
+    /// Dismiss the level-pass dialog: advance from `.scoring` to
+    /// `.transitioning(.levelAdvance)` (or `.won` if this was the last level).
+    /// Ports the JS `gameFinishCallback` at `main.js:1584`, which fires after
+    /// the modern-mode dialog closes and routes the game into `GAME_NEW_LEVEL`.
+    /// No-op unless the current phase is `.scoring`.
+    public mutating func finalizeScoring() {
+        guard case .scoring = phase else { return }
         if currentLevelIndex == 0 && passedLevelCount >= levels.count {
             phase = .won
         } else {

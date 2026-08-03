@@ -28,6 +28,13 @@ public final class GameSessionDriver {
     /// the new level — matching `main.js:1195-1230,1304-1319`.
     public private(set) var transitionPhase: LevelTransitionPhase?
 
+    /// Set true by the composition layer via `armScoringInput()` when the
+    /// level-pass dialog finishes its count-up animation. Gates the tick
+    /// loop's `.scoring`-phase input polling so a still-held movement key
+    /// from the last gold pickup can't dismiss the dialog mid-animation —
+    /// analog to `levelPass.js:116` (`if(!done) return`).
+    public private(set) var scoringInputArmed: Bool = false
+
     /// Live input source, polled once per `tick()`.
     public var input: (any RunnerInput)?
 
@@ -79,12 +86,55 @@ public final class GameSessionDriver {
         defer { isRunning = false }
         while !Task.isCancelled {
             tick()
+            if case .scoring = session.phase {
+                await runScoringPause()
+                continue
+            }
             if case .transitioning = session.phase {
                 await runLevelTransition()
                 continue
             }
             try? await Task.sleep(for: tickPeriod)
         }
+    }
+
+    /// Park the tick loop while the level-pass dialog animates. Clears any
+    /// held-key state on entry so a fresh press is required to dismiss, and
+    /// waits for the dialog to signal ready (`armScoringInput()`) before
+    /// accepting that press. The dialog can also short-circuit via a direct
+    /// tap: it calls `dismissScoring()` which drops us out of `.scoring` and
+    /// this loop exits on the next iteration. Ports the `GAME_WAITING`
+    /// slice at `main.js:1586` that parks the state machine until the
+    /// modern-mode dialog's `onPick` callback fires.
+    private func runScoringPause() async {
+        scoringInputArmed = false
+        input?.resetAction()
+        while case .scoring = session.phase, !Task.isCancelled {
+            let action = input?.currentAction ?? .stop
+            if scoringInputArmed, action != .stop {
+                dismissScoring()
+                return
+            }
+            try? await Task.sleep(for: tickPeriod)
+        }
+    }
+
+    /// Called by the dialog view when its count-up animation completes —
+    /// arms the keyboard-dismiss path so a fresh key press can advance to
+    /// the level swap. No-op outside `.scoring`.
+    public func armScoringInput() {
+        guard case .scoring = session.phase else { return }
+        scoringInputArmed = true
+    }
+
+    /// Dismiss the level-pass dialog: advance the session out of `.scoring`
+    /// (to `.transitioning(.levelAdvance)` or `.won`) and clear held input.
+    /// Wired to the dialog's tap gesture and to the driver's own keyboard
+    /// polling in `runScoringPause`.
+    public func dismissScoring() {
+        guard case .scoring = session.phase else { return }
+        session.finalizeScoring()
+        input?.resetAction()
     }
 
     /// Drive one full iris cycle around a pending sim swap. The tick loop is

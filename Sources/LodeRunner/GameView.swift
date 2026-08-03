@@ -63,6 +63,18 @@ public struct GameView: View {
                         // the flip finishes, dismiss back to `PackChooserView`.
                         GameOverOverlay(onFinished: { dismiss() })
                     }
+                    // Level-pass scoring dialog — port of `levelPass.open()`
+                    // at `main.js:1581`. Sits between the sim's `.finished`
+                    // tick and the iris-close wipe so the count-up animates
+                    // over the frozen last frame of the passed level.
+                    if case .scoring(let summary) = driver.session.phase {
+                        LevelPassDialog(
+                            summary: summary,
+                            onSound: { [sound] effect in sound.play(effect) },
+                            onReady: { driver.armScoringInput() },
+                            onDismiss: { driver.dismissScoring() }
+                        )
+                    }
                 }
                 ScoreHUD(
                     score: driver.session.score + driver.session.simulation.score,
