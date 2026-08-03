@@ -351,8 +351,9 @@ struct GameSessionDriverTests {
     @Test("performTransitionSwap resets appearances so the previous level's pose doesn't ghost in")
     func performTransitionSwapResetsAppearances() throws {
         // Same completable shape used above, laid out twice so completing
-        // level 0 routes into `.transitioning(.levelAdvance)` (rather than
-        // the terminal `.won` branch, which never fires the swap).
+        // level 0 routes into `.scoring` and then `.transitioning
+        // (.levelAdvance)` (rather than the terminal `.won` branch, which
+        // never fires the swap).
         let level = makeLevel(stamps: [
             (x: 3, y: 1, tile: .runner),
             (x: 4, y: 1, tile: .gold),
@@ -377,6 +378,11 @@ struct GameSessionDriverTests {
             driver.tick()
         }
         #expect(driver.runnerAppearance.lastAnimation == .runUpDn)
+        // Level completion now parks in `.scoring` first (the level-pass
+        // dialog animates over the frozen last frame). Dismissing the
+        // dialog drops us into `.transitioning(.levelAdvance)`, which is
+        // what `performTransitionSwap` expects.
+        driver.dismissScoring()
         #expect(driver.session.phase == .transitioning(.levelAdvance))
 
         // At the iris-fully-closed instant the sim swap fires. The fresh
