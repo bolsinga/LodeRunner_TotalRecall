@@ -38,6 +38,7 @@ struct SoundEffectTests {
             "born", "dead", "dig", "down", "fall", "getGold", "pass", "trap",
             "goldFinish", "goldFinish1", "goldFinish2", "goldFinish3",
             "goldFinish4", "goldFinish5", "goldFinish6",
+            "scoreBell", "scoreCount", "scoreEnding",
         ]
         #expect(Set(SoundEffect.allCases.map(\.rawValue)) == expected)
     }

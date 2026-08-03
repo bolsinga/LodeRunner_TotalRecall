@@ -39,11 +39,28 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     /// One of six C64 per-level "last gold picked up" clips (`runner.js:332`,
     /// `themeAssets.js:62`). Only shipped for the C64 theme.
     case goldFinish1, goldFinish2, goldFinish3, goldFinish4, goldFinish5, goldFinish6
+    /// Level-pass dialog "row-starts" chime (`levelPass.js:192`,
+    /// `soundPlay("scoreBell")`). The JS loads this from the shared `sound/`
+    /// root (no theme partition), so the port ships one copy under each
+    /// theme directory.
+    case scoreBell
+    /// Level-pass dialog "step tick" per animated count (`levelPass.js:208`,
+    /// `soundPlay("scoreCount")`). Same shared-across-themes provenance as
+    /// `scoreBell`.
+    case scoreCount
+    /// Level-pass dialog "count finished" flourish (`levelPass.js:250`,
+    /// `soundPlay("scoreEnding")`). Same shared-across-themes provenance as
+    /// `scoreBell`.
+    case scoreEnding
 
-    /// Sound effects that ship for both themes. Everything else is theme-
-    /// specific: `goldFinish` is Apple2-only and `goldFinish1..6` are C64-only.
+    /// Sound effects that ship for both themes. `goldFinish` is Apple2-only
+    /// and `goldFinish1..6` are C64-only. The three `score*` clips ship for
+    /// both themes because the JS treats them as shared (`levelPass.js:192,
+    /// 208,250` use `soundPlay(...)` which reads from `sound/` root, not the
+    /// theme partition).
     public static var commonToBothThemes: [SoundEffect] {
-        [.born, .dead, .dig, .down, .fall, .getGold, .pass, .trap]
+        [.born, .dead, .dig, .down, .fall, .getGold, .pass, .trap,
+         .scoreBell, .scoreCount, .scoreEnding]
     }
 
     /// The variant to play when the last gold is picked up. Ports the
