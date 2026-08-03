@@ -72,18 +72,38 @@ public struct PackChooserOverlay: View {
             Text("THEME")
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
-            Picker("Theme", selection: $selectedTheme) {
-                Text("Apple II").tag(Theme.apple2)
-                Text("Commodore 64").tag(Theme.c64)
+            // Custom two-button toggle. SwiftUI's `.segmented` picker
+            // renders in the standard macOS chrome — which both clipped
+            // "Commodore 64" (the segment splits width evenly regardless
+            // of label length) and stood out visually against the black-
+            // and-yellow monospaced panel. Building it out of plain
+            // `Button`s lets each label size to its own text and matches
+            // the PLAY button's styling.
+            HStack(spacing: 8) {
+                themeButton("Apple II", theme: .apple2)
+                themeButton("Commodore 64", theme: .c64)
             }
-            .pickerStyle(.segmented)
-            // No `.frame(maxWidth:)` — a hard cap here was clipping the
-            // "Commodore 64" segment on macOS. Letting the picker size to
-            // its widest label keeps both segments legible; the surrounding
-            // panel absorbs the extra width without looking off-balance.
-            .labelsHidden()
-            .fixedSize()
         }
+    }
+
+    private func themeButton(_ label: String, theme: Theme) -> some View {
+        let isSelected = selectedTheme == theme
+        return Button {
+            selectedTheme = theme
+        } label: {
+            Text(label)
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundStyle(isSelected ? .black : .white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.yellow : Color.clear)
+                .overlay(
+                    Rectangle().stroke(
+                        isSelected ? Color.yellow : Color.white.opacity(0.5),
+                        lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var playButton: some View {
