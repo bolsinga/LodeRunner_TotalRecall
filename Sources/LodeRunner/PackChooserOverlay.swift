@@ -77,7 +77,12 @@ public struct PackChooserOverlay: View {
                 Text("Commodore 64").tag(Theme.c64)
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 240)
+            // No `.frame(maxWidth:)` — a hard cap here was clipping the
+            // "Commodore 64" segment on macOS. Letting the picker size to
+            // its widest label keeps both segments legible; the surrounding
+            // panel absorbs the extra width without looking off-balance.
+            .labelsHidden()
+            .fixedSize()
         }
     }
 
