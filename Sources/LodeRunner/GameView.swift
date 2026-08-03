@@ -18,9 +18,17 @@ public struct GameView: View {
     @State private var sound = SoundPlayer()
     @Environment(\.tileTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    /// Called when the runner runs out of lives. Callers embedded in a
+    /// `NavigationStack` can leave this `nil` — the game-over overlay falls
+    /// back to `@Environment(\.dismiss)`, which pops the destination. Callers
+    /// that host GameView as an overlay-toggled child (e.g. `PackChooserView`
+    /// with a pack-picker overlay) pass a closure that clears their own state
+    /// so the picker re-appears.
+    private let onExit: (() -> Void)?
 
-    public init(session: GameSession) {
+    public init(session: GameSession, onExit: (() -> Void)? = nil) {
         _driver = State(initialValue: GameSessionDriver(session: session))
+        self.onExit = onExit
     }
 
     public var body: some View {
@@ -60,8 +68,11 @@ public struct GameView: View {
                     if driver.session.phase == .gameOver {
                         // Analog to JS `showCoverPage()` at `main.js:1522`
                         // (the terminal step of the `GAME_OVER` state): after
-                        // the flip finishes, dismiss back to `PackChooserView`.
-                        GameOverOverlay(onFinished: { dismiss() })
+                        // the flip finishes, hand control back to the caller
+                        // (chooser overlay or NavigationStack pop).
+                        GameOverOverlay(onFinished: {
+                            if let onExit { onExit() } else { dismiss() }
+                        })
                     }
                     // Level-pass scoring dialog — port of `levelPass.open()`
                     // at `main.js:1581`. Sits between the sim's `.finished`
