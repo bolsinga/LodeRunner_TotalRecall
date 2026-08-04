@@ -46,6 +46,22 @@ public struct LevelPassSummary: Equatable, Codable, Sendable {
         self.guardsTrapped = guardsTrapped
         self.secondsElapsed = secondsElapsed
     }
+
+    /// Per-level "modern mode" score, matching the JS formula at
+    /// `main.js:1406`: `((MAX_TIME_COUNT - curTime) + curGetGold +
+    /// curGuardDeadNo) * SCORE_VALUE_PER_POINT`. Value is deterministic per
+    /// (pack, level, playstyle) — a fast, low-death, gold-complete run
+    /// scores higher — so it's the natural key for a per-level high score,
+    /// independent of session-total score.
+    public var bonusScore: Int {
+        (Self.maxTimeCount - secondsElapsed + goldCollected + guardsTrapped)
+            * Self.scoreValuePerPoint
+    }
+
+    /// JS `MAX_TIME_COUNT` from `def.js:155`.
+    private static let maxTimeCount = 999
+    /// JS `SCORE_VALUE_PER_POINT` from `def.js:98`.
+    private static let scoreValuePerPoint = 100
 }
 
 /// Which cause routed us into `.transitioning`. `currentLevelIndex` is

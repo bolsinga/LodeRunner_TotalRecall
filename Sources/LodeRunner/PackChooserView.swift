@@ -36,11 +36,26 @@ public struct PackChooserView: View {
 
     @State private var phase: Phase = .pickingPack
 
-    /// Sticky "last committed" pack + theme so the overlay re-opens on
-    /// game-over with the player's previous choice pre-selected — small
-    /// polish that keeps the "try again" flow one tap.
-    @State private var lastPack: LevelPack = .classic
-    @State private var lastTheme: Theme = .apple2
+    /// Last committed pack + theme, persisted across app launches. Written
+    /// on every commit from the pack chooser, so relaunching the app
+    /// re-selects whatever the player had going. Ports the JS's
+    /// `getThemeMode`/`setThemeMode` (`storage.js:456,467`) and last-play
+    /// bookkeeping — kept minimal for this port (single pack + single
+    /// theme; no per-player accounts or version dropdown).
+    @AppStorage(Self.lastPackKey) private var lastPack: LevelPack = .classic
+    @AppStorage(Self.lastThemeKey) private var lastTheme: Theme = .apple2
+
+    /// Per-pack per-level best scores. Ported from JS `modernScoreInfo`
+    /// (`storage.js:150,189`) — record on level pass, read at dialog open
+    /// to populate the HI-SCORE row.
+    @State private var highScoreStore = HighScoreStore()
+
+    /// Deliberate namespacing: prefix every port `@AppStorage` key with
+    /// `loderunner_` so `UserDefaults` inspection reads cleanly and there's
+    /// zero chance of colliding with unrelated app defaults. Same convention
+    /// as the JS `STORAGE_PREFIX = "loderunner_"` at `def.js:178`.
+    static let lastPackKey = "loderunner_lastPack"
+    static let lastThemeKey = "loderunner_lastTheme"
 
     public init() {}
 
@@ -59,7 +74,17 @@ public struct PackChooserView: View {
             {
                 GameView(
                     session: session,
-                    onExit: { phase = .pickingPack }
+                    onExit: { phase = .pickingPack },
+                    onLevelPassed: { levelIndex, score in
+                        // Read the pre-existing best (for the dialog's
+                        // HI-SCORE row) before recording, so we don't
+                        // return the value we just wrote.
+                        let previous = highScoreStore.bestScore(
+                            pack: selection.pack, levelIndex: levelIndex)
+                        highScoreStore.recordScore(
+                            score, pack: selection.pack, levelIndex: levelIndex)
+                        return previous
+                    }
                 )
                 .environment(\.tileTheme, selection.theme)
                 .id(selection)
