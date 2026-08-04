@@ -60,7 +60,9 @@ public struct GameView: View {
         FittedBoardView(boardHeight: Self.combinedBoardHeight) {
             VStack(spacing: 0) {
                 ZStack(alignment: .topLeading) {
-                    LevelGridView(tiles: entityLessTiles(driver.session.simulation.slots))
+                    LevelGridView(tiles: entityLessTiles(
+                        driver.session.simulation.slots,
+                        fillStates: driver.session.simulation.fillStates))
                     if let dig = driver.session.simulation.digState {
                         DigSpriteView(digState: dig)
                     }
@@ -204,9 +206,21 @@ public struct GameView: View {
     /// doesn't ghost behind the overlaid sprite views during mid-tile motion,
     /// and let `LevelSlot.displayTile` handle everything else (including the
     /// `.gold` `.base`/`.empty` `.current` split).
-    private func entityLessTiles(_ slots: [[LevelSlot]]) -> [[TileType]] {
-        slots.map { column in
-            column.map { slot in
+    ///
+    /// Cells with an active `FillState` render as `.empty` even when an
+    /// entity is standing there — otherwise the base `.brick` would draw
+    /// behind the runner/guard, hiding the refilling hole. The overlaid
+    /// `FillSpriteView`s render the actual fill frames on top.
+    private func entityLessTiles(
+        _ slots: [[LevelSlot]],
+        fillStates: [FillState]
+    ) -> [[TileType]] {
+        let fillCells = Set(fillStates.map { $0.position })
+        return slots.enumerated().map { x, column in
+            column.enumerated().map { y, slot in
+                if fillCells.contains(GridPoint(x: x, y: y)) {
+                    return .empty
+                }
                 if slot.current == .runner || slot.current == .guard {
                     return slot.base
                 }
