@@ -25,10 +25,31 @@ public struct GameView: View {
     /// with a pack-picker overlay) pass a closure that clears their own state
     /// so the picker re-appears.
     private let onExit: (() -> Void)?
+    /// Optional per-level score lookup + record hook. Called with the just-
+    /// finished level's 0-based index and its per-level `bonusScore`; return
+    /// value is the *previous* best for that level (so `LevelPassDialog` can
+    /// show it as HI-SCORE), or `nil` if there's no prior record. `nil`
+    /// closure disables score persistence and the HI-SCORE row entirely —
+    /// useful for tests and standalone previews that don't own a store.
+    private let onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)?
 
-    public init(session: GameSession, onExit: (() -> Void)? = nil) {
+    /// Cached "hi-score before this level's completion", captured at the
+    /// `.scoring` entry via the `onLevelPassed` hook so the dialog can show
+    /// it without dividing responsibility over who reads the store when.
+    @State private var pendingPreviousBest: Int?
+    /// Guard so `onLevelPassed` fires exactly once per `.scoring` phase
+    /// (the phase equality check in `.onChange` won't cover level-1 →
+    /// level-1 re-entries after game over on the same level).
+    @State private var lastRecordedLevelNumber: Int?
+
+    public init(
+        session: GameSession,
+        onExit: (() -> Void)? = nil,
+        onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil
+    ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
         self.onExit = onExit
+        self.onLevelPassed = onLevelPassed
     }
 
     public var body: some View {
@@ -81,6 +102,7 @@ public struct GameView: View {
                     if case .scoring(let summary) = driver.session.phase {
                         LevelPassDialog(
                             summary: summary,
+                            hiScore: pendingPreviousBest,
                             onSound: { [sound] effect in sound.play(effect) },
                             onReady: { driver.armScoringInput() },
                             onDismiss: { driver.dismissScoring() }
@@ -115,6 +137,26 @@ public struct GameView: View {
         .onChange(of: theme) { _, newValue in
             sound.theme = newValue
             driver.theme = newValue
+        }
+        .onChange(of: driver.session.phase) { _, newValue in
+            // Fire the score-record hook exactly once at each `.scoring`
+            // entry. Compare against `lastRecordedLevelNumber` because
+            // successive attempts of the same level would produce the same
+            // phase value on retry — SwiftUI's `.onChange` wouldn't
+            // otherwise re-fire.
+            if case .scoring(let summary) = newValue,
+                lastRecordedLevelNumber != summary.levelNumber
+            {
+                lastRecordedLevelNumber = summary.levelNumber
+                pendingPreviousBest = onLevelPassed?(
+                    summary.levelNumber - 1, summary.bonusScore)
+            } else if case .playing = newValue {
+                // Reset the once-per-scoring guard so the *next* level's
+                // pass fires the hook. Also clear the cached previous best
+                // so a stale value can't leak into the next dialog.
+                pendingPreviousBest = nil
+                lastRecordedLevelNumber = nil
+            }
         }
     }
 

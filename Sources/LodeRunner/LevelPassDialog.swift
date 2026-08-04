@@ -28,6 +28,11 @@ import SwiftUI
 /// keyboard dismiss. Tap-to-dismiss short-circuits via `onDismiss`.
 public struct LevelPassDialog: View {
     let summary: LevelPassSummary
+    /// Optional previous best score for this level. When non-nil the
+    /// HI-SCORE row is shown; when the animated `scoreDisplay` beats it,
+    /// the row highlights (JS `levelPass.js:203-206`'s `.beat` class).
+    /// `nil` hides the row entirely — the pre-persistence default.
+    let hiScore: Int?
     let onSound: (SoundEffect) -> Void
     let onReady: () -> Void
     let onDismiss: () -> Void
@@ -40,11 +45,13 @@ public struct LevelPassDialog: View {
 
     public init(
         summary: LevelPassSummary,
+        hiScore: Int? = nil,
         onSound: @escaping (SoundEffect) -> Void = { _ in },
         onReady: @escaping () -> Void = {},
         onDismiss: @escaping () -> Void = {}
     ) {
         self.summary = summary
+        self.hiScore = hiScore
         self.onSound = onSound
         self.onReady = onReady
         self.onDismiss = onDismiss
@@ -76,6 +83,14 @@ public struct LevelPassDialog: View {
                     GridRow {
                         Text("SCORE").foregroundStyle(.white)
                         Text(pad6(scoreDisplay)).monospaced().foregroundStyle(.yellow)
+                    }
+                    if let hiScore {
+                        GridRow {
+                            Text("HI-SCORE").foregroundStyle(.white)
+                            Text(pad6(max(hiScore, scoreDisplay)))
+                                .monospaced()
+                                .foregroundStyle(scoreDisplay > hiScore ? .green : .yellow)
+                        }
                     }
                 }
                 .font(.system(size: 14, design: .monospaced))
