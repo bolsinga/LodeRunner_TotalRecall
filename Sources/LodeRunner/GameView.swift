@@ -64,12 +64,17 @@ public struct GameView: View {
                     if let dig = driver.session.simulation.digState {
                         DigSpriteView(digState: dig)
                     }
-                    ForEach(Array(driver.session.simulation.fillStates.enumerated()), id: \.offset) { _, fill in
-                        FillSpriteView(fillState: fill)
-                    }
                     runnerView
                     ForEach(Array(driver.session.simulation.guards.enumerated()), id: \.offset) { index, guardState in
                         guardView(index: index, guardState: guardState)
+                    }
+                    // Fill sprites render *above* runner + guards so the
+                    // player sees bricks refilling around whoever's still in
+                    // the hole. Matches the JS `moveChild2Top(fillHoleObj)`
+                    // pass at `runner.js:636`, which lifts every active fill
+                    // sprite over the entity layer each tick.
+                    ForEach(Array(driver.session.simulation.fillStates.enumerated()), id: \.offset) { _, fill in
+                        FillSpriteView(fillState: fill)
                     }
                     // Initial-level opening reveal (`armBornBlink` path) and
                     // mid-game post-transition opening reveal share the same
