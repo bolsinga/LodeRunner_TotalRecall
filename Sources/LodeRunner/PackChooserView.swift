@@ -16,13 +16,16 @@ import SwiftUI
 /// targets need `ENABLE_DEBUG_DYLIB` to preview, which SwiftPM can't set for
 /// us.
 public struct PackChooserView: View {
-    /// The three overlay-drives states this view can be in. Kept as a single
-    /// enum so exactly one overlay is showing at a time (or none, when a
-    /// session is playing).
+    /// Overlay states. Exactly one overlay is showing at a time (or none,
+    /// when a session is playing).
     private enum Phase: Equatable {
         case pickingPack
         case pickingLevel(pack: LevelPack, theme: Theme, levels: [LevelParseResult])
         case playing(Selection)
+        /// Post-game leaderboard. `pending` non-nil ⇒ the score qualified
+        /// and name entry is up; nil ⇒ read-only view from the chooser.
+        case leaderboard(
+            pack: LevelPack, theme: Theme, pending: LeaderboardOverlay.PendingScore?)
     }
 
     /// Committed pack + theme + starting-level identity for a live session.
@@ -49,6 +52,11 @@ public struct PackChooserView: View {
     /// (`storage.js:150,189`) — record on level pass, read at dialog open
     /// to populate the HI-SCORE row.
     @State private var highScoreStore = HighScoreStore()
+
+    /// Per-pack top-10 leaderboard. Ported from JS `hiscore.js`. Consulted
+    /// on game-over to decide whether to prompt for a name; also readable
+    /// via the pack chooser's LEADERBOARD button.
+    @State private var leaderboardStore = LeaderboardStore()
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly and there's
@@ -84,6 +92,22 @@ public struct PackChooserView: View {
                         highScoreStore.recordScore(
                             score, pack: selection.pack, levelIndex: levelIndex)
                         return previous
+                    },
+                    onGameOver: { finalScore, levelReached in
+                        // Route into the leaderboard overlay. Non-qualifying
+                        // scores still get to see the standings before
+                        // returning to the pack chooser — matching JS
+                        // `hiscore.js:showScoreTable`, which always renders
+                        // the table on GAME_OVER and gates only the name
+                        // input on qualification.
+                        let pending: LeaderboardOverlay.PendingScore? =
+                            leaderboardStore.qualifies(
+                                pack: selection.pack, score: finalScore)
+                            ? LeaderboardOverlay.PendingScore(
+                                score: finalScore, levelReached: levelReached)
+                            : nil
+                        phase = .leaderboard(
+                            pack: selection.pack, theme: selection.theme, pending: pending)
                     }
                 )
                 .environment(\.tileTheme, selection.theme)
@@ -125,6 +149,11 @@ public struct PackChooserView: View {
                         return
                     }
                     phase = .pickingLevel(pack: pack, theme: theme, levels: levels)
+                },
+                onPickLeaderboard: { pack, theme in
+                    lastPack = pack
+                    lastTheme = theme
+                    phase = .leaderboard(pack: pack, theme: theme, pending: nil)
                 }
             )
         case .pickingLevel(let pack, let theme, let levels):
@@ -135,6 +164,19 @@ public struct PackChooserView: View {
                         Selection(pack: pack, theme: theme, startingLevelIndex: index))
                 },
                 onClose: {
+                    phase = .pickingPack
+                }
+            )
+            .environment(\.tileTheme, theme)
+        case .leaderboard(let pack, let theme, let pending):
+            LeaderboardOverlay(
+                pack: pack,
+                entries: leaderboardStore.entries(pack: pack),
+                pendingScore: pending,
+                onSubmit: { entry in
+                    if let entry {
+                        leaderboardStore.insert(entry, pack: pack)
+                    }
                     phase = .pickingPack
                 }
             )

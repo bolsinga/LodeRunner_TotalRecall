@@ -16,6 +16,10 @@ public struct PackChooserOverlay: View {
     /// button is visible; when `nil`, only PLAY is shown. Callers wire this
     /// to their `LevelSelectOverlay` routing.
     let onPickLevel: ((LevelPack, Theme) -> Void)?
+    /// Optional callback fired when the user taps LEADERBOARD. When set,
+    /// the button is visible and taps route into `LeaderboardOverlay` in
+    /// read-only view mode.
+    let onPickLeaderboard: ((LevelPack, Theme) -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -24,12 +28,14 @@ public struct PackChooserOverlay: View {
         initialPack: LevelPack = .classic,
         initialTheme: Theme = .apple2,
         onPick: @escaping (LevelPack, Theme) -> Void,
-        onPickLevel: ((LevelPack, Theme) -> Void)? = nil
+        onPickLevel: ((LevelPack, Theme) -> Void)? = nil,
+        onPickLeaderboard: ((LevelPack, Theme) -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
         self.onPick = onPick
         self.onPickLevel = onPickLevel
+        self.onPickLeaderboard = onPickLeaderboard
     }
 
     public var body: some View {
@@ -121,6 +127,11 @@ public struct PackChooserOverlay: View {
             if let onPickLevel {
                 actionButton("SELECT LEVEL", filled: false) {
                     onPickLevel(selectedPack, selectedTheme)
+                }
+            }
+            if let onPickLeaderboard {
+                actionButton("LEADERBOARD", filled: false) {
+                    onPickLeaderboard(selectedPack, selectedTheme)
                 }
             }
         }
