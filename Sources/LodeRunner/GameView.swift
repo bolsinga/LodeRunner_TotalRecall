@@ -24,7 +24,13 @@ public struct GameView: View {
     /// that host GameView as an overlay-toggled child (e.g. `PackChooserView`
     /// with a pack-picker overlay) pass a closure that clears their own state
     /// so the picker re-appears.
+    ///
+    /// Callers that also want to route into a leaderboard overlay before
+    /// clearing state can provide `onGameOver` instead — when set, it fires
+    /// with the final score + 1-based level reached and `onExit` is *not*
+    /// called (the leaderboard host takes over the return path).
     private let onExit: (() -> Void)?
+    private let onGameOver: ((_ finalScore: Int, _ levelReached: Int) -> Void)?
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -45,11 +51,13 @@ public struct GameView: View {
     public init(
         session: GameSession,
         onExit: (() -> Void)? = nil,
-        onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil
+        onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
+        onGameOver: ((_ finalScore: Int, _ levelReached: Int) -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
+        self.onGameOver = onGameOver
     }
 
     public var body: some View {
@@ -96,10 +104,20 @@ public struct GameView: View {
                     if driver.session.phase == .gameOver {
                         // Analog to JS `showCoverPage()` at `main.js:1522`
                         // (the terminal step of the `GAME_OVER` state): after
-                        // the flip finishes, hand control back to the caller
-                        // (chooser overlay or NavigationStack pop).
+                        // the flip finishes, hand control back to the caller.
+                        // `onGameOver` wins over `onExit` — the leaderboard
+                        // host takes over the return path so it can show a
+                        // hi-score screen before clearing state.
                         GameOverOverlay(onFinished: {
-                            if let onExit { onExit() } else { dismiss() }
+                            if let onGameOver {
+                                onGameOver(
+                                    driver.session.score,
+                                    driver.session.currentLevelIndex + 1)
+                            } else if let onExit {
+                                onExit()
+                            } else {
+                                dismiss()
+                            }
                         })
                     }
                     // Level-pass scoring dialog — port of `levelPass.open()`
