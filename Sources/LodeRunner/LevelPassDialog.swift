@@ -69,11 +69,11 @@ public struct LevelPassDialog: View {
                     .foregroundStyle(.white)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     GridRow {
-                        Text("GOLD").foregroundStyle(.white)
+                        glyph(TextGlyph.gold)
                         Text(pad3(goldDisplay)).monospaced().foregroundStyle(.yellow)
                     }
                     GridRow {
-                        Text("GUARDS").foregroundStyle(.white)
+                        glyph(TextGlyph.guard)
                         Text(pad3(guardsDisplay)).monospaced().foregroundStyle(.yellow)
                     }
                     GridRow {
@@ -162,6 +162,32 @@ public struct LevelPassDialog: View {
 
     private func pad3(_ n: Int) -> String { String(format: "%03d", n) }
     private func pad6(_ n: Int) -> String { String(format: "%06d", n) }
+
+    /// Row-label glyph from the text sprite sheet — GOLD row uses
+    /// `TextGlyph.gold`, GUARDS row uses `TextGlyph.guard`. Mirrors the JS
+    /// `.lp-glyph-gold` / `.lp-glyph-guard` label swap at
+    /// `levelPass.js:89-91` (JS ships a text label for the TIME row too, so
+    /// TIME stays as `Text("TIME")` above).
+    ///
+    /// Native frame is 40×44; the surrounding row text is 14 pt (~10pt
+    /// glyph height at monospace). Scale to 24 pt tall — a bit bigger than
+    /// the labels but proportional to the JS's 28×44 crop with 0.8x transform
+    /// (`levelPass.css:88,95` → ~22 pt effective).
+    private func glyph(_ index: Int) -> some View {
+        SpriteFrame(sheet: .text, index: index)
+            .frame(
+                width: CGFloat(TileGeometry.tileWidth),
+                height: CGFloat(TileGeometry.tileHeight))
+            .scaleEffect(Self.glyphScale)
+            .frame(
+                width: CGFloat(TileGeometry.tileWidth) * Self.glyphScale,
+                height: CGFloat(TileGeometry.tileHeight) * Self.glyphScale)
+    }
+
+    /// Same "pin natural size, scale, report scaled size" pattern as
+    /// `LevelThumbnailView` — `.scaleEffect` alone doesn't shrink layout,
+    /// so bracket it between two `.frame`s.
+    private static let glyphScale: CGFloat = 24.0 / CGFloat(TileGeometry.tileHeight)
 }
 
 // MARK: - Preview

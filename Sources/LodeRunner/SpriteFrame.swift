@@ -62,6 +62,21 @@ public struct SpriteSheetSpec: Sendable {
     )
 }
 
+/// Named text-atlas frames the port uses outside the digit-per-frame HUD path.
+/// The JS's `levelPass.js:89-91` picks these two glyphs off the text sheet by
+/// hard-coded pixel offset (`levelPass.css:98-99`: `-1px -176px` and
+/// `-42px -176px`). Row 4 (`-176px = -4 * 44`) of the 10x6 grid is where the
+/// non-alphanumeric icons live: index 40 = gold, index 41 = guard.
+public enum TextGlyph {
+    /// Gold coin icon — `text.png` frame 40 (row 4, col 0), analog of JS
+    /// `.lp-glyph-gold` at `levelPass.css:98`.
+    public static let gold = 40
+    /// Guard icon (used as the "guards trapped" glyph on the level-pass
+    /// dialog) — `text.png` frame 41 (row 4, col 1), analog of JS
+    /// `.lp-glyph-guard` at `levelPass.css:99`.
+    public static let `guard` = 41
+}
+
 /// Renders one frame of a themed sprite sheet at its native pixel size. Slicing
 /// is done by drawing the full sheet at its natural dimensions, offsetting it so
 /// the requested frame's origin lands at (0,0), then clipping to a single frame.
