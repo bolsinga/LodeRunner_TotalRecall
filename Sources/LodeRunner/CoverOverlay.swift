@@ -12,10 +12,13 @@ import SwiftUI
 /// - `remake.png` — 350×155 badge, rotated -5° (JS `preload.js:369-373`),
 ///   positioned in the center-right area.
 ///
-/// Both badges fade in with linear tweens (JS `signet` 0.8→1.0 over 500ms,
-/// `remake` 0.6→1.0 over 800ms). Any tap or key press dismisses; the
-/// splash auto-dismisses after `Self.autoDismissSeconds`, matching the
-/// JS's `waitIdleDemo(3000)` idle timer at `main.js:243`.
+/// Both badges fade in with linear tweens. JS's start alphas of 0.8/0.6
+/// produce nearly-imperceptible fades in practice — the port stretches
+/// them to a full 0.0→1.0 range so the animation actually reads. Durations
+/// (500 ms / 800 ms) still match JS `preload.js:361,373`. Any tap or key
+/// press dismisses; the splash auto-dismisses after
+/// `Self.autoDismissSeconds`, matching JS `waitIdleDemo(3000)` at
+/// `main.js:243`.
 ///
 /// Deferred vs. the JS: the attract-mode auto-demo that fires when
 /// `waitIdleDemo` elapses is out of scope (no demo player in the port).
@@ -53,12 +56,8 @@ public struct CoverOverlay: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture {
-            print("[CoverOverlay] tap → onDismiss")
-            onDismiss()
-        }
+        .onTapGesture { onDismiss() }
         .onAppear {
-            print("[CoverOverlay] onAppear, scheduling dismiss in \(Self.autoDismissSeconds)s")
             // Fade tweens — JS `preload.js:359,371` uses `tweenGet().to({alpha})`.
             withAnimation(.linear(duration: Self.signetFadeSeconds)) {
                 signetOpacity = 1.0
@@ -66,20 +65,22 @@ public struct CoverOverlay: View {
             withAnimation(.linear(duration: Self.remakeFadeSeconds)) {
                 remakeOpacity = 1.0
             }
-            // Timer via DispatchQueue instead of `.task` + `Task.sleep`:
-            // SwiftUI's `.task` gets cancelled by transient view lifecycle
-            // events (window mount, size classes settling on macOS), and
-            // that was collapsing the cover into an instant flash. The
-            // dispatch closure isn't tied to the view's lifecycle — it
-            // fires exactly once after the delay regardless of what
-            // SwiftUI does to the view tree. `onDismiss` is idempotent
-            // (the host's `phase = .pickingPack` re-set is a no-op if
-            // already there), so a late-firing timer after e.g. a tap
-            // dismiss is harmless.
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoDismissSeconds) {
-                print("[CoverOverlay] timer fired → onDismiss")
-                onDismiss()
+        }
+        .task(id: "cover-dismiss-timer") {
+            // JS `main.js:243` `waitIdleDemo(3000)`. `.task(id:)` with a
+            // stable non-view identifier makes SwiftUI restart the task
+            // ONLY when the id changes — never on transient view
+            // lifecycle events (window mount, size class settling). A
+            // clean 3 s wait, then dismiss. On cancellation (the view
+            // truly went away, e.g. user tapped and phase changed) the
+            // sleep throws and we return without calling `onDismiss`
+            // — which would double-fire otherwise.
+            do {
+                try await Task.sleep(for: .seconds(Self.autoDismissSeconds))
+            } catch {
+                return
             }
+            onDismiss()
         }
     }
 
@@ -95,6 +96,12 @@ public struct CoverOverlay: View {
             .interpolation(.none)
             .frame(width: Self.signetSize, height: Self.signetSize)
             .opacity(signetOpacity)
+            // `.animation(value:)` on the opacity change is redundant with
+            // the `withAnimation` in `.onAppear`, but it's belt-and-braces
+            // against the case where SwiftUI's `withAnimation` batching
+            // decides the initial render is the "before" state and skips
+            // the transition.
+            .animation(.linear(duration: Self.signetFadeSeconds), value: signetOpacity)
             .position(x: centerX, y: centerY)
     }
 
@@ -111,6 +118,7 @@ public struct CoverOverlay: View {
             .frame(width: Self.remakeSize.width, height: Self.remakeSize.height)
             .rotationEffect(.degrees(Self.remakeRotationDegrees), anchor: .topLeading)
             .opacity(remakeOpacity)
+            .animation(.linear(duration: Self.remakeFadeSeconds), value: remakeOpacity)
             .position(x: centerX, y: centerY)
     }
 
@@ -124,7 +132,8 @@ public struct CoverOverlay: View {
     /// `SIGNET_UNDER_X = SIGNET_UNDER_Y = 30`.
     static let signetSize: CGFloat = 80
     static let signetInset: CGFloat = 30
-    static let signetStartOpacity: Double = 0.8
+    /// JS starts at 0.8 — barely perceptible against 1.0. Port starts at 0.
+    static let signetStartOpacity: Double = 0.0
     static let signetFadeSeconds: Double = 0.5
 
     /// Remake badge: 350×155, tilted -5° at (372, 130) — JS `preload.js:369-373`.
@@ -132,7 +141,8 @@ public struct CoverOverlay: View {
     /// Top-left of the remake badge, in board coordinates.
     static let remakeTopLeft: CGSize = CGSize(width: 372, height: 130)
     static let remakeRotationDegrees: Double = -5
-    static let remakeStartOpacity: Double = 0.6
+    /// JS starts at 0.6 — subtle. Port starts at 0 for a visible fade-in.
+    static let remakeStartOpacity: Double = 0.0
     static let remakeFadeSeconds: Double = 0.8
 
     /// JS `main.js:243` — 3000 ms idle-before-demo. In the port with no

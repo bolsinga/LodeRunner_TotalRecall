@@ -151,9 +151,16 @@ public struct PackChooserView: View {
         switch phase {
         case .cover:
             CoverOverlay(onDismiss: {
-                print("[PackChooserView] onDismiss from CoverOverlay; phase → .pickingPack")
-                phase = .pickingPack
+                // Cross-fade the cover → pack chooser transition so the
+                // switch doesn't hard-cut. JS itself hard-cuts to attract
+                // mode (`main.js:243`), but the port dismisses into the
+                // pack chooser instead, and the abrupt swap read as a
+                // "flash" during playtesting.
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    phase = .pickingPack
+                }
             })
+            .transition(.opacity)
         case .pickingPack:
             PackChooserOverlay(
                 initialPack: lastPack,
