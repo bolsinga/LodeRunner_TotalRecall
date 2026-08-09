@@ -45,6 +45,14 @@ public struct CoverOverlay: View {
                 boardWidth: Self.coverWidth, boardHeight: Self.coverHeight
             ) {
                 ZStack(alignment: .topLeading) {
+                    // Rainbow gradient behind the cover art — JS
+                    // `preload.js:87-98` (`TitleBackground.draw` after
+                    // `.rainbow = true` at `preload.js:350`). Without
+                    // this, the cover's transparent "LODE RUNNER"
+                    // lettering fell on the black backdrop and read as
+                    // solid black.
+                    Self.rainbowGradient
+                        .frame(width: Self.coverWidth, height: Self.coverHeight)
                     Image("cover", bundle: .module)
                         .resizable()
                         .interpolation(.none)
@@ -148,6 +156,29 @@ public struct CoverOverlay: View {
     /// JS `main.js:243` — 3000 ms idle-before-demo. In the port with no
     /// demo, we just dismiss into the pack chooser.
     static let autoDismissSeconds: Double = 3.0
+
+    /// Rainbow linear gradient rendered behind the cover art. Ports
+    /// `TitleBackground.draw` at `preload.js:87-98`:
+    /// colors `["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF",
+    /// "#4B0082", "#8B00FF"]` at stops `[0, .14, .28, .42, .56, .70, .84]`,
+    /// direction from `(0, h/5)` to `(w*6/5, h*2/5)` (`preload.js:90`).
+    /// SwiftUI's UnitPoint is normalized, so the JS pixel coords map to
+    /// `(0, 0.2)` → `(1.2, 0.4)`. `x=1.2` is outside `[0,1]` — SwiftUI
+    /// extrapolates the gradient axis, matching how HTML canvas handles
+    /// out-of-bounds gradient endpoints.
+    static let rainbowGradient = LinearGradient(
+        stops: [
+            .init(color: Color(red: 1.0, green: 0.0, blue: 0.0), location: 0.0),
+            .init(color: Color(red: 1.0, green: 0.5, blue: 0.0), location: 0.14),
+            .init(color: Color(red: 1.0, green: 1.0, blue: 0.0), location: 0.28),
+            .init(color: Color(red: 0.0, green: 1.0, blue: 0.0), location: 0.42),
+            .init(color: Color(red: 0.0, green: 0.0, blue: 1.0), location: 0.56),
+            .init(color: Color(red: 0.29, green: 0.0, blue: 0.51), location: 0.70),
+            .init(color: Color(red: 0.55, green: 0.0, blue: 1.0), location: 0.84),
+        ],
+        startPoint: UnitPoint(x: 0.0, y: 0.2),
+        endPoint: UnitPoint(x: 1.2, y: 0.4)
+    )
 }
 
 // MARK: - Preview
