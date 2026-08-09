@@ -65,22 +65,21 @@ public struct SettingsOverlay: View {
         }
     }
 
-    /// Two-button toggle that flips the in-game HUD between the
-    /// `SCORE / MEN / LEVEL` layout (`.classic`) and the `@ / # / TIME /
-    /// LEVEL` layout (`.modern`). Analog to JS `settings.setMode()` at
-    /// `settings.js:147`, which is presented there as a "Training" on/off
-    /// toggle.
+    /// TRAINING on = modern HUD (@ / # / TIME); off = classic HUD (SCORE
+    /// / MEN). Label + wording match the JS `settings.js:147`'s
+    /// "Training on/off" toggle verbatim; internally still drives the
+    /// same `HUDMode` enum.
     private var hudRow: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("HUD")
+            Text("TRAINING")
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
             HStack(spacing: 8) {
-                toggleButton("SCORE", isSelected: hudMode == .classic) {
-                    hudMode = .classic
-                }
-                toggleButton("STATS", isSelected: hudMode == .modern) {
+                toggleButton("ON", isSelected: hudMode == .modern) {
                     hudMode = .modern
+                }
+                toggleButton("OFF", isSelected: hudMode == .classic) {
+                    hudMode = .classic
                 }
             }
         }
