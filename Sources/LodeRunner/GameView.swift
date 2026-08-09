@@ -38,6 +38,9 @@ public struct GameView: View {
     /// period for the driver. Bound to the host's persisted
     /// `@AppStorage("loderunner_speedIndex")`.
     private let speedIndex: Int
+    /// HUD layout — `SCORE / MEN / LEVEL` vs `@ / # / TIME / LEVEL`.
+    /// Bound to the host's persisted `@AppStorage("loderunner_hudMode")`.
+    private let hudMode: HUDMode
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -59,6 +62,7 @@ public struct GameView: View {
         session: GameSession,
         soundEnabled: Bool = true,
         speedIndex: Int = GameSpeed.defaultIndex,
+        hudMode: HUDMode = .classic,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
         onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
@@ -66,6 +70,7 @@ public struct GameView: View {
         _driver = State(initialValue: GameSessionDriver(session: session))
         self.soundEnabled = soundEnabled
         self.speedIndex = speedIndex
+        self.hudMode = hudMode
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
@@ -159,9 +164,19 @@ public struct GameView: View {
                     }
                 }
                 ScoreHUD(
+                    mode: hudMode,
                     score: driver.session.score + driver.session.simulation.score,
                     lives: driver.session.lives,
-                    level: driver.session.currentLevelIndex + 1
+                    level: driver.session.currentLevelIndex + 1,
+                    // Modern-HUD stats are all per-level, matching JS's
+                    // `curGetGold`/`curGuardDeadNo`/`curTime` at
+                    // `main.js:664,84` (reset each level in
+                    // `initModernVariable`). Gold collected = the level's
+                    // starting gold count minus what's still on the board.
+                    goldCollected: currentLevelGoldCount
+                        - driver.session.simulation.goldRemaining,
+                    guardsTrapped: driver.session.simulation.guardsTrappedCount,
+                    secondsElapsed: driver.session.simulation.secondsElapsed
                 )
             }
         }
@@ -241,6 +256,16 @@ public struct GameView: View {
                 sheet: GuardSpriteView.sheet(forHasGold: guardState.hasGold)
             )
         }
+    }
+
+    /// Starting gold count on the current level. Read directly from
+    /// `session.levels[currentLevelIndex]` — the parse-time count doesn't
+    /// change during play, so pairing it with `simulation.goldRemaining`
+    /// gives the number the runner has picked up so far.
+    private var currentLevelGoldCount: Int {
+        let idx = driver.session.currentLevelIndex
+        guard driver.session.levels.indices.contains(idx) else { return 0 }
+        return driver.session.levels[idx].goldCount
     }
 
     /// Playfield rows + one HUD row. Matches the JS layout where `infoY` sits
