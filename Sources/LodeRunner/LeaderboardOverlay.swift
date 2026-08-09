@@ -28,6 +28,9 @@ public struct LeaderboardOverlay: View {
     /// pack. Ports JS `hiscore.js:246,286`'s `winner` flag — gates the
     /// `endingMusic.mp3` playback so a plain game-over stays silent.
     let isWinner: Bool
+    /// Global sound toggle from the settings overlay. Muted overlays skip
+    /// the ending music.
+    let soundEnabled: Bool
     let onSubmit: (LeaderboardEntry?) -> Void
 
     @State private var nameInput: String = ""
@@ -55,12 +58,14 @@ public struct LeaderboardOverlay: View {
         entries: [LeaderboardEntry],
         pendingScore: PendingScore? = nil,
         isWinner: Bool = false,
+        soundEnabled: Bool = true,
         onSubmit: @escaping (LeaderboardEntry?) -> Void
     ) {
         self.pack = pack
         self.entries = entries
         self.pendingScore = pendingScore
         self.isWinner = isWinner
+        self.soundEnabled = soundEnabled
         self.onSubmit = onSubmit
     }
 
@@ -83,7 +88,11 @@ public struct LeaderboardOverlay: View {
         }
         .task {
             // Ports `endingMusicPlay()` at `hiscore.js:246` — winner-only.
+            // Sound-off honored via `SoundPlayer.isEnabled` (which guards
+            // `play(_:)` internally) so the settings toggle mutes the
+            // ending music too.
             sound.theme = theme
+            sound.isEnabled = soundEnabled
             if isWinner {
                 sound.play(.ending)
             }
