@@ -24,8 +24,10 @@ public struct PackChooserView: View {
         case playing(Selection)
         /// Post-game leaderboard. `pending` non-nil ⇒ the score qualified
         /// and name entry is up; nil ⇒ read-only view from the chooser.
+        /// `isWinner` gates the ending music (JS `hiscore.js:246,286`).
         case leaderboard(
-            pack: LevelPack, theme: Theme, pending: LeaderboardOverlay.PendingScore?)
+            pack: LevelPack, theme: Theme,
+            pending: LeaderboardOverlay.PendingScore?, isWinner: Bool)
     }
 
     /// Committed pack + theme + starting-level identity for a live session.
@@ -93,7 +95,7 @@ public struct PackChooserView: View {
                             score, pack: selection.pack, levelIndex: levelIndex)
                         return previous
                     },
-                    onGameOver: { finalScore, levelReached in
+                    onGameOver: { finalScore, levelReached, isWinner in
                         // Route into the leaderboard overlay. Non-qualifying
                         // scores still get to see the standings before
                         // returning to the pack chooser — matching JS
@@ -107,7 +109,8 @@ public struct PackChooserView: View {
                                 score: finalScore, levelReached: levelReached)
                             : nil
                         phase = .leaderboard(
-                            pack: selection.pack, theme: selection.theme, pending: pending)
+                            pack: selection.pack, theme: selection.theme,
+                            pending: pending, isWinner: isWinner)
                     }
                 )
                 .environment(\.tileTheme, selection.theme)
@@ -153,7 +156,8 @@ public struct PackChooserView: View {
                 onPickLeaderboard: { pack, theme in
                     lastPack = pack
                     lastTheme = theme
-                    phase = .leaderboard(pack: pack, theme: theme, pending: nil)
+                    phase = .leaderboard(
+                        pack: pack, theme: theme, pending: nil, isWinner: false)
                 }
             )
         case .pickingLevel(let pack, let theme, let levels):
@@ -168,11 +172,12 @@ public struct PackChooserView: View {
                 }
             )
             .environment(\.tileTheme, theme)
-        case .leaderboard(let pack, let theme, let pending):
+        case .leaderboard(let pack, let theme, let pending, let isWinner):
             LeaderboardOverlay(
                 pack: pack,
                 entries: leaderboardStore.entries(pack: pack),
                 pendingScore: pending,
+                isWinner: isWinner,
                 onSubmit: { entry in
                     if let entry {
                         leaderboardStore.insert(entry, pack: pack)

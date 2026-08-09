@@ -52,15 +52,23 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     /// `soundPlay("scoreEnding")`). Same shared-across-themes provenance as
     /// `scoreBell`.
     case scoreEnding
+    /// Winner-only music that plays over the leaderboard when the player
+    /// clears the whole pack. Ported from `endingMusicPlay/Stop` at
+    /// `endingMusic.js:12,17`, gated by JS's `winner` flag at
+    /// `hiscore.js:246,286`. Shared clip in the JS (`sound/ending/
+    /// endingMusic.ogg`); the port ships one copy under each theme
+    /// directory to fit the `Sounds/<theme>/<effect>.mp3` layout.
+    case ending
 
     /// Sound effects that ship for both themes. `goldFinish` is Apple2-only
-    /// and `goldFinish1..6` are C64-only. The three `score*` clips ship for
-    /// both themes because the JS treats them as shared (`levelPass.js:192,
-    /// 208,250` use `soundPlay(...)` which reads from `sound/` root, not the
-    /// theme partition).
+    /// and `goldFinish1..6` are C64-only. The three `score*` clips + the
+    /// `ending` music ship for both themes because the JS treats them as
+    /// shared (`levelPass.js:192,208,250` + `endingMusic.js:5` all use
+    /// `soundPlay(...)` which reads from `sound/` root, not the theme
+    /// partition).
     public static var commonToBothThemes: [SoundEffect] {
         [.born, .dead, .dig, .down, .fall, .getGold, .pass, .trap,
-         .scoreBell, .scoreCount, .scoreEnding]
+         .scoreBell, .scoreCount, .scoreEnding, .ending]
     }
 
     /// The variant to play when the last gold is picked up. Ports the
