@@ -19,6 +19,9 @@ public struct PackChooserView: View {
     /// Overlay states. Exactly one overlay is showing at a time (or none,
     /// when a session is playing).
     private enum Phase: Equatable {
+        /// One-time title/cover splash on first render. Dismisses on tap or
+        /// after 3 s (JS `main.js:224,243`). Falls through to `.pickingPack`.
+        case cover
         case pickingPack
         case pickingLevel(pack: LevelPack, theme: Theme, levels: [LevelParseResult])
         case playing(Selection)
@@ -41,7 +44,7 @@ public struct PackChooserView: View {
         let startingLevelIndex: Int
     }
 
-    @State private var phase: Phase = .pickingPack
+    @State private var phase: Phase = .cover
 
     /// Last committed pack + theme, persisted across app launches. Written
     /// on every commit from the pack chooser, so relaunching the app
@@ -146,6 +149,8 @@ public struct PackChooserView: View {
     @ViewBuilder
     private var overlayLayer: some View {
         switch phase {
+        case .cover:
+            CoverOverlay(onDismiss: { phase = .pickingPack })
         case .pickingPack:
             PackChooserOverlay(
                 initialPack: lastPack,
