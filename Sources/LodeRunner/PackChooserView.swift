@@ -71,9 +71,14 @@ public struct PackChooserView: View {
     /// and drives `GameSessionDriver.tickPeriod` live.
     @AppStorage(Self.soundEnabledKey) private var soundEnabled: Bool = true
     @AppStorage(Self.speedIndexKey) private var speedIndex: Int = GameSpeed.defaultIndex
+    /// HUD layout: `.classic` (SCORE/MEN/LEVEL) or `.modern` (@/#/TIME).
+    /// Analog of JS `setLastPlayMode` at `menu.js:50` — persists across
+    /// launches; the settings overlay's HUD row toggles.
+    @AppStorage(Self.hudModeKey) private var hudMode: HUDMode = .classic
 
     static let soundEnabledKey = "loderunner_soundEnabled"
     static let speedIndexKey = "loderunner_speedIndex"
+    static let hudModeKey = "loderunner_hudMode"
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly and there's
@@ -101,6 +106,7 @@ public struct PackChooserView: View {
                     session: session,
                     soundEnabled: soundEnabled,
                     speedIndex: speedIndex,
+                    hudMode: hudMode,
                     onExit: { phase = .pickingPack },
                     onLevelPassed: { levelIndex, score in
                         // Read the pre-existing best (for the dialog's
@@ -209,6 +215,7 @@ public struct PackChooserView: View {
             SettingsOverlay(
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
+                hudMode: $hudMode,
                 onClose: { phase = .pickingPack }
             )
             .environment(\.tileTheme, theme)

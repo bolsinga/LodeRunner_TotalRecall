@@ -5,6 +5,9 @@ import SwiftUI
 ///
 /// - Sound on/off (JS `setSound`, `settings.js:74`)
 /// - Speed step 0..4 (JS `setSpeed`, `settings.js:117`, table `main.js:73`)
+/// - HUD mode (JS `settings.setMode()`, `settings.js:147`; renders as
+///   "Training on/off" there, "MODE: Score / Stats" here — same
+///   underlying `PLAY_CLASSIC` vs `PLAY_MODERN` split)
 ///
 /// Deferred vs. the JS: gamepad (no hardware wiring), color palettes (no
 /// palette layer in the port), key repeat toggle (our `KeyboardInput`
@@ -13,15 +16,18 @@ import SwiftUI
 public struct SettingsOverlay: View {
     @Binding var soundEnabled: Bool
     @Binding var speedIndex: Int
+    @Binding var hudMode: HUDMode
     let onClose: () -> Void
 
     public init(
         soundEnabled: Binding<Bool>,
         speedIndex: Binding<Int>,
+        hudMode: Binding<HUDMode>,
         onClose: @escaping () -> Void
     ) {
         _soundEnabled = soundEnabled
         _speedIndex = speedIndex
+        _hudMode = hudMode
         self.onClose = onClose
     }
 
@@ -36,6 +42,8 @@ public struct SettingsOverlay: View {
                 soundRow
                 Divider().background(Color.white.opacity(0.3))
                 speedRow
+                Divider().background(Color.white.opacity(0.3))
+                hudRow
 
                 closeButton
             }
@@ -53,6 +61,27 @@ public struct SettingsOverlay: View {
             HStack(spacing: 8) {
                 toggleButton("ON", isSelected: soundEnabled) { soundEnabled = true }
                 toggleButton("OFF", isSelected: !soundEnabled) { soundEnabled = false }
+            }
+        }
+    }
+
+    /// Two-button toggle that flips the in-game HUD between the
+    /// `SCORE / MEN / LEVEL` layout (`.classic`) and the `@ / # / TIME /
+    /// LEVEL` layout (`.modern`). Analog to JS `settings.setMode()` at
+    /// `settings.js:147`, which is presented there as a "Training" on/off
+    /// toggle.
+    private var hudRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("HUD")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                toggleButton("SCORE", isSelected: hudMode == .classic) {
+                    hudMode = .classic
+                }
+                toggleButton("STATS", isSelected: hudMode == .modern) {
+                    hudMode = .modern
+                }
             }
         }
     }
@@ -173,13 +202,15 @@ public enum GameSpeed {
 private struct SettingsPreviewHost: View {
     @State private var sound = true
     @State private var speed = GameSpeed.defaultIndex
+    @State private var hudMode: HUDMode = .classic
     var body: some View {
         SettingsOverlay(
             soundEnabled: $sound,
             speedIndex: $speed,
+            hudMode: $hudMode,
             onClose: {}
         )
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 450)
     }
 }
 
