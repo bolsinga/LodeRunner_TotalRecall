@@ -51,9 +51,12 @@ public final class GameSessionDriver {
     /// this in sync with the theme it drives `SoundPlayer.theme` from.
     public var theme: Theme = .apple2
 
-    /// 30 Hz to match the JS default (`lodeRunner.preload.js:242`), same as
-    /// `SimulationDriver`.
-    public let tickPeriod: Duration = .microseconds(1_000_000 / 30)
+    /// Tick period, read once per iteration of `run()`. Default 30 Hz (JS
+    /// `preload.js:242`, same as `SimulationDriver`); the settings overlay
+    /// switches between five speed steps ported from JS `main.js:73`'s
+    /// `speedMode = [14, 18, 23, 29, 35]` FPS, so callers can adjust
+    /// gameplay speed live.
+    public var tickPeriod: Duration = .microseconds(1_000_000 / 30)
 
     /// Iris close/open duration each — matches the JS `CLOSE_SCREEN_SPEED = 35`
     /// at 5 ms/step (`lodeRunner.def.js:148`, `main.js:1205,1314`) ≈ 175 ms

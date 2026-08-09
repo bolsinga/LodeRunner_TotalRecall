@@ -28,6 +28,8 @@ public struct PackChooserView: View {
         case leaderboard(
             pack: LevelPack, theme: Theme,
             pending: LeaderboardOverlay.PendingScore?, isWinner: Bool)
+        /// Sound + speed settings modal. Ported from `lodeRunner.settings.js`.
+        case settings(theme: Theme)
     }
 
     /// Committed pack + theme + starting-level identity for a live session.
@@ -60,6 +62,16 @@ public struct PackChooserView: View {
     /// via the pack chooser's LEADERBOARD button.
     @State private var leaderboardStore = LeaderboardStore()
 
+    /// Player settings — ported subset of `lodeRunner.settings.js`. Sound
+    /// on/off gates every `SoundPlayer.play(_:)` call (via
+    /// `SoundPlayer.isEnabled`); `speedIndex` picks the `GameSpeed` step
+    /// and drives `GameSessionDriver.tickPeriod` live.
+    @AppStorage(Self.soundEnabledKey) private var soundEnabled: Bool = true
+    @AppStorage(Self.speedIndexKey) private var speedIndex: Int = GameSpeed.defaultIndex
+
+    static let soundEnabledKey = "loderunner_soundEnabled"
+    static let speedIndexKey = "loderunner_speedIndex"
+
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly and there's
     /// zero chance of colliding with unrelated app defaults. Same convention
@@ -84,6 +96,8 @@ public struct PackChooserView: View {
             {
                 GameView(
                     session: session,
+                    soundEnabled: soundEnabled,
+                    speedIndex: speedIndex,
                     onExit: { phase = .pickingPack },
                     onLevelPassed: { levelIndex, score in
                         // Read the pre-existing best (for the dialog's
@@ -158,6 +172,10 @@ public struct PackChooserView: View {
                     lastTheme = theme
                     phase = .leaderboard(
                         pack: pack, theme: theme, pending: nil, isWinner: false)
+                },
+                onPickSettings: { theme in
+                    lastTheme = theme
+                    phase = .settings(theme: theme)
                 }
             )
         case .pickingLevel(let pack, let theme, let levels):
@@ -172,12 +190,20 @@ public struct PackChooserView: View {
                 }
             )
             .environment(\.tileTheme, theme)
+        case .settings(let theme):
+            SettingsOverlay(
+                soundEnabled: $soundEnabled,
+                speedIndex: $speedIndex,
+                onClose: { phase = .pickingPack }
+            )
+            .environment(\.tileTheme, theme)
         case .leaderboard(let pack, let theme, let pending, let isWinner):
             LeaderboardOverlay(
                 pack: pack,
                 entries: leaderboardStore.entries(pack: pack),
                 pendingScore: pending,
                 isWinner: isWinner,
+                soundEnabled: soundEnabled,
                 onSubmit: { entry in
                     if let entry {
                         leaderboardStore.insert(entry, pack: pack)

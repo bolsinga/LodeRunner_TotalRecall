@@ -20,6 +20,10 @@ public struct PackChooserOverlay: View {
     /// the button is visible and taps route into `LeaderboardOverlay` in
     /// read-only view mode.
     let onPickLeaderboard: ((LevelPack, Theme) -> Void)?
+    /// Optional callback fired when the user taps SETTINGS. When set, the
+    /// button is visible; the callback receives the current theme so the
+    /// host can seed its settings-overlay phase.
+    let onPickSettings: ((Theme) -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -29,13 +33,15 @@ public struct PackChooserOverlay: View {
         initialTheme: Theme = .apple2,
         onPick: @escaping (LevelPack, Theme) -> Void,
         onPickLevel: ((LevelPack, Theme) -> Void)? = nil,
-        onPickLeaderboard: ((LevelPack, Theme) -> Void)? = nil
+        onPickLeaderboard: ((LevelPack, Theme) -> Void)? = nil,
+        onPickSettings: ((Theme) -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
         self.onPick = onPick
         self.onPickLevel = onPickLevel
         self.onPickLeaderboard = onPickLeaderboard
+        self.onPickSettings = onPickSettings
     }
 
     public var body: some View {
@@ -132,6 +138,11 @@ public struct PackChooserOverlay: View {
             if let onPickLeaderboard {
                 actionButton("LEADERBOARD", filled: false) {
                     onPickLeaderboard(selectedPack, selectedTheme)
+                }
+            }
+            if let onPickSettings {
+                actionButton("SETTINGS", filled: false) {
+                    onPickSettings(selectedTheme)
                 }
             }
         }

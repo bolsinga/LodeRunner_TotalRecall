@@ -31,6 +31,13 @@ public struct GameView: View {
     /// called (the leaderboard host takes over the return path).
     private let onExit: (() -> Void)?
     private let onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)?
+    /// Whether the sound player is on. Bound to the host's persisted
+    /// `@AppStorage("loderunner_soundEnabled")`; changes propagate live.
+    private let soundEnabled: Bool
+    /// Speed table index (0..`GameSpeed.stepCount-1`) — picks the tick
+    /// period for the driver. Bound to the host's persisted
+    /// `@AppStorage("loderunner_speedIndex")`.
+    private let speedIndex: Int
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -50,11 +57,15 @@ public struct GameView: View {
 
     public init(
         session: GameSession,
+        soundEnabled: Bool = true,
+        speedIndex: Int = GameSpeed.defaultIndex,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
         onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
+        self.soundEnabled = soundEnabled
+        self.speedIndex = speedIndex
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
@@ -159,7 +170,9 @@ public struct GameView: View {
         .task {
             driver.input = keyboard
             sound.theme = theme
+            sound.isEnabled = soundEnabled
             driver.theme = theme
+            driver.tickPeriod = GameSpeed.tickPeriod(for: speedIndex)
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -175,6 +188,12 @@ public struct GameView: View {
         .onChange(of: theme) { _, newValue in
             sound.theme = newValue
             driver.theme = newValue
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            sound.isEnabled = newValue
+        }
+        .onChange(of: speedIndex) { _, newValue in
+            driver.tickPeriod = GameSpeed.tickPeriod(for: newValue)
         }
         .onChange(of: driver.session.phase) { _, newValue in
             // Fire the score-record hook exactly once at each `.scoring`
