@@ -34,7 +34,10 @@ public struct CoverOverlay: View {
             Color.black.ignoresSafeArea()
             // `cover.png` at its native 1120×768 aspect. `FittedBoardView`
             // handles the letterboxing so the cover always fills the same
-            // space as the playfield.
+            // space as the playfield. The board is a 1120×768 layout box;
+            // badges are positioned inside via `.position(x:y:)` so the
+            // math reads as absolute board-coordinates rather than delta
+            // offsets from the top-left corner.
             FittedBoardView(
                 boardWidth: Self.coverWidth, boardHeight: Self.coverHeight
             ) {
@@ -46,46 +49,68 @@ public struct CoverOverlay: View {
                     remakeBadge
                     signetBadge
                 }
+                .frame(width: Self.coverWidth, height: Self.coverHeight)
             }
         }
         .contentShape(Rectangle())
         .onTapGesture { onDismiss() }
-        .task {
+        .onAppear {
             // Fade tweens — JS `preload.js:359,371` uses `tweenGet().to({alpha})`.
+            // Kept in `.onAppear` (not `.task`) because SwiftUI may cycle the
+            // task on window-mount transitions and we don't want the animation
+            // to restart every re-render.
             withAnimation(.linear(duration: Self.signetFadeSeconds)) {
                 signetOpacity = 1.0
             }
             withAnimation(.linear(duration: Self.remakeFadeSeconds)) {
                 remakeOpacity = 1.0
             }
+        }
+        .task {
             // Auto-dismiss timer, JS `main.js:243`'s `waitIdleDemo(3000)`.
-            try? await Task.sleep(for: .seconds(Self.autoDismissSeconds))
+            // If the task is cancelled (window remount, phase change race),
+            // `Task.sleep` throws — we must return WITHOUT calling
+            // `onDismiss()`. The old `try?` swallowed the cancellation and
+            // fell through to dismiss, which made the cover flash by on
+            // launch instead of waiting the full duration.
+            do {
+                try await Task.sleep(for: .seconds(Self.autoDismissSeconds))
+            } catch {
+                return
+            }
             onDismiss()
         }
     }
 
     private var signetBadge: some View {
-        Image("signet", bundle: .module)
+        // JS `preload.js:357-358`: badge's top-left at `(BASE_SCREEN_X -
+        // SIGNET_UNDER_X - width, BASE_SCREEN_Y - SIGNET_UNDER_Y -
+        // height)`. `.position(x:y:)` in SwiftUI takes the *center* of
+        // the view, so we add half the badge size to the JS top-left.
+        let centerX = Self.coverWidth - Self.signetInset - Self.signetSize / 2
+        let centerY = Self.coverHeight - Self.signetInset - Self.signetSize / 2
+        return Image("signet", bundle: .module)
             .resizable()
             .interpolation(.none)
             .frame(width: Self.signetSize, height: Self.signetSize)
             .opacity(signetOpacity)
-            .offset(
-                x: Self.coverWidth - Self.signetSize - Self.signetInset,
-                y: Self.coverHeight - Self.signetSize - Self.signetInset
-            )
+            .position(x: centerX, y: centerY)
     }
 
     private var remakeBadge: some View {
-        Image("remake", bundle: .module)
+        // JS `preload.js:367-370`: top-left at (372, 130), rotation around
+        // top-left (JS `regX/regY` default to 0). SwiftUI's
+        // `.rotationEffect` rotates around the frame center by default;
+        // pass `anchor: .topLeading` to match the JS pivot.
+        let centerX = Self.remakeTopLeft.width + Self.remakeSize.width / 2
+        let centerY = Self.remakeTopLeft.height + Self.remakeSize.height / 2
+        return Image("remake", bundle: .module)
             .resizable()
             .interpolation(.none)
             .frame(width: Self.remakeSize.width, height: Self.remakeSize.height)
-            .rotationEffect(.degrees(Self.remakeRotationDegrees))
+            .rotationEffect(.degrees(Self.remakeRotationDegrees), anchor: .topLeading)
             .opacity(remakeOpacity)
-            // JS positions this at (372, 130) in canvas coords
-            // (`preload.js:369-370`), which sits center-right of the cover.
-            .offset(x: Self.remakeOffset.width, y: Self.remakeOffset.height)
+            .position(x: centerX, y: centerY)
     }
 
     // MARK: - Constants (JS `preload.js`)
@@ -103,7 +128,8 @@ public struct CoverOverlay: View {
 
     /// Remake badge: 350×155, tilted -5° at (372, 130) — JS `preload.js:369-373`.
     static let remakeSize: CGSize = CGSize(width: 350, height: 155)
-    static let remakeOffset: CGSize = CGSize(width: 372, height: 130)
+    /// Top-left of the remake badge, in board coordinates.
+    static let remakeTopLeft: CGSize = CGSize(width: 372, height: 130)
     static let remakeRotationDegrees: Double = -5
     static let remakeStartOpacity: Double = 0.6
     static let remakeFadeSeconds: Double = 0.8
