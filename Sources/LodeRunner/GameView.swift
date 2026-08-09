@@ -30,7 +30,7 @@ public struct GameView: View {
     /// with the final score + 1-based level reached and `onExit` is *not*
     /// called (the leaderboard host takes over the return path).
     private let onExit: (() -> Void)?
-    private let onGameOver: ((_ finalScore: Int, _ levelReached: Int) -> Void)?
+    private let onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)?
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -52,7 +52,7 @@ public struct GameView: View {
         session: GameSession,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
-        onGameOver: ((_ finalScore: Int, _ levelReached: Int) -> Void)? = nil
+        onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
         self.onExit = onExit
@@ -112,13 +112,26 @@ public struct GameView: View {
                             if let onGameOver {
                                 onGameOver(
                                     driver.session.score,
-                                    driver.session.currentLevelIndex + 1)
+                                    driver.session.currentLevelIndex + 1,
+                                    /* isWinner: */ false)
                             } else if let onExit {
                                 onExit()
                             } else {
                                 dismiss()
                             }
                         })
+                    }
+                    // Session `.won` — JS `main.js:1659-1665` skips the
+                    // GAME_OVER flip and routes straight to the leaderboard
+                    // with `winner: 1`. Same path here; `onGameOver` fires
+                    // immediately, no overlay needed.
+                    if driver.session.phase == .won {
+                        Color.clear.task {
+                            onGameOver?(
+                                driver.session.score,
+                                driver.session.levels.count,
+                                /* isWinner: */ true)
+                        }
                     }
                     // Level-pass scoring dialog — port of `levelPass.open()`
                     // at `main.js:1581`. Sits between the sim's `.finished`

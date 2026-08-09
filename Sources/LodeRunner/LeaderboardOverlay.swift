@@ -24,9 +24,19 @@ public struct LeaderboardOverlay: View {
     let pack: LevelPack
     let entries: [LeaderboardEntry]
     let pendingScore: PendingScore?
+    /// True when this overlay is opened for a player who cleared the whole
+    /// pack. Ports JS `hiscore.js:246,286`'s `winner` flag — gates the
+    /// `endingMusic.mp3` playback so a plain game-over stays silent.
+    let isWinner: Bool
     let onSubmit: (LeaderboardEntry?) -> Void
 
     @State private var nameInput: String = ""
+    /// Sound player local to this overlay so the ending music's lifetime
+    /// matches the overlay's — starts in `.task`, stops in `.onDisappear`.
+    /// A fresh instance instead of an injected `SoundPlayer` because no
+    /// other overlay on-screen at this moment plays audio.
+    @State private var sound = SoundPlayer()
+    @Environment(\.tileTheme) private var theme
 
     /// A qualifying score awaiting a name so it can be added to the
     /// leaderboard. Includes the level reached so the overlay can render
@@ -44,11 +54,13 @@ public struct LeaderboardOverlay: View {
         pack: LevelPack,
         entries: [LeaderboardEntry],
         pendingScore: PendingScore? = nil,
+        isWinner: Bool = false,
         onSubmit: @escaping (LeaderboardEntry?) -> Void
     ) {
         self.pack = pack
         self.entries = entries
         self.pendingScore = pendingScore
+        self.isWinner = isWinner
         self.onSubmit = onSubmit
     }
 
@@ -56,9 +68,9 @@ public struct LeaderboardOverlay: View {
         ZStack {
             Color.black.opacity(0.75).ignoresSafeArea()
             VStack(spacing: 12) {
-                Text("HIGH SCORES")
+                Text(isWinner ? "YOU WIN!" : "HIGH SCORES")
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(isWinner ? .green : .yellow)
                 Text(pack.displayName.uppercased())
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.7))
@@ -68,6 +80,18 @@ public struct LeaderboardOverlay: View {
             .padding(24)
             .background(Color.black)
             .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
+        }
+        .task {
+            // Ports `endingMusicPlay()` at `hiscore.js:246` — winner-only.
+            sound.theme = theme
+            if isWinner {
+                sound.play(.ending)
+            }
+        }
+        .onDisappear {
+            // `endingMusicStop()` at `hiscore.js:286`. Safe to call whether
+            // or not the play fired.
+            sound.stop(.ending)
         }
     }
 
