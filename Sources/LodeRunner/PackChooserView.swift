@@ -150,7 +150,10 @@ public struct PackChooserView: View {
     private var overlayLayer: some View {
         switch phase {
         case .cover:
-            CoverOverlay(onDismiss: { phase = .pickingPack })
+            CoverOverlay(onDismiss: {
+                print("[PackChooserView] onDismiss from CoverOverlay; phase → .pickingPack")
+                phase = .pickingPack
+            })
         case .pickingPack:
             PackChooserOverlay(
                 initialPack: lastPack,

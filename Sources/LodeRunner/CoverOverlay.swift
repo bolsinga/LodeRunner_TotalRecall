@@ -53,32 +53,33 @@ public struct CoverOverlay: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { onDismiss() }
+        .onTapGesture {
+            print("[CoverOverlay] tap → onDismiss")
+            onDismiss()
+        }
         .onAppear {
+            print("[CoverOverlay] onAppear, scheduling dismiss in \(Self.autoDismissSeconds)s")
             // Fade tweens — JS `preload.js:359,371` uses `tweenGet().to({alpha})`.
-            // Kept in `.onAppear` (not `.task`) because SwiftUI may cycle the
-            // task on window-mount transitions and we don't want the animation
-            // to restart every re-render.
             withAnimation(.linear(duration: Self.signetFadeSeconds)) {
                 signetOpacity = 1.0
             }
             withAnimation(.linear(duration: Self.remakeFadeSeconds)) {
                 remakeOpacity = 1.0
             }
-        }
-        .task {
-            // Auto-dismiss timer, JS `main.js:243`'s `waitIdleDemo(3000)`.
-            // If the task is cancelled (window remount, phase change race),
-            // `Task.sleep` throws — we must return WITHOUT calling
-            // `onDismiss()`. The old `try?` swallowed the cancellation and
-            // fell through to dismiss, which made the cover flash by on
-            // launch instead of waiting the full duration.
-            do {
-                try await Task.sleep(for: .seconds(Self.autoDismissSeconds))
-            } catch {
-                return
+            // Timer via DispatchQueue instead of `.task` + `Task.sleep`:
+            // SwiftUI's `.task` gets cancelled by transient view lifecycle
+            // events (window mount, size classes settling on macOS), and
+            // that was collapsing the cover into an instant flash. The
+            // dispatch closure isn't tied to the view's lifecycle — it
+            // fires exactly once after the delay regardless of what
+            // SwiftUI does to the view tree. `onDismiss` is idempotent
+            // (the host's `phase = .pickingPack` re-set is a no-op if
+            // already there), so a late-firing timer after e.g. a tap
+            // dismiss is harmless.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoDismissSeconds) {
+                print("[CoverOverlay] timer fired → onDismiss")
+                onDismiss()
             }
-            onDismiss()
         }
     }
 
