@@ -108,9 +108,9 @@ public struct PackChooserView: View {
             {
                 GameView(
                     session: session,
-                    soundEnabled: soundEnabled,
-                    speedIndex: speedIndex,
-                    hudMode: hudMode,
+                    soundEnabled: $soundEnabled,
+                    speedIndex: $speedIndex,
+                    hudMode: $hudMode,
                     onExit: { phase = .pickingPack },
                     onLevelPassed: { levelIndex, score in
                         // Read the pre-existing best (for the dialog's

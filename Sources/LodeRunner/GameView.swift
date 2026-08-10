@@ -31,16 +31,18 @@ public struct GameView: View {
     /// called (the leaderboard host takes over the return path).
     private let onExit: (() -> Void)?
     private let onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)?
-    /// Whether the sound player is on. Bound to the host's persisted
-    /// `@AppStorage("loderunner_soundEnabled")`; changes propagate live.
-    private let soundEnabled: Bool
-    /// Speed table index (0..`GameSpeed.stepCount-1`) — picks the tick
-    /// period for the driver. Bound to the host's persisted
-    /// `@AppStorage("loderunner_speedIndex")`.
-    private let speedIndex: Int
-    /// HUD layout — `SCORE / MEN / LEVEL` vs `@ / # / TIME / LEVEL`.
-    /// Bound to the host's persisted `@AppStorage("loderunner_hudMode")`.
-    private let hudMode: HUDMode
+    /// Bindings to the host's persisted `@AppStorage` values. Bindings
+    /// (not plain values) so in-game hotkeys can mutate them — the Ctrl+S
+    /// / Ctrl+minus / Ctrl+= / Ctrl+T tips shortcuts flip these and the
+    /// change propagates back up to the pack chooser's SettingsOverlay.
+    @Binding private var soundEnabled: Bool
+    @Binding private var speedIndex: Int
+    @Binding private var hudMode: HUDMode
+
+    /// Local controller for the "SOUND ON", "FAST", "TRAINING OFF"…
+    /// flash-messages that appear when a hotkey mutates a setting.
+    /// Ports JS `showTipsText` at `main.js:993`.
+    @State private var tips = TipsController()
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -60,17 +62,17 @@ public struct GameView: View {
 
     public init(
         session: GameSession,
-        soundEnabled: Bool = true,
-        speedIndex: Int = GameSpeed.defaultIndex,
-        hudMode: HUDMode = .classic,
+        soundEnabled: Binding<Bool> = .constant(true),
+        speedIndex: Binding<Int> = .constant(GameSpeed.defaultIndex),
+        hudMode: Binding<HUDMode> = .constant(.classic),
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
         onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
-        self.soundEnabled = soundEnabled
-        self.speedIndex = speedIndex
-        self.hudMode = hudMode
+        _soundEnabled = soundEnabled
+        _speedIndex = speedIndex
+        _hudMode = hudMode
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
@@ -180,6 +182,8 @@ public struct GameView: View {
                 )
             }
         }
+        .overlay(TipsOverlay(controller: tips))
+        .background(hotkeyButtons)
         .background(Color.black)
         .keyboardInput(keyboard)
         .task {
@@ -256,6 +260,48 @@ public struct GameView: View {
                 sheet: GuardSpriteView.sheet(forHasGold: guardState.hasGold)
             )
         }
+    }
+
+    /// Hidden Button carriers for the in-game keyboard shortcuts that
+    /// mutate persisted settings + flash a tip. SwiftUI's
+    /// `.keyboardShortcut` only attaches to `Button`s; parking them in
+    /// `.hidden()` inside a `.background` view keeps them focusable-for-
+    /// shortcuts without contributing anything visible.
+    ///
+    /// Ports JS `key.js` toggles at:
+    /// - Ctrl+S — sound (`key.js:66`, tip "SOUND ON/OFF" @ 1500 ms)
+    /// - Ctrl+minus — slower (`key.js:206-208`, tip = speed label)
+    /// - Ctrl+= — faster (same handler with `+1` delta)
+    /// - Ctrl+T — training / HUD mode (JS `settings.js:147`; the JS's
+    ///   Training toggle only lives in the settings modal there, but a
+    ///   hotkey feels right in the port since we already have Ctrl+S)
+    private var hotkeyButtons: some View {
+        Group {
+            Button("") {
+                soundEnabled.toggle()
+                tips.show(soundEnabled ? "SOUND ON" : "SOUND OFF")
+            }
+            .keyboardShortcut("s", modifiers: .control)
+
+            Button("") {
+                speedIndex = max(0, speedIndex - 1)
+                tips.show(GameSpeed.label(for: speedIndex))
+            }
+            .keyboardShortcut("-", modifiers: .control)
+
+            Button("") {
+                speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
+                tips.show(GameSpeed.label(for: speedIndex))
+            }
+            .keyboardShortcut("=", modifiers: .control)
+
+            Button("") {
+                hudMode = (hudMode == .modern) ? .classic : .modern
+                tips.show(hudMode == .modern ? "TRAINING ON" : "TRAINING OFF")
+            }
+            .keyboardShortcut("t", modifiers: .control)
+        }
+        .hidden()
     }
 
     /// Starting gold count on the current level. Read directly from
