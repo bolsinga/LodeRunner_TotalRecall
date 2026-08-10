@@ -24,6 +24,12 @@ public struct PackChooserOverlay: View {
     /// button is visible; the callback receives the current theme so the
     /// host can seed its settings-overlay phase.
     let onPickSettings: ((Theme) -> Void)?
+    /// Optional callback fired when the user taps HELP. When set, the
+    /// button is visible; the callback receives the current theme.
+    let onPickHelp: ((Theme) -> Void)?
+    /// Optional callback fired when the user taps INFO. Receives the
+    /// current pack + theme so the host can render the right facts.
+    let onPickInfo: ((LevelPack, Theme) -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -34,7 +40,9 @@ public struct PackChooserOverlay: View {
         onPick: @escaping (LevelPack, Theme) -> Void,
         onPickLevel: ((LevelPack, Theme) -> Void)? = nil,
         onPickLeaderboard: ((LevelPack, Theme) -> Void)? = nil,
-        onPickSettings: ((Theme) -> Void)? = nil
+        onPickSettings: ((Theme) -> Void)? = nil,
+        onPickHelp: ((Theme) -> Void)? = nil,
+        onPickInfo: ((LevelPack, Theme) -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
@@ -42,6 +50,8 @@ public struct PackChooserOverlay: View {
         self.onPickLevel = onPickLevel
         self.onPickLeaderboard = onPickLeaderboard
         self.onPickSettings = onPickSettings
+        self.onPickHelp = onPickHelp
+        self.onPickInfo = onPickInfo
     }
 
     public var body: some View {
@@ -125,24 +135,41 @@ public struct PackChooserOverlay: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
-            actionButton("PLAY", filled: true) {
-                onPick(selectedPack, selectedTheme)
-            }
-            .keyboardShortcut(.return, modifiers: [])
-            if let onPickLevel {
-                actionButton("SELECT LEVEL", filled: false) {
-                    onPickLevel(selectedPack, selectedTheme)
+        // Two rows so the button count stays readable at six. First row =
+        // "start a game" actions (PLAY / SELECT LEVEL); second row =
+        // "explore state" actions (LEADERBOARD / SETTINGS / HELP / INFO).
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                actionButton("PLAY", filled: true) {
+                    onPick(selectedPack, selectedTheme)
+                }
+                .keyboardShortcut(.return, modifiers: [])
+                if let onPickLevel {
+                    actionButton("SELECT LEVEL", filled: false) {
+                        onPickLevel(selectedPack, selectedTheme)
+                    }
                 }
             }
-            if let onPickLeaderboard {
-                actionButton("LEADERBOARD", filled: false) {
-                    onPickLeaderboard(selectedPack, selectedTheme)
+            HStack(spacing: 12) {
+                if let onPickLeaderboard {
+                    actionButton("LEADERBOARD", filled: false) {
+                        onPickLeaderboard(selectedPack, selectedTheme)
+                    }
                 }
-            }
-            if let onPickSettings {
-                actionButton("SETTINGS", filled: false) {
-                    onPickSettings(selectedTheme)
+                if let onPickSettings {
+                    actionButton("SETTINGS", filled: false) {
+                        onPickSettings(selectedTheme)
+                    }
+                }
+                if let onPickHelp {
+                    actionButton("HELP", filled: false) {
+                        onPickHelp(selectedTheme)
+                    }
+                }
+                if let onPickInfo {
+                    actionButton("INFO", filled: false) {
+                        onPickInfo(selectedPack, selectedTheme)
+                    }
                 }
             }
         }
