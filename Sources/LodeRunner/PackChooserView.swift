@@ -33,6 +33,10 @@ public struct PackChooserView: View {
             pending: LeaderboardOverlay.PendingScore?, isWinner: Bool)
         /// Sound + speed settings modal. Ported from `lodeRunner.settings.js`.
         case settings(theme: Theme)
+        /// Keyboard cheat-sheet modal. Ported from `lodeRunner.help.js`.
+        case help(theme: Theme)
+        /// Per-pack facts modal. Ported from `lodeRunner.info.js`.
+        case info(pack: LevelPack, theme: Theme)
     }
 
     /// Committed pack + theme + starting-level identity for a live session.
@@ -205,6 +209,15 @@ public struct PackChooserView: View {
                 onPickSettings: { theme in
                     lastTheme = theme
                     phase = .settings(theme: theme)
+                },
+                onPickHelp: { theme in
+                    lastTheme = theme
+                    phase = .help(theme: theme)
+                },
+                onPickInfo: { pack, theme in
+                    lastPack = pack
+                    lastTheme = theme
+                    phase = .info(pack: pack, theme: theme)
                 }
             )
         case .pickingLevel(let pack, let theme, let levels):
@@ -227,6 +240,12 @@ public struct PackChooserView: View {
                 onClose: { phase = .pickingPack }
             )
             .environment(\.tileTheme, theme)
+        case .help(let theme):
+            HelpOverlay(onClose: { phase = .pickingPack })
+                .environment(\.tileTheme, theme)
+        case .info(let pack, let theme):
+            InfoOverlay(pack: pack, onClose: { phase = .pickingPack })
+                .environment(\.tileTheme, theme)
         case .leaderboard(let pack, let theme, let pending, let isWinner):
             LeaderboardOverlay(
                 pack: pack,
