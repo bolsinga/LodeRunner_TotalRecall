@@ -177,17 +177,25 @@ public struct PackChooserView: View {
                     phase = .playing(
                         Selection(pack: pack, theme: theme, startingLevelIndex: 0))
                 },
-                onPickLevel: { pack, theme in
-                    lastPack = pack
-                    lastTheme = theme
-                    // Load the pack up-front so the grid can show thumbnails.
-                    // A failure surfaces via `gameLayer`'s
-                    // `ContentUnavailableView` fallback on next play.
-                    guard let levels = try? pack.load(), !levels.isEmpty else {
-                        return
+                // JS `settings.js:412-415`: "Level: training only —
+                // challenge starts at 1 and progresses". Gate the SELECT
+                // LEVEL button on training being on; passing `nil` here
+                // hides the button entirely (see
+                // `PackChooserOverlay.actionButtons`), mirroring how the
+                // JS hides its Level button when Training is off.
+                onPickLevel: hudMode == .modern
+                    ? { pack, theme in
+                        lastPack = pack
+                        lastTheme = theme
+                        // Load the pack up-front so the grid can show
+                        // thumbnails. A failure surfaces via `gameLayer`'s
+                        // `ContentUnavailableView` fallback on next play.
+                        guard let levels = try? pack.load(), !levels.isEmpty else {
+                            return
+                        }
+                        phase = .pickingLevel(pack: pack, theme: theme, levels: levels)
                     }
-                    phase = .pickingLevel(pack: pack, theme: theme, levels: levels)
-                },
+                    : nil,
                 onPickLeaderboard: { pack, theme in
                     lastPack = pack
                     lastTheme = theme
