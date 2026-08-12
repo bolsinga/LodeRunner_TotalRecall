@@ -79,6 +79,101 @@ public struct GameView: View {
     }
 
     public var body: some View {
+        VStack(spacing: 0) {
+            exitBar
+            gameBody
+        }
+        .overlay(TipsOverlay(controller: tips))
+        .background(hotkeyButtons)
+        .background(Color.black)
+        .keyboardInput(keyboard)
+        .task {
+            driver.input = keyboard
+            sound.theme = theme
+            sound.isEnabled = soundEnabled
+            driver.theme = theme
+            driver.tickPeriod = GameSpeed.tickPeriod(for: speedIndex)
+            driver.soundHandler = { [sound] effect in
+                // Landing/death/level-pass all cut the fall clip in the JS
+                // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
+                // ~4s, so without this it rings well past the actual fall.
+                switch effect {
+                case .down, .dead, .pass: sound.stop(.fall)
+                default: break
+                }
+                sound.play(effect)
+            }
+            await driver.run()
+        }
+        .onChange(of: theme) { _, newValue in
+            sound.theme = newValue
+            driver.theme = newValue
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            sound.isEnabled = newValue
+        }
+        .onChange(of: speedIndex) { _, newValue in
+            driver.tickPeriod = GameSpeed.tickPeriod(for: newValue)
+        }
+        .onChange(of: driver.session.phase) { _, newValue in
+            // Fire the score-record hook exactly once at each `.scoring`
+            // entry. Compare against `lastRecordedLevelNumber` because
+            // successive attempts of the same level would produce the same
+            // phase value on retry — SwiftUI's `.onChange` wouldn't
+            // otherwise re-fire.
+            if case .scoring(let summary) = newValue,
+                lastRecordedLevelNumber != summary.levelNumber
+            {
+                lastRecordedLevelNumber = summary.levelNumber
+                pendingPreviousBest = onLevelPassed?(
+                    summary.levelNumber - 1, summary.bonusScore)
+            } else if case .playing = newValue {
+                // Reset the once-per-scoring guard so the *next* level's
+                // pass fires the hook. Also clear the cached previous best
+                // so a stale value can't leak into the next dialog.
+                pendingPreviousBest = nil
+                lastRecordedLevelNumber = nil
+            }
+        }
+    }
+
+    /// Slim strip above the game frame with an EXIT text button. Sits
+    /// outside the `FittedBoardView` so it doesn't compete with gameplay
+    /// pixels — analog to the JS's HTML menu bar that lives around the
+    /// canvas. Ctrl+R is wired up alongside via `hotkeyButtons` and
+    /// matches JS `key.js:93`'s "End game — back to demo".
+    private var exitBar: some View {
+        HStack {
+            Button {
+                triggerExit()
+            } label: {
+                Text("◀ EXIT")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.yellow)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.black)
+    }
+
+    /// User-initiated abort. Skips the leaderboard flow — a mid-game
+    /// quit isn't a real game-over. Straight back to the pack chooser
+    /// via `onExit`.
+    private func triggerExit() {
+        if let onExit {
+            onExit()
+        } else {
+            dismiss()
+        }
+    }
+
+    private var gameBody: some View {
         // A single FittedBoardView for both playfield and HUD so they share
         // one uniform scale factor — matching the JS's single `mainStage`
         // canvas with everything at pixel coordinates, rather than laying
@@ -182,58 +277,6 @@ public struct GameView: View {
                 )
             }
         }
-        .overlay(TipsOverlay(controller: tips))
-        .background(hotkeyButtons)
-        .background(Color.black)
-        .keyboardInput(keyboard)
-        .task {
-            driver.input = keyboard
-            sound.theme = theme
-            sound.isEnabled = soundEnabled
-            driver.theme = theme
-            driver.tickPeriod = GameSpeed.tickPeriod(for: speedIndex)
-            driver.soundHandler = { [sound] effect in
-                // Landing/death/level-pass all cut the fall clip in the JS
-                // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
-                // ~4s, so without this it rings well past the actual fall.
-                switch effect {
-                case .down, .dead, .pass: sound.stop(.fall)
-                default: break
-                }
-                sound.play(effect)
-            }
-            await driver.run()
-        }
-        .onChange(of: theme) { _, newValue in
-            sound.theme = newValue
-            driver.theme = newValue
-        }
-        .onChange(of: soundEnabled) { _, newValue in
-            sound.isEnabled = newValue
-        }
-        .onChange(of: speedIndex) { _, newValue in
-            driver.tickPeriod = GameSpeed.tickPeriod(for: newValue)
-        }
-        .onChange(of: driver.session.phase) { _, newValue in
-            // Fire the score-record hook exactly once at each `.scoring`
-            // entry. Compare against `lastRecordedLevelNumber` because
-            // successive attempts of the same level would produce the same
-            // phase value on retry — SwiftUI's `.onChange` wouldn't
-            // otherwise re-fire.
-            if case .scoring(let summary) = newValue,
-                lastRecordedLevelNumber != summary.levelNumber
-            {
-                lastRecordedLevelNumber = summary.levelNumber
-                pendingPreviousBest = onLevelPassed?(
-                    summary.levelNumber - 1, summary.bonusScore)
-            } else if case .playing = newValue {
-                // Reset the once-per-scoring guard so the *next* level's
-                // pass fires the hook. Also clear the cached previous best
-                // so a stale value can't leak into the next dialog.
-                pendingPreviousBest = nil
-                lastRecordedLevelNumber = nil
-            }
-        }
     }
 
     @ViewBuilder
@@ -300,6 +343,15 @@ public struct GameView: View {
                 tips.show(hudMode == .modern ? "TRAINING ON" : "TRAINING OFF")
             }
             .keyboardShortcut("t", modifiers: .control)
+
+            // Ctrl+R — abort game, back to pack chooser (JS `key.js:93`
+            // "End game — back to demo"). Routes through `onExit`, not
+            // `onGameOver`, so a user-cancelled run doesn't hit the
+            // leaderboard.
+            Button("") {
+                triggerExit()
+            }
+            .keyboardShortcut("r", modifiers: .control)
         }
         .hidden()
     }
