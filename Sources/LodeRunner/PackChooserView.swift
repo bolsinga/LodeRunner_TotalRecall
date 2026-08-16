@@ -161,13 +161,17 @@ public struct PackChooserView: View {
         switch phase {
         case .cover:
             CoverOverlay(onDismiss: {
-                // Cross-fade the cover → pack chooser transition so the
-                // switch doesn't hard-cut. JS itself hard-cuts to attract
-                // mode (`main.js:243`), but the port dismisses into the
-                // pack chooser instead, and the abrupt swap read as a
-                // "flash" during playtesting.
+                // JS drops straight into gameplay after the title splash —
+                // menu / settings live behind a top-left hamburger that
+                // the player can pop over the running game (JS
+                // `boardIcons.js` sidebar). Port matches: dismiss the
+                // cover into `.playing` with the last-committed pack +
+                // theme (first-launch defaults are Classic / Apple II via
+                // the `@AppStorage` fallbacks). Cross-fade so the swap
+                // doesn't hard-cut.
                 withAnimation(.easeInOut(duration: 0.4)) {
-                    phase = .pickingPack
+                    phase = .playing(
+                        Selection(pack: lastPack, theme: lastTheme, startingLevelIndex: 0))
                 }
             })
             .transition(.opacity)
