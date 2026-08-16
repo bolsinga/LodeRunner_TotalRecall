@@ -43,6 +43,11 @@ public struct GameView: View {
     /// flash-messages that appear when a hotkey mutates a setting.
     /// Ports JS `showTipsText` at `main.js:993`.
     @State private var tips = TipsController()
+
+    /// Whether gameplay is paused. Host toggles this when an overlay
+    /// (menu, settings, leaderboard…) opens over the running game so
+    /// the sim freezes instead of ticking beneath the modal.
+    private let isPaused: Bool
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -65,6 +70,7 @@ public struct GameView: View {
         soundEnabled: Binding<Bool> = .constant(true),
         speedIndex: Binding<Int> = .constant(GameSpeed.defaultIndex),
         hudMode: Binding<HUDMode> = .constant(.classic),
+        isPaused: Bool = false,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
         onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
@@ -73,6 +79,7 @@ public struct GameView: View {
         _soundEnabled = soundEnabled
         _speedIndex = speedIndex
         _hudMode = hudMode
+        self.isPaused = isPaused
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
@@ -93,6 +100,7 @@ public struct GameView: View {
             sound.isEnabled = soundEnabled
             driver.theme = theme
             driver.tickPeriod = GameSpeed.tickPeriod(for: speedIndex)
+            driver.isPaused = isPaused
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -114,6 +122,9 @@ public struct GameView: View {
         }
         .onChange(of: speedIndex) { _, newValue in
             driver.tickPeriod = GameSpeed.tickPeriod(for: newValue)
+        }
+        .onChange(of: isPaused) { _, newValue in
+            driver.isPaused = newValue
         }
         .onChange(of: driver.session.phase) { _, newValue in
             // Fire the score-record hook exactly once at each `.scoring`

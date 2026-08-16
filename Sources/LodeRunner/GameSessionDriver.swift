@@ -81,6 +81,14 @@ public final class GameSessionDriver {
         self.input = input
     }
 
+    /// Freezes gameplay in place. Ported from JS `main.js:1668-1670`'s
+    /// `GAME_PAUSE` state — the tick loop stops calling `tick()` but the
+    /// task keeps sleeping, so sim state (runner position, mid-fill holes,
+    /// guard shakes) stays exactly where it was. Flip back to `false` and
+    /// gameplay resumes at the next tick period. Ignored during
+    /// `.scoring` / `.transitioning` (those have their own pause loops).
+    public var isPaused: Bool = false
+
     /// Runs the tick loop until the enclosing task is cancelled. Attach via
     /// `.task { await driver.run() }` in a SwiftUI view.
     public func run() async {
@@ -88,14 +96,16 @@ public final class GameSessionDriver {
         isRunning = true
         defer { isRunning = false }
         while !Task.isCancelled {
-            tick()
-            if case .scoring = session.phase {
-                await runScoringPause()
-                continue
-            }
-            if case .transitioning = session.phase {
-                await runLevelTransition()
-                continue
+            if !isPaused {
+                tick()
+                if case .scoring = session.phase {
+                    await runScoringPause()
+                    continue
+                }
+                if case .transitioning = session.phase {
+                    await runLevelTransition()
+                    continue
+                }
             }
             try? await Task.sleep(for: tickPeriod)
         }

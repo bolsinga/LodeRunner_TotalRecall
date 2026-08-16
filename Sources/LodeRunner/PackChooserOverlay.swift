@@ -30,6 +30,11 @@ public struct PackChooserOverlay: View {
     /// Optional callback fired when the user taps INFO. Receives the
     /// current pack + theme so the host can render the right facts.
     let onPickInfo: ((LevelPack, Theme) -> Void)?
+    /// Optional callback fired when the user taps RESUME. Only rendered
+    /// when set — meaningful only when a game is running underneath the
+    /// menu (so there's something to return to). Analog of dismissing
+    /// the JS `boardIcons.js` sidebar without picking a new mode.
+    let onClose: (() -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -42,7 +47,8 @@ public struct PackChooserOverlay: View {
         onPickLeaderboard: ((LevelPack, Theme) -> Void)? = nil,
         onPickSettings: ((Theme) -> Void)? = nil,
         onPickHelp: ((Theme) -> Void)? = nil,
-        onPickInfo: ((LevelPack, Theme) -> Void)? = nil
+        onPickInfo: ((LevelPack, Theme) -> Void)? = nil,
+        onClose: (() -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
@@ -52,6 +58,7 @@ public struct PackChooserOverlay: View {
         self.onPickSettings = onPickSettings
         self.onPickHelp = onPickHelp
         self.onPickInfo = onPickInfo
+        self.onClose = onClose
     }
 
     public var body: some View {
@@ -135,15 +142,27 @@ public struct PackChooserOverlay: View {
     }
 
     private var actionButtons: some View {
-        // Two rows so the button count stays readable at six. First row =
-        // "start a game" actions (PLAY / SELECT LEVEL); second row =
-        // "explore state" actions (LEADERBOARD / SETTINGS / HELP / INFO).
+        // Two rows so the button count stays readable. First row =
+        // "start / resume a game" (RESUME / PLAY / SELECT LEVEL); second
+        // row = "explore state" (LEADERBOARD / SETTINGS / HELP / INFO).
         VStack(spacing: 10) {
             HStack(spacing: 12) {
-                actionButton("PLAY", filled: true) {
-                    onPick(selectedPack, selectedTheme)
+                if let onClose {
+                    actionButton("RESUME", filled: true) {
+                        onClose()
+                    }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    actionButton("NEW GAME", filled: false) {
+                        onPick(selectedPack, selectedTheme)
+                    }
+                } else {
+                    // Pre-game path: no session to resume, so PLAY is the
+                    // primary. Return key still starts a new game.
+                    actionButton("PLAY", filled: true) {
+                        onPick(selectedPack, selectedTheme)
+                    }
+                    .keyboardShortcut(.return, modifiers: [])
                 }
-                .keyboardShortcut(.return, modifiers: [])
                 if let onPickLevel {
                     actionButton("SELECT LEVEL", filled: false) {
                         onPickLevel(selectedPack, selectedTheme)
