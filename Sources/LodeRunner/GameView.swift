@@ -137,24 +137,25 @@ public struct GameView: View {
         }
     }
 
-    /// Slim strip above the game frame with an EXIT text button. Sits
-    /// outside the `FittedBoardView` so it doesn't compete with gameplay
-    /// pixels — analog to the JS's HTML menu bar that lives around the
-    /// canvas. Ctrl+R is wired up alongside via `hotkeyButtons` and
-    /// matches JS `key.js:93`'s "End game — back to demo".
+    /// Slim strip above the game frame with the hamburger menu button
+    /// on the left. Sits outside the `FittedBoardView` so it doesn't
+    /// compete with gameplay pixels — analog to the JS's board-icons
+    /// sidebar at `boardIcons.js`, which parks its hamburger over the
+    /// running canvas. Ctrl+R is wired up alongside via `hotkeyButtons`
+    /// and matches JS `key.js:93`'s "End game — back to demo".
     private var exitBar: some View {
         HStack {
             Button {
                 triggerExit()
             } label: {
-                Text("◀ EXIT")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                Text("☰")
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .frame(width: 34, height: 26)
                     .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Menu")
             Spacer()
         }
         .padding(.horizontal, 8)
@@ -162,9 +163,10 @@ public struct GameView: View {
         .background(Color.black)
     }
 
-    /// User-initiated abort. Skips the leaderboard flow — a mid-game
-    /// quit isn't a real game-over. Straight back to the pack chooser
-    /// via `onExit`.
+    /// User-initiated menu open: unmounts the current game session and
+    /// returns to the pack chooser overlay (which now doubles as the
+    /// menu, per JS `boardIcons.js`'s hamburger flow). Also fires on
+    /// Ctrl+R from `hotkeyButtons`.
     private func triggerExit() {
         if let onExit {
             onExit()
