@@ -48,6 +48,11 @@ public struct GameView: View {
     /// (menu, settings, leaderboard…) opens over the running game so
     /// the sim freezes instead of ticking beneath the modal.
     private let isPaused: Bool
+    /// Fires when the player taps the top-right grid icon. Analog of JS
+    /// `boardIcons.js:96,125-140`'s `chooseLevel()` which pops the level
+    /// picker. Only shown when Training is on (`hudMode == .modern`);
+    /// `nil` hides the button entirely.
+    private let onOpenLevelPicker: (() -> Void)?
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -73,7 +78,8 @@ public struct GameView: View {
         isPaused: Bool = false,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
-        onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil
+        onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil,
+        onOpenLevelPicker: (() -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
         _soundEnabled = soundEnabled
@@ -83,6 +89,7 @@ public struct GameView: View {
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
+        self.onOpenLevelPicker = onOpenLevelPicker
     }
 
     public var body: some View {
@@ -148,12 +155,12 @@ public struct GameView: View {
         }
     }
 
-    /// Slim strip above the game frame with the hamburger menu button
-    /// on the left. Sits outside the `FittedBoardView` so it doesn't
-    /// compete with gameplay pixels — analog to the JS's board-icons
-    /// sidebar at `boardIcons.js`, which parks its hamburger over the
-    /// running canvas. Ctrl+R is wired up alongside via `hotkeyButtons`
-    /// and matches JS `key.js:93`'s "End game — back to demo".
+    /// Slim strip above the game frame. Hamburger menu on the left (JS
+    /// settings toggle at `boardIcons.js:8`); training-mode-only board
+    /// icons on the right (JS `boardIcons.js:148-170` — the grid opens
+    /// the level picker, and a play/stop demo icon would sit next to it
+    /// once attract-mode demos are ported). Sits outside the
+    /// `FittedBoardView` so it doesn't compete with gameplay pixels.
     private var exitBar: some View {
         HStack {
             Button {
@@ -167,7 +174,31 @@ public struct GameView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Menu")
+
             Spacer()
+
+            // Training-only board icons (JS `boardIcons.js:150,154`:
+            // `training = (playMode == PLAY_MODERN)` gates visibility).
+            if hudMode == .modern, let onOpenLevelPicker {
+                // TODO: watch/stop demo button belongs here (JS
+                // `boardIcons.js:81,111-123`, `startDemo`/`stopDemo`).
+                // Waiting on the attract-mode demo port before wiring —
+                // showing a stub disabled button would confuse the
+                // player more than omitting it.
+                Button(action: onOpenLevelPicker) {
+                    // Same 2×2 grid glyph as the JS `SVG_GRID` at
+                    // `boardIcons.js:18-26`, dropped into a monospaced
+                    // caption instead of an SVG since the port has no
+                    // themed icon layer yet.
+                    Text("⊞")
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.yellow)
+                        .frame(width: 34, height: 26)
+                        .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Choose level")
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

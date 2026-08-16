@@ -41,8 +41,13 @@ public struct PackChooserView: View {
         /// Main menu — same pack chooser as before, but now doubles as
         /// the JS `boardIcons.js` sidebar menu that pops over gameplay.
         case menu
-        /// Per-level thumbnail picker.
-        case levelPicker(pack: LevelPack, theme: Theme, levels: [LevelParseResult])
+        /// Per-level thumbnail picker. `returnTo` decides where the
+        /// close-X button lands: `.menu` when opened via the menu's
+        /// SELECT LEVEL button, `.game` when opened via the training-
+        /// mode grid button on the game surface (JS `boardIcons.js:96`).
+        case levelPicker(
+            pack: LevelPack, theme: Theme,
+            levels: [LevelParseResult], returnTo: LevelPickerReturn)
         /// Sound / speed / training settings.
         case settings(theme: Theme)
         /// Keyboard cheat-sheet.
@@ -55,6 +60,15 @@ public struct PackChooserView: View {
         case leaderboard(
             pack: LevelPack, theme: Theme,
             pending: LeaderboardOverlay.PendingScore?, isWinner: Bool)
+    }
+
+    /// Where the level picker's close-X button routes to.
+    private enum LevelPickerReturn: Equatable {
+        /// Back to the pause menu (level picker opened from the menu).
+        case menu
+        /// Back to running gameplay (opened from the training-mode grid
+        /// button, so the player expects RESUME semantics).
+        case game
     }
 
     @State private var currentGame: Selection?
@@ -96,6 +110,21 @@ public struct PackChooserView: View {
                 overlayView(overlay)
             }
         }
+        .onChange(of: hudMode) { _, _ in
+            // JS `settings.setMode()` at `settings.js:147` restarts the
+            // game whenever Training is toggled — flipping the mode calls
+            // `classicPlay(0)` or `modernPlay(0)`, both of which route
+            // through `startGame()` and pick up the target mode's *own*
+            // persisted `curLevel` (JS keeps separate `classicInfo` vs.
+            // `modernInfo` progress buckets). The port has a single
+            // `currentGame` selection, so the closest equivalent is:
+            // rebuild it at level 0 when the mode toggles mid-game.
+            // Matches the "challenge starts at 1 and progresses" line at
+            // `settings.js:412`.
+            guard let running = currentGame else { return }
+            currentGame = Selection(
+                pack: running.pack, theme: running.theme, startingLevelIndex: 0)
+        }
     }
 
     @ViewBuilder
@@ -129,7 +158,21 @@ public struct PackChooserView: View {
                     overlay = .leaderboard(
                         pack: currentGame.pack, theme: currentGame.theme,
                         pending: pending, isWinner: isWinner)
-                }
+                },
+                // Wired only when Training is on so GameView shows the
+                // grid button (JS `boardIcons.js:150,158`). Opening the
+                // picker pauses the game (via `overlay != nil`); the
+                // close-X returns straight to gameplay.
+                onOpenLevelPicker: hudMode == .modern
+                    ? {
+                        guard let levels = try? currentGame.pack.load(),
+                              !levels.isEmpty
+                        else { return }
+                        overlay = .levelPicker(
+                            pack: currentGame.pack, theme: currentGame.theme,
+                            levels: levels, returnTo: .game)
+                    }
+                    : nil
             )
             .environment(\.tileTheme, currentGame.theme)
             .id(currentGame)
@@ -174,7 +217,8 @@ public struct PackChooserView: View {
                             return
                         }
                         self.overlay = .levelPicker(
-                            pack: pack, theme: theme, levels: levels)
+                            pack: pack, theme: theme,
+                            levels: levels, returnTo: .menu)
                     }
                     : nil,
                 onPickLeaderboard: { pack, theme in
@@ -203,7 +247,7 @@ public struct PackChooserView: View {
                 // hides the button on the pre-game path.
                 onClose: currentGame != nil ? { self.overlay = nil } : nil
             )
-        case .levelPicker(let pack, let theme, let levels):
+        case .levelPicker(let pack, let theme, let levels, let returnTo):
             LevelSelectOverlay(
                 levels: levels,
                 onPick: { index in
@@ -211,7 +255,9 @@ public struct PackChooserView: View {
                         pack: pack, theme: theme, startingLevelIndex: index)
                     self.overlay = nil
                 },
-                onClose: { self.overlay = .menu }
+                onClose: {
+                    self.overlay = (returnTo == .menu) ? .menu : nil
+                }
             )
             .environment(\.tileTheme, theme)
         case .settings(let theme):
