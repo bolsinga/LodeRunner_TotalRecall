@@ -550,10 +550,15 @@ extension RunnerSimulation {
                 || (y < TileGeometry.maxTileY && slots[x][y + 1].base == .ladder
                     && yOffset < TileGeometry.quarterTileHeight))
         {
+            // Demo playback replaces the random `hasGold` countdown with the
+            // recorded value at this pickup — JS `getDemoGold` at `demo.js:97-100`.
+            // Falls back to `Int.random(in: 12...37)` when there's no live demo
+            // script or the script has run out.
+            let goldValue = demoScript?.nextGuardGold() ?? Int.random(in: 12...37)
             let s = guards[id]
             guards[id] = Guard(
                 position: s.position, xOffset: s.xOffset, yOffset: s.yOffset, action: s.action,
-                hasGold: Int.random(in: 12...37), holePos: s.holePos)
+                hasGold: goldValue, holePos: s.holePos)
             slots[x][y].base = .empty
         }
     }
@@ -647,6 +652,23 @@ extension RunnerSimulation {
 
     mutating func guardReborn(at cell: GridPoint) {
         guard let id = guardIndex(at: cell) else { return }
+
+        // Demo playback substitutes the scripted `(x, y)` for the sim's
+        // `columnPicker` roll — JS `main.js:952` picks `getDemoBornPos()` over
+        // the random path. When the script is exhausted, or in normal
+        // gameplay, fall through to the search loop below.
+        if let scripted = demoScript?.nextBornPosition(),
+            scripted.x >= 0, scripted.x < LevelGrid.tilesX,
+            scripted.y >= 0, scripted.y <= TileGeometry.maxTileY
+        {
+            slots[scripted.x][scripted.y].current = .guard
+            let guardState = guards[id]
+            guards[id] = Guard(
+                position: scripted, xOffset: 0, yOffset: 0, action: .reborn,
+                hasGold: guardState.hasGold, holePos: guardState.holePos)
+            rebornGuards.append(RebornState(guardIndex: id, frameIndex: 0, frameTime: -1))
+            return
+        }
 
         var bornY = 1
         var bornX = columnPicker.next()

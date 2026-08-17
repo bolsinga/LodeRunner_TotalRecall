@@ -118,7 +118,17 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
     /// JS's `playTickTimer` at `main.js:938,946-950`.
     private var tickSubcounter: Int = 0
 
-    public init(level: LevelParseResult) throws {
+    /// Optional canned-run overrides for a `DemoInput`-driven session. When
+    /// non-nil, `guardReborn(at:)` reads the next scripted `(x, y)` instead
+    /// of using `columnPicker`, and guard gold pickups use the next scripted
+    /// `hasGold` instead of `Int.random(in: 12...37)`. Matches JS's
+    /// `getDemoBornPos` / `getDemoGold` at `demo.js:97-110`, gated on
+    /// `playMode == PLAY_AUTO/DEMO/DEMO_ONCE` at `main.js:862,866,952`.
+    /// Mutating through `mutating` sim calls advances the script indices
+    /// in-place; nil for regular gameplay.
+    public var demoScript: DemoScript?
+
+    public init(level: LevelParseResult, demoScript: DemoScript? = nil) throws {
         guard let spawn = level.runner else {
             throw RunnerSimulationError.noRunnerSpawn
         }
@@ -141,6 +151,7 @@ public struct RunnerSimulation: Equatable, Codable, Sendable {
         secondsElapsed = 0
         guardsTrappedCount = 0
         tickSubcounter = 0
+        self.demoScript = demoScript
     }
 
     /// Transition `.starting → .playing`. Ported from `beginPlay` at

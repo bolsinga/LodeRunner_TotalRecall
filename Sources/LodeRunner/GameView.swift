@@ -16,6 +16,10 @@ public struct GameView: View {
     @State private var driver: GameSessionDriver
     @State private var keyboard = KeyboardInput()
     @State private var sound = SoundPlayer()
+    /// Present in demo mode. Held in `@State` (rather than reconstructed
+    /// per render) so the driver keeps a stable reference across body
+    /// re-evaluations while playback runs.
+    @State private var demoInput: DemoInput?
     @Environment(\.tileTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     /// Called when the runner runs out of lives. Callers embedded in a
@@ -53,6 +57,26 @@ public struct GameView: View {
     /// picker. Only shown when Training is on (`hudMode == .modern`);
     /// `nil` hides the button entirely.
     private let onOpenLevelPicker: (() -> Void)?
+    /// When non-nil, this GameView is the demo-playback screen for the
+    /// given record. Ports the JS `PLAY_DEMO_ONCE` mode at `main.js:82`.
+    /// Presence swaps the driver's input from `KeyboardInput` to a
+    /// `DemoInput` created here, and enables the "any-key stops demo"
+    /// keyboard hook (JS `anyKeyStopDemo` at `demo.js:273-280`).
+    private let demoRecord: DemoRecord?
+    /// Fires when demo playback ends — either the recorded run finished,
+    /// the runner died, the player pressed any key, or the player tapped
+    /// the stop-demo button. Non-nil only in demo mode. Composition layer
+    /// clears its demo state and reverts to the underlying Training game.
+    private let onDemoEnd: (() -> Void)?
+    /// 0-based level indices with a bundled demo for the running pack.
+    /// Used only in Training mode to gate the "watch demo" button on the
+    /// current level having a recording. Empty set = button never shows.
+    /// JS `boardIcons.js:159`'s `curDemoLevelIsVaild()` disable path.
+    private let demoLevelIndices: Set<Int>
+    /// Fires when the player taps the "watch demo" button. Receives the
+    /// current 0-based level index so the host can look up the right
+    /// record. Nil hides the button (used when Training is off).
+    private let onStartDemo: ((_ levelIndex: Int) -> Void)?
     /// Optional per-level score lookup + record hook. Called with the just-
     /// finished level's 0-based index and its per-level `bonusScore`; return
     /// value is the *previous* best for that level (so `LevelPassDialog` can
@@ -79,7 +103,11 @@ public struct GameView: View {
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
         onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)? = nil,
-        onOpenLevelPicker: (() -> Void)? = nil
+        onOpenLevelPicker: (() -> Void)? = nil,
+        demoRecord: DemoRecord? = nil,
+        onDemoEnd: (() -> Void)? = nil,
+        demoLevelIndices: Set<Int> = [],
+        onStartDemo: ((_ levelIndex: Int) -> Void)? = nil
     ) {
         _driver = State(initialValue: GameSessionDriver(session: session))
         _soundEnabled = soundEnabled
@@ -90,6 +118,10 @@ public struct GameView: View {
         self.onLevelPassed = onLevelPassed
         self.onGameOver = onGameOver
         self.onOpenLevelPicker = onOpenLevelPicker
+        self.demoRecord = demoRecord
+        self.onDemoEnd = onDemoEnd
+        self.demoLevelIndices = demoLevelIndices
+        self.onStartDemo = onStartDemo
     }
 
     public var body: some View {
@@ -102,7 +134,18 @@ public struct GameView: View {
         .background(Color.black)
         .keyboardInput(keyboard)
         .task {
-            driver.input = keyboard
+            if let demoRecord {
+                let di = DemoInput(record: demoRecord)
+                demoInput = di
+                driver.input = di
+                // JS `anyKeyStopDemo` (`demo.js:273-280`): every key press
+                // routes to `stopDemoAndPlay`. Route the same way here so
+                // any keyboard input during playback tears the demo down.
+                keyboard.onAnyKeyPress = { [onDemoEnd] in onDemoEnd?() }
+            } else {
+                driver.input = keyboard
+                keyboard.onAnyKeyPress = nil
+            }
             sound.theme = theme
             sound.isEnabled = soundEnabled
             driver.theme = theme
@@ -152,6 +195,18 @@ public struct GameView: View {
                 pendingPreviousBest = nil
                 lastRecordedLevelNumber = nil
             }
+            // Demo mode: any terminal-ish phase ends playback. `.scoring`
+            // = level passed, `.gameOver` = died with 1 life, `.won` =
+            // pack cleared. JS equivalents fire `stopDemoAndPlay` at
+            // `demo.js:282` from the same events.
+            if demoRecord != nil {
+                switch newValue {
+                case .scoring, .gameOver, .won:
+                    onDemoEnd?()
+                default:
+                    break
+                }
+            }
         }
     }
 
@@ -179,30 +234,67 @@ public struct GameView: View {
 
             // Training-only board icons (JS `boardIcons.js:150,154`:
             // `training = (playMode == PLAY_MODERN)` gates visibility).
-            if hudMode == .modern, let onOpenLevelPicker {
-                // TODO: watch/stop demo button belongs here (JS
-                // `boardIcons.js:81,111-123`, `startDemo`/`stopDemo`).
-                // Waiting on the attract-mode demo port before wiring —
-                // showing a stub disabled button would confuse the
-                // player more than omitting it.
-                Button(action: onOpenLevelPicker) {
-                    // Same 2×2 grid glyph as the JS `SVG_GRID` at
-                    // `boardIcons.js:18-26`, dropped into a monospaced
-                    // caption instead of an SVG since the port has no
-                    // themed icon layer yet.
-                    Text("⊞")
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.yellow)
-                        .frame(width: 34, height: 26)
-                        .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+            // Also stays visible in demo mode (`watching` in
+            // `boardIcons.js:151,158`) so the stop-demo button has a home.
+            if hudMode == .modern || demoRecord != nil {
+                if let onOpenLevelPicker {
+                    Button(action: onOpenLevelPicker) {
+                        // Same 2×2 grid glyph as the JS `SVG_GRID` at
+                        // `boardIcons.js:18-26`, dropped into a monospaced
+                        // caption instead of an SVG since the port has no
+                        // themed icon layer yet.
+                        Text("⊞")
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.yellow)
+                            .frame(width: 34, height: 26)
+                            .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Choose level")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Choose level")
+                demoButton
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.black)
+    }
+
+    /// Play (▶) / Stop (■) demo icon. Always visible in Training mode
+    /// (or while a demo is running); disabled when the current level has
+    /// no bundled recording. Ports JS `playBtn` at `boardIcons.js:100-146`
+    /// where `playBtn.disabled = !curDemoLevelIsVaild()` gates the enabled
+    /// state (`boardIcons.js:159`) without hiding the icon — so the
+    /// feature stays discoverable even on levels without demos.
+    @ViewBuilder
+    private var demoButton: some View {
+        if demoRecord != nil, let onDemoEnd {
+            iconButton("■", label: "Stop demo", enabled: true, action: onDemoEnd)
+        } else if let onStartDemo {
+            let hasDemo = demoLevelIndices.contains(driver.session.currentLevelIndex)
+            iconButton("▶", label: "Watch demo", enabled: hasDemo) {
+                onStartDemo(driver.session.currentLevelIndex)
+            }
+        }
+    }
+
+    private func iconButton(
+        _ glyph: String, label: String, enabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(glyph)
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundStyle(enabled ? .yellow : .white.opacity(0.35))
+                .frame(width: 34, height: 26)
+                .overlay(
+                    Rectangle().stroke(
+                        enabled ? Color.yellow : Color.white.opacity(0.35),
+                        lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(label)
     }
 
     /// User-initiated menu open: unmounts the current game session and
@@ -258,13 +350,15 @@ public struct GameView: View {
                     if driver.transitionPhase == .closing {
                         LevelPassOverlay()
                     }
-                    if driver.session.phase == .gameOver {
+                    if driver.session.phase == .gameOver, demoRecord == nil {
                         // Analog to JS `showCoverPage()` at `main.js:1522`
                         // (the terminal step of the `GAME_OVER` state): after
                         // the flip finishes, hand control back to the caller.
                         // `onGameOver` wins over `onExit` — the leaderboard
                         // host takes over the return path so it can show a
                         // hi-score screen before clearing state.
+                        // Demo mode skips the flip: the phase change fires
+                        // `onDemoEnd` directly in `.onChange(of: session.phase)`.
                         GameOverOverlay(onFinished: {
                             if let onGameOver {
                                 onGameOver(
@@ -282,7 +376,7 @@ public struct GameView: View {
                     // GAME_OVER flip and routes straight to the leaderboard
                     // with `winner: 1`. Same path here; `onGameOver` fires
                     // immediately, no overlay needed.
-                    if driver.session.phase == .won {
+                    if driver.session.phase == .won, demoRecord == nil {
                         Color.clear.task {
                             onGameOver?(
                                 driver.session.score,
@@ -294,7 +388,11 @@ public struct GameView: View {
                     // at `main.js:1581`. Sits between the sim's `.finished`
                     // tick and the iris-close wipe so the count-up animates
                     // over the frozen last frame of the passed level.
-                    if case .scoring(let summary) = driver.session.phase {
+                    // Demo mode skips the dialog: `.scoring` fires `onDemoEnd`
+                    // directly and the demo unmounts before the count-up.
+                    if case .scoring(let summary) = driver.session.phase,
+                        demoRecord == nil
+                    {
                         LevelPassDialog(
                             summary: summary,
                             hiScore: pendingPreviousBest,

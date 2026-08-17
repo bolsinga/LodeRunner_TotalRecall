@@ -23,6 +23,15 @@ import SwiftUI
 public final class KeyboardInput: RunnerInput {
     public private(set) var currentAction: RunnerAction = .stop
 
+    /// Fires on every key press this input observes (bound or unbound).
+    /// Set by `GameView` during demo playback to route "any key stops demo"
+    /// — JS `anyKeyStopDemo` at `demo.js:273-280`, which routes every
+    /// keydown to `stopDemoAndPlay`. Cleared back to `nil` outside demo
+    /// mode so normal gameplay isn't disturbed. Not part of `RunnerInput`
+    /// because non-keyboard inputs (`DemoInput`, future gamepad) have no
+    /// "any key" concept.
+    public var onAnyKeyPress: (() -> Void)?
+
     public init() {}
 
     /// Map a `KeyEquivalent` to its `RunnerAction`, or `nil` if the key isn't
@@ -60,6 +69,10 @@ public final class KeyboardInput: RunnerInput {
     /// so unbound keys (menu shortcuts etc.) pass through to other handlers.
     @discardableResult
     public func handle(_ press: KeyPress) -> KeyPress.Result {
+        // Fire the "any key" hook first (demo-stop path). Set independently
+        // of the bound-key lookup so keys that would normally be `.ignored`
+        // (letters, numbers) still terminate a running demo.
+        onAnyKeyPress?()
         guard let action = action(for: press.key) else { return .ignored }
         currentAction = action
         return .handled
