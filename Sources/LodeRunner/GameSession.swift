@@ -103,7 +103,10 @@ public struct GameSession: Equatable, Codable, Sendable {
     public private(set) var simulation: RunnerSimulation
     public private(set) var phase: GameSessionPhase
 
-    public init(levels: [LevelParseResult], startingLevelIndex: Int = 0) throws {
+    public init(
+        levels: [LevelParseResult], startingLevelIndex: Int = 0,
+        initialLives: Int? = nil, demoScript: DemoScript? = nil
+    ) throws {
         guard !levels.isEmpty else {
             throw GameSessionError.noLevels
         }
@@ -114,9 +117,10 @@ public struct GameSession: Equatable, Codable, Sendable {
         self.levels = levels
         currentLevelIndex = startingLevelIndex
         passedLevelCount = 0
-        lives = startingLives
+        lives = initialLives ?? startingLives
         score = 0
-        simulation = try RunnerSimulation(level: levels[startingLevelIndex])
+        simulation = try RunnerSimulation(
+            level: levels[startingLevelIndex], demoScript: demoScript)
         phase = .playing
     }
 

@@ -190,6 +190,10 @@ public final class GameSessionDriver {
     /// session, fire sound triggers, refresh appearances. Exposed so callers
     /// can step deterministically without the async loop.
     public func tick() {
+        // Give the input a chance to advance any scripted state before we
+        // read `currentAction` — `DemoInput` uses this to fire the tick's
+        // canned keypress. Default no-op for keyboard/gamepad inputs.
+        input?.advanceTickIfNeeded()
         let action = input?.currentAction ?? .stop
         if session.simulation.phase == .starting, action != .stop {
             session.beginPlay()

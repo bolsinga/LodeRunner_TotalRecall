@@ -74,6 +74,23 @@ public struct PackChooserView: View {
     @State private var currentGame: Selection?
     @State private var overlay: Overlay? = .cover
 
+    /// The active demo playback session, if any. Owns the record being
+    /// played, the pack + theme the demo runs under, and the 0-based
+    /// level index the underlying Training game was on so we can restart
+    /// there when the demo ends. Rendered by `gameLayer` in preference to
+    /// `currentGame`; while non-nil, the Training game is unmounted (its
+    /// state is lost, matching JS `stopDemoAndPlay` at `demo.js:282-296`
+    /// which calls `selectGame` to start a fresh session). Its own
+    /// separate state pair (rather than an `Overlay` case) because a demo
+    /// runs an actual `GameView`, not a modal.
+    private struct DemoState: Equatable {
+        let record: DemoRecord
+        let pack: LevelPack
+        let theme: Theme
+        let returnToLevelIndex: Int
+    }
+    @State private var demoState: DemoState?
+
     /// Last committed pack + theme, persisted across app launches. First-
     /// launch defaults come from these `@AppStorage` fallbacks; the cover
     /// splash's onDismiss uses them to seed the initial game.
@@ -121,6 +138,9 @@ public struct PackChooserView: View {
             // rebuild it at level 0 when the mode toggles mid-game.
             // Matches the "challenge starts at 1 and progresses" line at
             // `settings.js:412`.
+            // Also tears down any running demo — the Training toggle also
+            // implies "start fresh" for the demo case.
+            demoState = nil
             guard let running = currentGame else { return }
             currentGame = Selection(
                 pack: running.pack, theme: running.theme, startingLevelIndex: 0)
@@ -129,7 +149,34 @@ public struct PackChooserView: View {
 
     @ViewBuilder
     private var gameLayer: some View {
-        if let currentGame, let session = Self.makeSession(
+        if let demoState, let session = Self.makeDemoSession(demoState) {
+            // Demo playback screen. Runs on top of nothing — the underlying
+            // Training game is unmounted while `demoState != nil`. Fresh
+            // GameView per record so its @State (driver, keyboard, demo
+            // input) all rebuild cleanly per demo.
+            GameView(
+                session: session,
+                soundEnabled: $soundEnabled,
+                speedIndex: $speedIndex,
+                hudMode: $hudMode,
+                isPaused: overlay != nil,
+                onExit: { overlay = .menu },
+                demoRecord: demoState.record,
+                onDemoEnd: {
+                    // Restart Training at the level the player was on when
+                    // they hit "Watch demo" — JS `stopDemoAndPlay` at
+                    // `demo.js:282-296` reads Training's persisted curLevel
+                    // and re-enters `PLAY_MODERN`. Fresh `Selection` so
+                    // `.id(...)` triggers a clean remount.
+                    self.currentGame = Selection(
+                        pack: demoState.pack, theme: demoState.theme,
+                        startingLevelIndex: demoState.returnToLevelIndex)
+                    self.demoState = nil
+                }
+            )
+            .environment(\.tileTheme, demoState.theme)
+            .id(demoState.record.levelNumber)
+        } else if let currentGame, let session = Self.makeSession(
             for: currentGame.pack, startingLevelIndex: currentGame.startingLevelIndex)
         {
             GameView(
@@ -172,6 +219,23 @@ public struct PackChooserView: View {
                             pack: currentGame.pack, theme: currentGame.theme,
                             levels: levels, returnTo: .game)
                     }
+                    : nil,
+                // Training-mode-only demo button. Set only when a demo
+                // exists for the pack; GameView further gates by the
+                // *current* level index (`demoLevelIndices.contains(...)`).
+                demoLevelIndices: hudMode == .modern
+                    ? DemoData.demoLevelIndices(for: currentGame.pack)
+                    : [],
+                onStartDemo: hudMode == .modern
+                    ? { levelIndex in
+                        guard let record = DemoData.demo(
+                            for: currentGame.pack, levelIndex: levelIndex)
+                        else { return }
+                        demoState = DemoState(
+                            record: record, pack: currentGame.pack,
+                            theme: currentGame.theme,
+                            returnToLevelIndex: levelIndex)
+                    }
                     : nil
             )
             .environment(\.tileTheme, currentGame.theme)
@@ -180,6 +244,23 @@ public struct PackChooserView: View {
             // Cover splash or bootstrap. Plain black; the overlay covers
             // the whole frame.
             Color.black.ignoresSafeArea()
+        }
+    }
+
+    /// Build a demo `GameSession` at the record's level, with only 1 life
+    /// (JS `getAutoDemoLevel`/`initDemoInfo` at `demo.js:22,148`) and a
+    /// `DemoScript` seeded from the record's `goldDrops` + `bornPositions`.
+    private static func makeDemoSession(_ demo: DemoState) -> GameSession? {
+        do {
+            let levels = try demo.pack.load()
+            guard levels.indices.contains(demo.record.levelIndex) else { return nil }
+            return try GameSession(
+                levels: levels,
+                startingLevelIndex: demo.record.levelIndex,
+                initialLives: 1,
+                demoScript: DemoScript(record: demo.record))
+        } catch {
+            return nil
         }
     }
 
@@ -192,6 +273,7 @@ public struct PackChooserView: View {
                 // persisted last pack/theme (fresh installs get Classic /
                 // Apple II via the `@AppStorage` fallbacks).
                 withAnimation(.easeInOut(duration: 0.4)) {
+                    demoState = nil
                     currentGame = Selection(
                         pack: lastPack, theme: lastTheme, startingLevelIndex: 0)
                     self.overlay = nil
@@ -205,6 +287,7 @@ public struct PackChooserView: View {
                 onPick: { pack, theme in
                     lastPack = pack
                     lastTheme = theme
+                    demoState = nil
                     currentGame = Selection(
                         pack: pack, theme: theme, startingLevelIndex: 0)
                     self.overlay = nil
@@ -251,6 +334,7 @@ public struct PackChooserView: View {
             LevelSelectOverlay(
                 levels: levels,
                 onPick: { index in
+                    demoState = nil
                     currentGame = Selection(
                         pack: pack, theme: theme, startingLevelIndex: index)
                     self.overlay = nil
