@@ -285,17 +285,4 @@ public enum DemoData {
         guard pack == .classic else { return [] }
         return Set(classicDemos.map { $0.levelIndex })
     }
-
-    /// Nearest bundled demo at or after `levelIndex`, wrapping back to the
-    /// pack's first demo when past the end. Ports JS `getValidDemoLevel`
-    /// at `demo.js:202-207`, which advances `curLevel` past undefined
-    /// entries and wraps at `levelData.length`. Returns `nil` when the
-    /// pack has no demos at all.
-    public static func nextValidDemo(for pack: LevelPack, startingAt levelIndex: Int)
-        -> DemoRecord?
-    {
-        guard pack == .classic else { return nil }
-        let ordered = classicDemos.sorted { $0.levelIndex < $1.levelIndex }
-        return ordered.first { $0.levelIndex >= levelIndex } ?? ordered.first
-    }
 }

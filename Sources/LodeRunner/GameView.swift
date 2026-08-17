@@ -261,18 +261,18 @@ public struct GameView: View {
     }
 
     /// Play (▶) / Stop (■) demo icon. Always visible in Training mode
-    /// (or while a demo is running); enabled whenever the pack has any
-    /// bundled recording. Clicking hands the current level index to the
-    /// host, which finds the nearest valid demo — matching JS
-    /// `getValidDemoLevel` at `demo.js:202-207` — so the player doesn't
-    /// have to first navigate onto a demo-having level.
+    /// (or while a demo is running); disabled when the current level has
+    /// no bundled recording. Ports JS `playBtn` at `boardIcons.js:100-146`
+    /// where `playBtn.disabled = !curDemoLevelIsVaild()` gates the enabled
+    /// state (`boardIcons.js:159`) without hiding the icon — so the
+    /// feature stays discoverable even on levels without demos.
     @ViewBuilder
     private var demoButton: some View {
         if demoRecord != nil, let onDemoEnd {
             iconButton("■", label: "Stop demo", enabled: true, action: onDemoEnd)
         } else if let onStartDemo {
-            let hasAnyDemo = !demoLevelIndices.isEmpty
-            iconButton("▶", label: "Watch demo", enabled: hasAnyDemo) {
+            let hasDemo = demoLevelIndices.contains(driver.session.currentLevelIndex)
+            iconButton("▶", label: "Watch demo", enabled: hasDemo) {
                 onStartDemo(driver.session.currentLevelIndex)
             }
         }
