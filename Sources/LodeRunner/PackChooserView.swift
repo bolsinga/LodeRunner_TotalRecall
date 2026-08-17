@@ -75,19 +75,31 @@ public struct PackChooserView: View {
     @State private var overlay: Overlay? = .cover
 
     /// The active demo playback session, if any. Owns the record being
-    /// played, the pack + theme the demo runs under, and the 0-based
-    /// level index the underlying Training game was on so we can restart
-    /// there when the demo ends. Rendered by `gameLayer` in preference to
-    /// `currentGame`; while non-nil, the Training game is unmounted (its
-    /// state is lost, matching JS `stopDemoAndPlay` at `demo.js:282-296`
-    /// which calls `selectGame` to start a fresh session). Its own
-    /// separate state pair (rather than an `Overlay` case) because a demo
-    /// runs an actual `GameView`, not a modal.
+    /// played, the pack + theme the demo runs under, and where to route
+    /// when playback ends. Rendered by `gameLayer` in preference to
+    /// `currentGame`; while non-nil, the Training game (if any) is
+    /// unmounted (its state is lost, matching JS `stopDemoAndPlay` at
+    /// `demo.js:282-296`). Its own separate state pair (rather than an
+    /// `Overlay` case) because a demo runs an actual `GameView`, not a
+    /// modal.
     private struct DemoState: Equatable {
         let record: DemoRecord
         let pack: LevelPack
         let theme: Theme
-        let returnToLevelIndex: Int
+        /// Where `onDemoEnd` routes when the demo finishes. Two flavors:
+        /// user-triggered demos return into Training at the level the
+        /// player was on when they clicked ▶; attract-mode demos loop
+        /// back to the cover splash for another idle cycle.
+        let returnTo: DemoReturn
+    }
+    private enum DemoReturn: Equatable {
+        /// User-triggered "Watch demo" — restart Training at this 0-based
+        /// level index (JS `stopDemoAndPlay` → `selectGame`).
+        case training(levelIndex: Int)
+        /// Attract-mode auto-demo — bounce back to the cover overlay.
+        /// The idle timer will fire another demo after the next 3 s
+        /// interval, so the attract loop continues automatically.
+        case cover
     }
     @State private var demoState: DemoState?
 
@@ -175,14 +187,26 @@ public struct PackChooserView: View {
                 onExit: { overlay = .menu },
                 demoRecord: demoState.record,
                 onDemoEnd: {
-                    // Restart Training at the level the player was on when
-                    // they hit "Watch demo" — JS `stopDemoAndPlay` at
-                    // `demo.js:282-296` reads Training's persisted curLevel
-                    // and re-enters `PLAY_MODERN`. Fresh `Selection` so
-                    // `.id(...)` triggers a clean remount.
-                    self.currentGame = Selection(
-                        pack: demoState.pack, theme: demoState.theme,
-                        startingLevelIndex: demoState.returnToLevelIndex)
+                    switch demoState.returnTo {
+                    case .training(let levelIndex):
+                        // User-triggered: restart Training at the level
+                        // the player was on when they hit ▶. JS
+                        // `stopDemoAndPlay` at `demo.js:282-296` re-enters
+                        // `PLAY_MODERN` at Training's persisted curLevel.
+                        // Fresh `Selection` so `.id(...)` triggers a
+                        // clean remount.
+                        self.currentGame = Selection(
+                            pack: demoState.pack, theme: demoState.theme,
+                            startingLevelIndex: levelIndex)
+                    case .cover:
+                        // Attract-mode: back to cover. The cover's idle
+                        // timer restarts on remount and the loop continues.
+                        // Don't touch `currentGame` — it's typically nil
+                        // at this point (pre-first-game); if the attract
+                        // demo somehow fired over a running game, the
+                        // Training session is discarded to match JS.
+                        self.overlay = .cover
+                    }
                     self.demoState = nil
                 }
             )
@@ -257,7 +281,7 @@ public struct PackChooserView: View {
                         demoState = DemoState(
                             record: record, pack: currentGame.pack,
                             theme: currentGame.theme,
-                            returnToLevelIndex: levelIndex)
+                            returnTo: .training(levelIndex: levelIndex))
                         lastDemoLevelIndex = record.levelIndex
                     }
                     : nil
@@ -292,18 +316,37 @@ public struct PackChooserView: View {
     private func overlayView(_ overlay: Overlay) -> some View {
         switch overlay {
         case .cover:
-            CoverOverlay(onDismiss: {
-                // Cover → gameplay direct. Seed the game from the
-                // persisted last pack/theme (fresh installs get Classic /
-                // Apple II via the `@AppStorage` fallbacks).
-                withAnimation(.easeInOut(duration: 0.4)) {
-                    demoState = nil
-                    lastDemoLevelIndex = nil
-                    currentGame = Selection(
-                        pack: lastPack, theme: lastTheme, startingLevelIndex: 0)
+            CoverOverlay(
+                onDismiss: {
+                    // Cover → gameplay direct. Seed the game from the
+                    // persisted last pack/theme (fresh installs get
+                    // Classic / Apple II via the `@AppStorage` fallbacks).
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        demoState = nil
+                        lastDemoLevelIndex = nil
+                        currentGame = Selection(
+                            pack: lastPack, theme: lastTheme,
+                            startingLevelIndex: 0)
+                        self.overlay = nil
+                    }
+                },
+                onIdle: {
+                    // JS `waitIdleDemo(3000)` → PLAY_AUTO attract mode.
+                    // Pick a random Classic demo and route into the
+                    // demo GameView with `returnTo: .cover` so playback
+                    // end bounces back here — restarting the idle timer
+                    // for the next cycle. Uses the persisted theme so
+                    // the attract mode reflects the user's preference.
+                    guard let record = DemoData.classicDemos.randomElement()
+                    else { return }
+                    demoState = DemoState(
+                        record: record, pack: .classic,
+                        theme: lastTheme, returnTo: .cover)
+                    // Clear the cover overlay so `gameLayer` — which
+                    // renders `demoState` in preference — becomes visible.
                     self.overlay = nil
                 }
-            })
+            )
             .transition(.opacity)
         case .menu:
             PackChooserOverlay(
