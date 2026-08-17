@@ -91,6 +91,17 @@ public struct PackChooserView: View {
     }
     @State private var demoState: DemoState?
 
+    /// 0-based level index of the most recently watched demo. Advances
+    /// the seed for the *next* click's `nextValidDemo(startingAt:)` so
+    /// repeated ▶ presses cycle through the pack's demos in order rather
+    /// than replaying the same one. `nil` before the first watch and
+    /// after any "fresh Training start" reset (new game, level picker,
+    /// hudMode toggle, cover dismiss). The seed picks the higher of
+    /// `lastDemoLevelIndex + 1` and Training's own currentLevelIndex so
+    /// Training progression past the last-watched level still gets
+    /// picked up.
+    @State private var lastDemoLevelIndex: Int?
+
     /// Last committed pack + theme, persisted across app launches. First-
     /// launch defaults come from these `@AppStorage` fallbacks; the cover
     /// splash's onDismiss uses them to seed the initial game.
@@ -141,6 +152,7 @@ public struct PackChooserView: View {
             // Also tears down any running demo — the Training toggle also
             // implies "start fresh" for the demo case.
             demoState = nil
+            lastDemoLevelIndex = nil
             guard let running = currentGame else { return }
             currentGame = Selection(
                 pack: running.pack, theme: running.theme, startingLevelIndex: 0)
@@ -220,21 +232,33 @@ public struct PackChooserView: View {
                             levels: levels, returnTo: .game)
                     }
                     : nil,
-                // Training-mode-only demo button. Set only when a demo
-                // exists for the pack; GameView further gates by the
-                // *current* level index (`demoLevelIndices.contains(...)`).
+                // Training-mode-only demo button. Set to the pack's
+                // demo-level set so GameView can enable/disable the icon
+                // based on whether the pack ships any demos at all; the
+                // actual level to play is picked by `onStartDemo` via
+                // `nextValidDemo` (JS `getValidDemoLevel`).
                 demoLevelIndices: hudMode == .modern
                     ? DemoData.demoLevelIndices(for: currentGame.pack)
                     : [],
                 onStartDemo: hudMode == .modern
                     ? { levelIndex in
-                        guard let record = DemoData.demo(
-                            for: currentGame.pack, levelIndex: levelIndex)
+                        // Advance through the pack's demos on repeated
+                        // clicks. Seed = whichever is higher: the last-
+                        // watched demo's level + 1, or Training's current
+                        // level. `nextValidDemo` then wraps forward.
+                        // Ports the JS `getValidDemoLevel` (`demo.js:202-207`)
+                        // + `getNextDemoLevel` (`demo.js:209-214`) pair —
+                        // JS bumps `curLevel` past just-watched demos so
+                        // the next lookup lands on a different record.
+                        let seed = max(levelIndex, (lastDemoLevelIndex ?? -1) + 1)
+                        guard let record = DemoData.nextValidDemo(
+                            for: currentGame.pack, startingAt: seed)
                         else { return }
                         demoState = DemoState(
                             record: record, pack: currentGame.pack,
                             theme: currentGame.theme,
                             returnToLevelIndex: levelIndex)
+                        lastDemoLevelIndex = record.levelIndex
                     }
                     : nil
             )
@@ -274,6 +298,7 @@ public struct PackChooserView: View {
                 // Apple II via the `@AppStorage` fallbacks).
                 withAnimation(.easeInOut(duration: 0.4)) {
                     demoState = nil
+                    lastDemoLevelIndex = nil
                     currentGame = Selection(
                         pack: lastPack, theme: lastTheme, startingLevelIndex: 0)
                     self.overlay = nil
@@ -288,6 +313,7 @@ public struct PackChooserView: View {
                     lastPack = pack
                     lastTheme = theme
                     demoState = nil
+                    lastDemoLevelIndex = nil
                     currentGame = Selection(
                         pack: pack, theme: theme, startingLevelIndex: 0)
                     self.overlay = nil
@@ -335,6 +361,7 @@ public struct PackChooserView: View {
                 levels: levels,
                 onPick: { index in
                     demoState = nil
+                    lastDemoLevelIndex = nil
                     currentGame = Selection(
                         pack: pack, theme: theme, startingLevelIndex: index)
                     self.overlay = nil
