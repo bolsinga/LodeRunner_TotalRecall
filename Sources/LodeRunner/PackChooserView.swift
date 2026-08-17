@@ -220,16 +220,22 @@ public struct PackChooserView: View {
                             levels: levels, returnTo: .game)
                     }
                     : nil,
-                // Training-mode-only demo button. Set only when a demo
-                // exists for the pack; GameView further gates by the
-                // *current* level index (`demoLevelIndices.contains(...)`).
+                // Training-mode-only demo button. Set to the pack's
+                // demo-level set so GameView can enable/disable the icon
+                // based on whether the pack ships any demos at all; the
+                // actual level to play is picked by `onStartDemo` via
+                // `nextValidDemo` (JS `getValidDemoLevel`).
                 demoLevelIndices: hudMode == .modern
                     ? DemoData.demoLevelIndices(for: currentGame.pack)
                     : [],
                 onStartDemo: hudMode == .modern
                     ? { levelIndex in
-                        guard let record = DemoData.demo(
-                            for: currentGame.pack, levelIndex: levelIndex)
+                        // JS `getValidDemoLevel` (`demo.js:202-207`) —
+                        // start at the requested level, advance until we
+                        // hit one with a recording, wrapping to the first
+                        // if we run off the end.
+                        guard let record = DemoData.nextValidDemo(
+                            for: currentGame.pack, startingAt: levelIndex)
                         else { return }
                         demoState = DemoState(
                             record: record, pack: currentGame.pack,
