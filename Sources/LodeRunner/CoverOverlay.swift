@@ -20,16 +20,21 @@ import SwiftUI
 /// `Self.autoDismissSeconds`, matching JS `waitIdleDemo(3000)` at
 /// `main.js:243`.
 ///
-/// Deferred vs. the JS: the attract-mode auto-demo that fires when
-/// `waitIdleDemo` elapses is out of scope (no demo player in the port).
-/// Here the timer just dismisses into the pack chooser.
+/// When `onIdle` is set, the timer fires attract-mode demo playback via
+/// that callback instead of auto-dismissing — matching JS
+/// `waitIdleDemo(3000)` at `main.js:243`, which enters PLAY_AUTO on
+/// timeout. When `onIdle` is nil the cover behaves as before (tap or
+/// timer both dismiss into the pack chooser); useful for the Preview
+/// and any host that doesn't wire the attract flow.
 public struct CoverOverlay: View {
     let onDismiss: () -> Void
+    let onIdle: (() -> Void)?
     @State private var signetOpacity: Double = Self.signetStartOpacity
     @State private var remakeOpacity: Double = Self.remakeStartOpacity
 
-    public init(onDismiss: @escaping () -> Void) {
+    public init(onDismiss: @escaping () -> Void, onIdle: (() -> Void)? = nil) {
         self.onDismiss = onDismiss
+        self.onIdle = onIdle
     }
 
     public var body: some View {
@@ -74,21 +79,26 @@ public struct CoverOverlay: View {
                 remakeOpacity = 1.0
             }
         }
-        .task(id: "cover-dismiss-timer") {
+        .task(id: "cover-idle-timer") {
             // JS `main.js:243` `waitIdleDemo(3000)`. `.task(id:)` with a
             // stable non-view identifier makes SwiftUI restart the task
             // ONLY when the id changes — never on transient view
             // lifecycle events (window mount, size class settling). A
-            // clean 3 s wait, then dismiss. On cancellation (the view
-            // truly went away, e.g. user tapped and phase changed) the
-            // sleep throws and we return without calling `onDismiss`
-            // — which would double-fire otherwise.
+            // clean 3 s wait, then fire the idle handler. On cancellation
+            // (the view truly went away, e.g. user tapped and phase
+            // changed) the sleep throws and we return without firing.
             do {
                 try await Task.sleep(for: .seconds(Self.autoDismissSeconds))
             } catch {
                 return
             }
-            onDismiss()
+            // Attract-mode host uses `onIdle` to start a demo instead of
+            // dismissing. Without it, keep the old behavior (dismiss).
+            if let onIdle {
+                onIdle()
+            } else {
+                onDismiss()
+            }
         }
     }
 
