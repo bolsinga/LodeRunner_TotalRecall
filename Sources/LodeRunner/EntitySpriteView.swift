@@ -66,15 +66,22 @@ public struct GuardSpriteView: View {
     /// `key.js:131,172` which defaults to on — we mirror that default and
     /// defer the toggle to a future settings surface.
     ///
-    /// **Not part of the original 1983 Broderbund Lode Runner.** This
-    /// remake's own git history (commit `675e52f`, "Lode Runner version
-    /// 2.21c", 2017-01-01) introduces `redhat.png` and `guardWearRedhat`/
-    /// `guardRemoveRedhat` alongside that release's gamepad support and
-    /// color-theme selection — i.e. it's a QoL addition by this JS remake's
-    /// author (simon_hung), not an original-game mechanic. It exists so a
+    /// Almost certainly not part of the original 1983 Broderbund release —
+    /// verifiable in *this remake's own* git history, not a claim about the
+    /// original's source (which isn't in this repo to diff against):
+    /// `git show 675e52f -- lodeRunner.guard.js lodeRunner.key.js` shows
+    /// `guardWearRedhat`/`guardRemoveRedhat`/`redhatMode`/`toggleRedhatMode`
+    /// all as `+` (net-new) lines, and `git log --diff-filter=A -- \
+    /// image/Theme/APPLE2/redhat.png` shows that commit is where the sprite
+    /// itself first enters the repo (`Bin 0 -> 2943 bytes`) — absent from
+    /// every prior commit back to this repo's `243a4a9` first commit. That
+    /// commit's own message frames the whole batch as new work ("Add
+    /// gamepad support... Add color themes selection..."), i.e. this JS
+    /// remake's author (simon_hung) added it two years into the remake's
+    /// life, alongside other unambiguously-modern features. It exists so a
     /// player can tell at a glance which guard is holding their gold (worth
     /// trapping to recover it); `Ctrl+H` lets a player switch it back off
-    /// for a more authentic, harder-to-track original feel.
+    /// for a more authentic, harder-to-track feel.
     public static func sheet(forHasGold hasGold: Int) -> SpriteSheetSpec {
         hasGold > 0 ? .redhat : .guard
     }
