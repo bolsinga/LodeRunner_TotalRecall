@@ -37,12 +37,14 @@ public struct GameView: View {
     private let onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)?
     /// Bindings to the host's persisted `@AppStorage` values. Bindings
     /// (not plain values) so in-game hotkeys can mutate them — the Ctrl+S
-    /// / Ctrl+minus / Ctrl+= / Ctrl+T / Ctrl+K tips shortcuts flip these and
-    /// the change propagates back up to the pack chooser's SettingsOverlay.
+    /// / Ctrl+minus / Ctrl+= / Ctrl+T / Ctrl+K / Ctrl+H tips shortcuts flip
+    /// these and the change propagates back up to the pack chooser's
+    /// SettingsOverlay.
     @Binding private var soundEnabled: Bool
     @Binding private var speedIndex: Int
     @Binding private var hudMode: HUDMode
     @Binding private var repeatActionsEnabled: Bool
+    @Binding private var redhatModeEnabled: Bool
 
     /// Local controller for the "SOUND ON", "FAST", "TRAINING OFF"…
     /// flash-messages that appear when a hotkey mutates a setting.
@@ -101,6 +103,7 @@ public struct GameView: View {
         speedIndex: Binding<Int> = .constant(GameSpeed.defaultIndex),
         hudMode: Binding<HUDMode> = .constant(.classic),
         repeatActionsEnabled: Binding<Bool> = .constant(false),
+        redhatModeEnabled: Binding<Bool> = .constant(false),
         isPaused: Bool = false,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
@@ -116,6 +119,7 @@ public struct GameView: View {
         _speedIndex = speedIndex
         _hudMode = hudMode
         _repeatActionsEnabled = repeatActionsEnabled
+        _redhatModeEnabled = redhatModeEnabled
         self.isPaused = isPaused
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
@@ -449,7 +453,8 @@ public struct GameView: View {
             GuardSpriteView(
                 guardState: guardState,
                 appearance: driver.guardAppearances[index],
-                sheet: GuardSpriteView.sheet(forHasGold: guardState.hasGold)
+                sheet: GuardSpriteView.sheet(
+                    forHasGold: guardState.hasGold, redhatModeEnabled: redhatModeEnabled)
             )
         }
     }
@@ -470,6 +475,10 @@ public struct GameView: View {
     /// - Ctrl+K — repeat actions (`key.js:51-53`'s `toggleRepeatAction`,
     ///   tip "REPEAT ACTIONS ON/OFF" @ 2500 ms — the JS's own duration,
     ///   longer than the other toggles' 1500 ms since the message is longer)
+    /// - Ctrl+H — red-hat mode (`key.js:77-78`'s `toggleRedhatMode`, tip
+    ///   "REDHAT MODE ON/OFF" @ 1500 ms — the JS's own duration). Port
+    ///   defaults this **off**, unlike the JS's on-by-default, per an
+    ///   explicit product decision (see `GuardSpriteView.sheet`).
     private var hotkeyButtons: some View {
         Group {
             Button("") {
@@ -503,6 +512,14 @@ public struct GameView: View {
                     duration: 2.5)
             }
             .keyboardShortcut("k", modifiers: .control)
+
+            Button("") {
+                redhatModeEnabled.toggle()
+                tips.show(
+                    redhatModeEnabled ? "REDHAT MODE ON" : "REDHAT MODE OFF",
+                    duration: 1.5)
+            }
+            .keyboardShortcut("h", modifiers: .control)
 
             // Ctrl+R — abort game, back to pack chooser (JS `key.js:93`
             // "End game — back to demo"). Routes through `onExit`, not

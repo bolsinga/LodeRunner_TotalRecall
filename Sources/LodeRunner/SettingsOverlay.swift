@@ -10,6 +10,9 @@ import SwiftUI
 ///   underlying `PLAY_CLASSIC` vs `PLAY_MODERN` split)
 /// - Repeat actions on/off (JS `toggleRepeatAction`, `key.js:141-151`;
 ///   see `KeyboardInput.repeatActionsEnabled` for what the two modes mean)
+/// - Red hat mode on/off (JS `toggleRedhatMode`, `key.js:170-186`; see
+///   `GuardSpriteView.sheet(forHasGold:redhatModeEnabled:)` — the port
+///   defaults this off, unlike the JS's on-by-default)
 ///
 /// Deferred vs. the JS: gamepad (no hardware wiring), editor / import /
 /// export, and the storage-clear tab.
@@ -25,6 +28,7 @@ public struct SettingsOverlay: View {
     @Binding var speedIndex: Int
     @Binding var hudMode: HUDMode
     @Binding var repeatActionsEnabled: Bool
+    @Binding var redhatModeEnabled: Bool
     let onClose: () -> Void
 
     public init(
@@ -32,12 +36,14 @@ public struct SettingsOverlay: View {
         speedIndex: Binding<Int>,
         hudMode: Binding<HUDMode>,
         repeatActionsEnabled: Binding<Bool>,
+        redhatModeEnabled: Binding<Bool>,
         onClose: @escaping () -> Void
     ) {
         _soundEnabled = soundEnabled
         _speedIndex = speedIndex
         _hudMode = hudMode
         _repeatActionsEnabled = repeatActionsEnabled
+        _redhatModeEnabled = redhatModeEnabled
         self.onClose = onClose
     }
 
@@ -56,6 +62,8 @@ public struct SettingsOverlay: View {
                 hudRow
                 Divider().background(Color.white.opacity(0.3))
                 repeatActionsRow
+                Divider().background(Color.white.opacity(0.3))
+                redhatModeRow
 
                 closeButton
             }
@@ -111,6 +119,27 @@ public struct SettingsOverlay: View {
                 }
                 toggleButton("OFF", isSelected: !repeatActionsEnabled) {
                     repeatActionsEnabled = false
+                }
+            }
+        }
+    }
+
+    /// ON shows a red hat on any guard currently carrying gold (worth
+    /// trapping to recover it); OFF — the port's default, unlike the JS's
+    /// on-by-default — leaves gold-carrying guards indistinguishable from
+    /// empty-handed ones. Label matches JS `toggleRedhatMode`'s tip text
+    /// (`key.js:179,184`) verbatim.
+    private var redhatModeRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("RED HAT")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                toggleButton("ON", isSelected: redhatModeEnabled) {
+                    redhatModeEnabled = true
+                }
+                toggleButton("OFF", isSelected: !redhatModeEnabled) {
+                    redhatModeEnabled = false
                 }
             }
         }
@@ -234,12 +263,14 @@ private struct SettingsPreviewHost: View {
     @State private var speed = GameSpeed.defaultIndex
     @State private var hudMode: HUDMode = .classic
     @State private var repeatActionsEnabled = false
+    @State private var redhatModeEnabled = false
     var body: some View {
         SettingsOverlay(
             soundEnabled: $sound,
             speedIndex: $speed,
             hudMode: $hudMode,
             repeatActionsEnabled: $repeatActionsEnabled,
+            redhatModeEnabled: $redhatModeEnabled,
             onClose: {}
         )
         .frame(width: 500, height: 450)
