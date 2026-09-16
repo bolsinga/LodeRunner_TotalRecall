@@ -5,26 +5,34 @@ import SwiftUI
 /// per-cell tile render.
 ///
 /// Deferred vs. the JS:
-/// - **Completion markers** — JS shades cleared levels and shows the score
-///   (`levelSelect.js:98-117`). Our port has no persisted high-score store
-///   yet, so every cell is always "clickable" and no score is drawn.
 /// - **Version dropdown** — JS lets you jump between packs from inside the
 ///   dialog. Our flow picks pack first (in `PackChooserOverlay`) and then
 ///   opens level select for that pack, so no dropdown is needed.
 /// - **Auto-scroll to current** — JS `showCurrent()` scrolls the active
 ///   level into view on open. Level select in this port opens *before* a
 ///   session, so there is no "current level" to scroll to.
+/// - **Demo-mode check marks** — JS's `clearedInfo` also covers `PLAY_DEMO`,
+///   showing a check where a demo recording exists. This overlay only ever
+///   opens from Training, so only the `modernScoreInfo` (best-score) branch
+///   applies.
 public struct LevelSelectOverlay: View {
     let levels: [LevelParseResult]
+    /// Best recorded score for a 0-based level index, or `nil` if the level
+    /// has never been cleared. Ports JS `clearedInfo`'s `modernScoreInfo`
+    /// branch (`levelSelect.js:88-93`) — a score IS the record of
+    /// completion, so no separate check mark is drawn.
+    let bestScore: (Int) -> Int?
     let onPick: (Int) -> Void
     let onClose: () -> Void
 
     public init(
         levels: [LevelParseResult],
+        bestScore: @escaping (Int) -> Int? = { _ in nil },
         onPick: @escaping (Int) -> Void,
         onClose: @escaping () -> Void
     ) {
         self.levels = levels
+        self.bestScore = bestScore
         self.onPick = onPick
         self.onClose = onClose
     }
@@ -74,13 +82,28 @@ public struct LevelSelectOverlay: View {
     }
 
     private func cell(index: Int, level: LevelParseResult) -> some View {
-        Button {
+        let score = bestScore(index)
+        return Button {
             onPick(index)
         } label: {
             VStack(spacing: 4) {
-                Text(String(format: "%03d", index + 1))
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.yellow)
+                HStack {
+                    Text(String(format: "%03d", index + 1))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.yellow)
+                    Spacer(minLength: 4)
+                    if let score {
+                        Text("\(score)")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.yellow)
+                            .lineLimit(1)
+                    }
+                }
+                // Pin the caption row to the thumbnail's rendered width —
+                // without this, the adaptive grid column (often wider than
+                // a thumbnail) lets the row's Spacer stretch the number and
+                // score out to the column's edges, far from the art below.
+                .frame(width: LevelThumbnailView.width())
                 LevelThumbnailView(level: level)
                     .overlay(Rectangle().stroke(Color.white.opacity(0.3), lineWidth: 1))
             }
@@ -125,4 +148,15 @@ private func previewLevels() -> [LevelParseResult] {
     )
     .frame(width: 800, height: 600)
     .environment(\.tileTheme, .c64)
+}
+
+#Preview("Level select — cleared") {
+    LevelSelectOverlay(
+        levels: previewLevels(),
+        bestScore: { index in index.isMultiple(of: 2) ? 1200 + index * 50 : nil },
+        onPick: { _ in },
+        onClose: {}
+    )
+    .frame(width: 800, height: 600)
+    .environment(\.tileTheme, .apple2)
 }

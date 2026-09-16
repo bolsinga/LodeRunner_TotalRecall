@@ -402,6 +402,9 @@ public struct PackChooserView: View {
         case .levelPicker(let pack, let theme, let levels, let returnTo):
             LevelSelectOverlay(
                 levels: levels,
+                bestScore: { index in
+                    highScoreStore.bestScore(pack: pack, levelIndex: index)
+                },
                 onPick: { index in
                     demoState = nil
                     lastDemoLevelIndex = nil
