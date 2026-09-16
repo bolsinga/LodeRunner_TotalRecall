@@ -9,10 +9,16 @@ import SwiftUI
 ///   "Training on/off" there, "MODE: Score / Stats" here — same
 ///   underlying `PLAY_CLASSIC` vs `PLAY_MODERN` split)
 ///
-/// Deferred vs. the JS: gamepad (no hardware wiring), color palettes (no
-/// palette layer in the port), key repeat toggle (our `KeyboardInput`
-/// matches the JS default with no toggle), editor / import / export, and
-/// the storage-clear tab.
+/// Deferred vs. the JS: gamepad (no hardware wiring), key repeat toggle
+/// (our `KeyboardInput` matches the JS default with no toggle), editor /
+/// import / export, and the storage-clear tab.
+///
+/// **Permanently out of scope** (not just deferred — do not implement):
+/// color-palette slots (`Ctrl+1`–`5`, `themeColorChange` at
+/// `colorTheme.js:173-193`). JS re-tints the ground-tile bitmaps to one of
+/// 5 preset hex colors per theme; it's a cosmetic recolor pipeline with no
+/// gameplay effect, and the port has no equivalent tinting layer. Explicit
+/// product decision — skip this if it resurfaces in a future gap analysis.
 public struct SettingsOverlay: View {
     @Binding var soundEnabled: Bool
     @Binding var speedIndex: Int
