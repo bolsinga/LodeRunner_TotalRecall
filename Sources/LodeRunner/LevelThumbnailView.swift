@@ -40,6 +40,13 @@ public struct LevelThumbnailView: View {
             )
     }
 
+    /// Rendered width at `scale` — lets callers (e.g. `LevelSelectOverlay`'s
+    /// caption row) size a sibling view to match the thumbnail exactly,
+    /// rather than stretching to fill whatever container offers.
+    public static func width(scale: CGFloat = 0.16) -> CGFloat {
+        naturalWidth * scale
+    }
+
     /// Natural pixel size of the playfield, matching JS `NO_OF_TILES_X *
     /// BASE_TILE_X` × `NO_OF_TILES_Y * BASE_TILE_Y`.
     private static let naturalWidth: CGFloat =

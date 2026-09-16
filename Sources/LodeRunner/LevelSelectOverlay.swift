@@ -99,6 +99,11 @@ public struct LevelSelectOverlay: View {
                             .lineLimit(1)
                     }
                 }
+                // Pin the caption row to the thumbnail's rendered width —
+                // without this, the adaptive grid column (often wider than
+                // a thumbnail) lets the row's Spacer stretch the number and
+                // score out to the column's edges, far from the art below.
+                .frame(width: LevelThumbnailView.width())
                 LevelThumbnailView(level: level)
                     .overlay(Rectangle().stroke(Color.white.opacity(0.3), lineWidth: 1))
             }
