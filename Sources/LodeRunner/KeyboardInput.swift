@@ -1,9 +1,20 @@
 import SwiftUI
 
-/// Hardware-keyboard `RunnerInput`. Held keys persist as the current action (no
-/// key-up clears state) to match the JS default at `lodeRunner.key.js:322` where
-/// `handleKeyUp` returns without touching `keyAction` unless the repeat-mode
-/// toggle is on.
+/// Hardware-keyboard `RunnerInput`. Ports the JS's two key-repeat modes
+/// (`lodeRunner.key.js:36-88`'s `pressCtrlKey` `KEYCODE_K`, dispatched per
+/// tick by `processInputKeyState` at `key.js:316-340`):
+///
+/// - **Sticky / "NES" mode** (`repeatActionsEnabled == false`, the JS
+///   default — `storage.js:443`'s "set default off (NES keyboard mode)"):
+///   releasing the key that's driving the current action stops it, same as
+///   `advanceStickyKeyState`'s released branch (`inputLogic.js:37-46`)
+///   setting `keyAction = ACT_STOP`.
+/// - **Repeat / "Apple II" mode** (`repeatActionsEnabled == true`):
+///   key-up is ignored entirely — `advanceRepeatKeyState`
+///   (`inputLogic.js:61-94`) never clears `keyAction` on release, so the
+///   action persists until a *different* bound key is pressed. Reproduces
+///   the original Apple II's typematic-driven feel, where the software
+///   only ever sees repeated keydowns, never a release.
 ///
 /// Key map, ported from `pressKey` at `lodeRunner.key.js:211-270`:
 ///
@@ -22,6 +33,17 @@ import SwiftUI
 @Observable @MainActor
 public final class KeyboardInput: RunnerInput {
     public private(set) var currentAction: RunnerAction = .stop
+
+    /// `Ctrl+K` setting (`SettingsOverlay`'s REPEAT row). `false` (sticky /
+    /// NES) matches the JS default; `GameView` mirrors its `@AppStorage`-
+    /// backed binding into this property on appear and on change.
+    public var repeatActionsEnabled: Bool = false
+
+    /// The key currently driving `currentAction`, so a key-up can tell
+    /// "the active key was released" (→ stop, in sticky mode) apart from
+    /// "some other, already-superseded key was released" (→ no-op) — JS's
+    /// `recordKeyCode == event.keyCode` guard at `key.js:329`.
+    private var heldKey: KeyEquivalent?
 
     /// Fires on every key press this input observes (bound or unbound).
     /// Set by `GameView` during demo playback to route "any key stops demo"
@@ -64,22 +86,48 @@ public final class KeyboardInput: RunnerInput {
         return nil
     }
 
-    /// Consume a key-down and update `currentAction` if the key is bound.
-    /// Returns `.handled` when a `RunnerAction` was set, `.ignored` otherwise —
-    /// so unbound keys (menu shortcuts etc.) pass through to other handlers.
+    /// Consume a key event and update `currentAction` if the key is bound.
+    /// Returns `.handled` when the event drove a change, `.ignored`
+    /// otherwise — so unbound keys (menu shortcuts etc.) pass through to
+    /// other handlers.
     @discardableResult
     public func handle(_ press: KeyPress) -> KeyPress.Result {
         // Fire the "any key" hook first (demo-stop path). Set independently
         // of the bound-key lookup so keys that would normally be `.ignored`
         // (letters, numbers) still terminate a running demo.
         onAnyKeyPress?()
-        guard let action = action(for: press.key) else { return .ignored }
-        currentAction = action
+        return handle(key: press.key, phase: press.phase)
+    }
+
+    /// The phase-decision logic behind `handle(_:)`, factored out because
+    /// `KeyPress` has no public initializer — tests drive this directly
+    /// with a `KeyEquivalent` + `KeyPress.Phases` instead. Mirrors why the
+    /// JS factored `advanceStickyKeyState`/`advanceRepeatKeyState` into
+    /// pure functions in `inputLogic.js`.
+    @discardableResult
+    func handle(key: KeyEquivalent, phase: KeyPress.Phases) -> KeyPress.Result {
+        guard let action = action(for: key) else { return .ignored }
+        switch phase {
+        case .up:
+            // Sticky mode only: releasing the key currently driving the
+            // action stops it (`advanceStickyKeyState`'s released branch).
+            // Releasing a *different*, already-superseded key is a no-op —
+            // matches JS's `recordKeyCode == event.keyCode` guard. Repeat
+            // mode ignores key-up altogether (`processInputKeyState`'s
+            // `repeatAction` branch never reaches this case).
+            guard !repeatActionsEnabled, heldKey == key else { return .ignored }
+            currentAction = .stop
+            heldKey = nil
+        default: // .down, .repeat
+            currentAction = action
+            heldKey = key
+        }
         return .handled
     }
 
     public func resetAction() {
         currentAction = .stop
+        heldKey = nil
     }
 }
 
@@ -114,7 +162,7 @@ private struct KeyboardInputModifier: ViewModifier {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
             }
-            .onKeyPress(phases: [.down, .repeat]) { press in
+            .onKeyPress(phases: [.down, .repeat, .up]) { press in
                 input.handle(press)
             }
     }
@@ -126,9 +174,10 @@ extension View {
     /// click), and pipes key events into `input`. Apply near the top of the
     /// game view hierarchy so the game surface keeps focus.
     ///
-    /// Only `.down` and `.repeat` phases are observed (matching the JS default
-    /// where held keys persist); `.up` is intentionally ignored so releasing a
-    /// key keeps the runner moving until the next direction change.
+    /// All three phases (`.down`, `.repeat`, `.up`) are observed —
+    /// `KeyboardInput.handle` decides what `.up` means based on
+    /// `repeatActionsEnabled`, so the toggle can flip behavior at runtime
+    /// without re-attaching this modifier.
     public func keyboardInput(_ input: KeyboardInput) -> some View {
         modifier(KeyboardInputModifier(input: input))
     }

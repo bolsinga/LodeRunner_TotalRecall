@@ -129,10 +129,18 @@ public struct PackChooserView: View {
     @AppStorage(Self.soundEnabledKey) private var soundEnabled: Bool = true
     @AppStorage(Self.speedIndexKey) private var speedIndex: Int = GameSpeed.defaultIndex
     @AppStorage(Self.hudModeKey) private var hudMode: HUDMode = .classic
+    /// `false` (sticky / "NES" mode) matches the JS default
+    /// (`storage.js:443`) — see `KeyboardInput.repeatActionsEnabled`.
+    @AppStorage(Self.repeatActionsEnabledKey) private var repeatActionsEnabled: Bool = false
+    /// `false` — deliberately *not* matching the JS default (`on`); see
+    /// `GuardSpriteView.sheet(forHasGold:redhatModeEnabled:)`.
+    @AppStorage(Self.redhatModeEnabledKey) private var redhatModeEnabled: Bool = false
 
     static let soundEnabledKey = "loderunner_soundEnabled"
     static let speedIndexKey = "loderunner_speedIndex"
     static let hudModeKey = "loderunner_hudMode"
+    static let repeatActionsEnabledKey = "loderunner_repeatActionsEnabled"
+    static let redhatModeEnabledKey = "loderunner_redhatModeEnabled"
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly. Same
@@ -183,6 +191,8 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
+                redhatModeEnabled: $redhatModeEnabled,
                 isPaused: overlay != nil,
                 onExit: { overlay = .menu },
                 demoRecord: demoState.record,
@@ -220,6 +230,8 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
+                redhatModeEnabled: $redhatModeEnabled,
                 // Freeze the sim whenever any overlay is on top of us —
                 // JS `main.js:1668-1670`'s `GAME_PAUSE`.
                 isPaused: overlay != nil,
@@ -422,6 +434,8 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
+                redhatModeEnabled: $redhatModeEnabled,
                 onClose: { self.overlay = .menu }
             )
             .environment(\.tileTheme, theme)

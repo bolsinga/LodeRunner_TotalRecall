@@ -59,14 +59,33 @@ public struct GuardSpriteView: View {
         )
     }
 
-    /// Picks the guard's sprite sheet based on gold-carry state, matching
-    /// `guardWearRedhat` / `guardRemoveRedhat` at `lodeRunner.guard.js:376-385`.
-    /// Carrying gold (`hasGold > 0`) draws with the red-hat sheet; empty-handed
-    /// guards use the default. The JS gates this on a `redhatMode` toggle at
-    /// `key.js:131,172` which defaults to on — we mirror that default and
-    /// defer the toggle to a future settings surface.
-    public static func sheet(forHasGold hasGold: Int) -> SpriteSheetSpec {
-        hasGold > 0 ? .redhat : .guard
+    /// Picks the guard's sprite sheet based on gold-carry state and the
+    /// `Ctrl+H` setting, matching `guardWearRedhat` / `guardRemoveRedhat` at
+    /// `lodeRunner.guard.js:376-385`. Carrying gold (`hasGold > 0`) draws
+    /// with the red-hat sheet only when `redhatModeEnabled` is on;
+    /// empty-handed guards, or the mode being off, use the default sheet.
+    ///
+    /// JS's own `redhatMode` (`key.js:131`) defaults to **on**; the port
+    /// defaults `redhatModeEnabled` to **off** instead — a deliberate
+    /// product decision (not a fidelity gap) so a fresh install starts
+    /// closer to the original's harder-to-track guards, with the
+    /// modernized indicator available as an opt-in via `Ctrl+H`.
+    ///
+    /// Almost certainly not part of the original 1983 Broderbund release —
+    /// verifiable in *this remake's own* git history, not a claim about the
+    /// original's source (which isn't in this repo to diff against):
+    /// `git show 675e52f -- lodeRunner.guard.js lodeRunner.key.js` shows
+    /// `guardWearRedhat`/`guardRemoveRedhat`/`redhatMode`/`toggleRedhatMode`
+    /// all as `+` (net-new) lines, and `git log --diff-filter=A -- \
+    /// image/Theme/APPLE2/redhat.png` shows that commit is where the sprite
+    /// itself first enters the repo (`Bin 0 -> 2943 bytes`) — absent from
+    /// every prior commit back to this repo's `243a4a9` first commit. That
+    /// commit's own message frames the whole batch as new work ("Add
+    /// gamepad support... Add color themes selection..."), i.e. this JS
+    /// remake's author (simon_hung) added it two years into the remake's
+    /// life, alongside other unambiguously-modern features.
+    public static func sheet(forHasGold hasGold: Int, redhatModeEnabled: Bool) -> SpriteSheetSpec {
+        hasGold > 0 && redhatModeEnabled ? .redhat : .guard
     }
 }
 
