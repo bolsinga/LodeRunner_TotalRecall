@@ -91,8 +91,8 @@ public struct LevelSelectOverlay: View {
                     Text(String(format: "%03d", index + 1))
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.yellow)
+                    Spacer(minLength: 4)
                     if let score {
-                        Spacer(minLength: 4)
                         Text("\(score)")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.yellow)
