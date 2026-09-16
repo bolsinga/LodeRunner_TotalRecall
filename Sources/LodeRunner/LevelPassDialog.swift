@@ -17,8 +17,6 @@ import SwiftUI
 /// Deferred vs. the JS:
 /// - Party poppers (`levelPass.js:172-186`) — needs a confetti particle
 ///   system that doesn't exist in the port yet.
-/// - HI-SCORE row — the port has no persisted high-score store; the row
-///   would always read 000000, so it's omitted.
 /// - Replay / level-select buttons — level select isn't wired yet, so the
 ///   only action is "continue to next level", triggered by tap or any key.
 ///
@@ -28,10 +26,10 @@ import SwiftUI
 /// keyboard dismiss. Tap-to-dismiss short-circuits via `onDismiss`.
 public struct LevelPassDialog: View {
     let summary: LevelPassSummary
-    /// Optional previous best score for this level. When non-nil the
-    /// HI-SCORE row is shown; when the animated `scoreDisplay` beats it,
-    /// the row highlights (JS `levelPass.js:203-206`'s `.beat` class).
-    /// `nil` hides the row entirely — the pre-persistence default.
+    /// Previous best score for this level, from `HighScoreStore`. When
+    /// non-nil the HI-SCORE row is shown; when the animated `scoreDisplay`
+    /// beats it, the row highlights (JS `levelPass.js:203-206`'s `.beat`
+    /// class). `nil` (e.g. a never-cleared level) hides the row entirely.
     let hiScore: Int?
     let onSound: (SoundEffect) -> Void
     let onReady: () -> Void
