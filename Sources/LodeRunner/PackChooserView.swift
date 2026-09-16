@@ -129,10 +129,14 @@ public struct PackChooserView: View {
     @AppStorage(Self.soundEnabledKey) private var soundEnabled: Bool = true
     @AppStorage(Self.speedIndexKey) private var speedIndex: Int = GameSpeed.defaultIndex
     @AppStorage(Self.hudModeKey) private var hudMode: HUDMode = .classic
+    /// `false` (sticky / "NES" mode) matches the JS default
+    /// (`storage.js:443`) — see `KeyboardInput.repeatActionsEnabled`.
+    @AppStorage(Self.repeatActionsEnabledKey) private var repeatActionsEnabled: Bool = false
 
     static let soundEnabledKey = "loderunner_soundEnabled"
     static let speedIndexKey = "loderunner_speedIndex"
     static let hudModeKey = "loderunner_hudMode"
+    static let repeatActionsEnabledKey = "loderunner_repeatActionsEnabled"
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly. Same
@@ -183,6 +187,7 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
                 isPaused: overlay != nil,
                 onExit: { overlay = .menu },
                 demoRecord: demoState.record,
@@ -220,6 +225,7 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
                 // Freeze the sim whenever any overlay is on top of us —
                 // JS `main.js:1668-1670`'s `GAME_PAUSE`.
                 isPaused: overlay != nil,
@@ -422,6 +428,7 @@ public struct PackChooserView: View {
                 soundEnabled: $soundEnabled,
                 speedIndex: $speedIndex,
                 hudMode: $hudMode,
+                repeatActionsEnabled: $repeatActionsEnabled,
                 onClose: { self.overlay = .menu }
             )
             .environment(\.tileTheme, theme)

@@ -65,4 +65,56 @@ struct KeyboardInputTests {
         }
     }
     #endif
+
+    // MARK: - repeatActionsEnabled (Ctrl+K)
+
+    @Test("sticky mode (default): releasing the active key stops the action")
+    func stickyModeReleaseStops() {
+        let input = KeyboardInput()
+        #expect(input.repeatActionsEnabled == false)
+        #expect(input.handle(key: "d", phase: .down) == .handled)
+        #expect(input.currentAction == .right)
+        #expect(input.handle(key: "d", phase: .up) == .handled)
+        #expect(input.currentAction == .stop)
+    }
+
+    @Test("sticky mode: releasing a superseded key is a no-op")
+    func stickyModeReleaseOfSupersededKeyIsNoOp() {
+        let input = KeyboardInput()
+        input.handle(key: "d", phase: .down)  // right
+        input.handle(key: "s", phase: .down)  // down — supersedes "d"
+        #expect(input.currentAction == .down)
+        #expect(input.handle(key: "d", phase: .up) == .ignored)
+        #expect(input.currentAction == .down)  // unaffected — "d" is stale
+    }
+
+    @Test("repeat mode: key-up is ignored, action persists past release")
+    func repeatModeIgnoresKeyUp() {
+        let input = KeyboardInput()
+        input.repeatActionsEnabled = true
+        input.handle(key: "d", phase: .down)
+        #expect(input.currentAction == .right)
+        #expect(input.handle(key: "d", phase: .up) == .ignored)
+        #expect(input.currentAction == .right)  // still latched
+    }
+
+    @Test("repeat mode: a new key overrides the persisted action")
+    func repeatModeNewKeyOverrides() {
+        let input = KeyboardInput()
+        input.repeatActionsEnabled = true
+        input.handle(key: "d", phase: .down)
+        input.handle(key: "d", phase: .up)  // ignored, still .right
+        input.handle(key: "w", phase: .down)
+        #expect(input.currentAction == .up)
+    }
+
+    @Test("resetAction clears heldKey, so a stale key-up is ignored")
+    func resetActionClearsHeldKey() {
+        let input = KeyboardInput()
+        input.handle(key: "d", phase: .down)
+        input.resetAction()
+        #expect(input.currentAction == .stop)
+        #expect(input.handle(key: "d", phase: .up) == .ignored)
+        #expect(input.currentAction == .stop)
+    }
 }

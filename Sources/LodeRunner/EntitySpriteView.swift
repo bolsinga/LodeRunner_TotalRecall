@@ -65,6 +65,16 @@ public struct GuardSpriteView: View {
     /// guards use the default. The JS gates this on a `redhatMode` toggle at
     /// `key.js:131,172` which defaults to on — we mirror that default and
     /// defer the toggle to a future settings surface.
+    ///
+    /// **Not part of the original 1983 Broderbund Lode Runner.** This
+    /// remake's own git history (commit `675e52f`, "Lode Runner version
+    /// 2.21c", 2017-01-01) introduces `redhat.png` and `guardWearRedhat`/
+    /// `guardRemoveRedhat` alongside that release's gamepad support and
+    /// color-theme selection — i.e. it's a QoL addition by this JS remake's
+    /// author (simon_hung), not an original-game mechanic. It exists so a
+    /// player can tell at a glance which guard is holding their gold (worth
+    /// trapping to recover it); `Ctrl+H` lets a player switch it back off
+    /// for a more authentic, harder-to-track original feel.
     public static func sheet(forHasGold hasGold: Int) -> SpriteSheetSpec {
         hasGold > 0 ? .redhat : .guard
     }

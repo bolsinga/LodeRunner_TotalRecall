@@ -8,10 +8,11 @@ import SwiftUI
 /// - HUD mode (JS `settings.setMode()`, `settings.js:147`; renders as
 ///   "Training on/off" there, "MODE: Score / Stats" here — same
 ///   underlying `PLAY_CLASSIC` vs `PLAY_MODERN` split)
+/// - Repeat actions on/off (JS `toggleRepeatAction`, `key.js:141-151`;
+///   see `KeyboardInput.repeatActionsEnabled` for what the two modes mean)
 ///
-/// Deferred vs. the JS: gamepad (no hardware wiring), key repeat toggle
-/// (our `KeyboardInput` matches the JS default with no toggle), editor /
-/// import / export, and the storage-clear tab.
+/// Deferred vs. the JS: gamepad (no hardware wiring), editor / import /
+/// export, and the storage-clear tab.
 ///
 /// **Permanently out of scope** (not just deferred — do not implement):
 /// color-palette slots (`Ctrl+1`–`5`, `themeColorChange` at
@@ -23,17 +24,20 @@ public struct SettingsOverlay: View {
     @Binding var soundEnabled: Bool
     @Binding var speedIndex: Int
     @Binding var hudMode: HUDMode
+    @Binding var repeatActionsEnabled: Bool
     let onClose: () -> Void
 
     public init(
         soundEnabled: Binding<Bool>,
         speedIndex: Binding<Int>,
         hudMode: Binding<HUDMode>,
+        repeatActionsEnabled: Binding<Bool>,
         onClose: @escaping () -> Void
     ) {
         _soundEnabled = soundEnabled
         _speedIndex = speedIndex
         _hudMode = hudMode
+        _repeatActionsEnabled = repeatActionsEnabled
         self.onClose = onClose
     }
 
@@ -50,6 +54,8 @@ public struct SettingsOverlay: View {
                 speedRow
                 Divider().background(Color.white.opacity(0.3))
                 hudRow
+                Divider().background(Color.white.opacity(0.3))
+                repeatActionsRow
 
                 closeButton
             }
@@ -86,6 +92,25 @@ public struct SettingsOverlay: View {
                 }
                 toggleButton("OFF", isSelected: hudMode == .classic) {
                     hudMode = .classic
+                }
+            }
+        }
+    }
+
+    /// ON = repeat/"Apple II" mode (held key persists past release); OFF =
+    /// sticky/"NES" mode (releasing stops), the JS default. Label matches
+    /// JS `toggleRepeatAction`'s tip text (`key.js:143-147`) verbatim.
+    private var repeatActionsRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("REPEAT ACTIONS")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                toggleButton("ON", isSelected: repeatActionsEnabled) {
+                    repeatActionsEnabled = true
+                }
+                toggleButton("OFF", isSelected: !repeatActionsEnabled) {
+                    repeatActionsEnabled = false
                 }
             }
         }
@@ -208,11 +233,13 @@ private struct SettingsPreviewHost: View {
     @State private var sound = true
     @State private var speed = GameSpeed.defaultIndex
     @State private var hudMode: HUDMode = .classic
+    @State private var repeatActionsEnabled = false
     var body: some View {
         SettingsOverlay(
             soundEnabled: $sound,
             speedIndex: $speed,
             hudMode: $hudMode,
+            repeatActionsEnabled: $repeatActionsEnabled,
             onClose: {}
         )
         .frame(width: 500, height: 450)
