@@ -3,10 +3,12 @@ import SwiftUI
 /// Keyboard cheat-sheet modal. Ports the "Keyboard" tab of the JS
 /// `helpDialog` at `lodeRunner.help.js:70-119`.
 ///
-/// Deferred vs. the JS: the "Gamepad" tab (`help.js:122-153`) is out of
-/// scope — no gamepad support in the port. Editor / trap-reveal / color
-/// palette / red-hat toggle rows are also dropped: none map onto the
-/// port's actual keybindings (`KeyboardInput.swift`).
+/// Deferred vs. the JS: the illustrated "Gamepad" tab (`help.js:122-153`,
+/// the SNES-diagram button reference) is out of scope — gamepad *support*
+/// itself is ported (see `GamepadInput`, `SettingsOverlay`'s GAMEPAD row),
+/// just not this cheat-sheet's visual reference for it. Editor / trap-
+/// reveal / color palette / red-hat toggle rows are also dropped: none map
+/// onto the port's actual keybindings (`KeyboardInput.swift`).
 public struct HelpOverlay: View {
     let onClose: () -> Void
 

@@ -135,12 +135,16 @@ public struct PackChooserView: View {
     /// `false` — deliberately *not* matching the JS default (`on`); see
     /// `GuardSpriteView.sheet(forHasGold:redhatModeEnabled:)`.
     @AppStorage(Self.redhatModeEnabledKey) private var redhatModeEnabled: Bool = false
+    /// `true` matches the JS default (`gamepadMode = 1`, `key.js:130`,
+    /// `storage.js:459-462`) — see `GamepadInput.isEnabled`.
+    @AppStorage(Self.gamepadEnabledKey) private var gamepadEnabled: Bool = true
 
     static let soundEnabledKey = "loderunner_soundEnabled"
     static let speedIndexKey = "loderunner_speedIndex"
     static let hudModeKey = "loderunner_hudMode"
     static let repeatActionsEnabledKey = "loderunner_repeatActionsEnabled"
     static let redhatModeEnabledKey = "loderunner_redhatModeEnabled"
+    static let gamepadEnabledKey = "loderunner_gamepadEnabled"
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly. Same
@@ -193,6 +197,7 @@ public struct PackChooserView: View {
                 hudMode: $hudMode,
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
+                gamepadEnabled: $gamepadEnabled,
                 isPaused: overlay != nil,
                 onExit: { overlay = .menu },
                 demoRecord: demoState.record,
@@ -232,6 +237,7 @@ public struct PackChooserView: View {
                 hudMode: $hudMode,
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
+                gamepadEnabled: $gamepadEnabled,
                 // Freeze the sim whenever any overlay is on top of us —
                 // JS `main.js:1668-1670`'s `GAME_PAUSE`.
                 isPaused: overlay != nil,
@@ -436,6 +442,7 @@ public struct PackChooserView: View {
                 hudMode: $hudMode,
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
+                gamepadEnabled: $gamepadEnabled,
                 onClose: { self.overlay = .menu }
             )
             .environment(\.tileTheme, theme)
