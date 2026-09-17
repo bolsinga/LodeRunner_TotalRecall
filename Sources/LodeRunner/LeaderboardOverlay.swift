@@ -177,7 +177,9 @@ public struct LeaderboardOverlay: View {
                             .background(Color.yellow)
                     }
                     .buttonStyle(.plain)
+                    #if !os(tvOS)
                     .keyboardShortcut(.return, modifiers: [])
+                    #endif
                     .disabled(!isNameValid)
                 }
             }
@@ -193,7 +195,9 @@ public struct LeaderboardOverlay: View {
                     .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
             }
             .buttonStyle(.plain)
+            #if !os(tvOS)
             .keyboardShortcut(.return, modifiers: [])
+            #endif
         }
     }
 

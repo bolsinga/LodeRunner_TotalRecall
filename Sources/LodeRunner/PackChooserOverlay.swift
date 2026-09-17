@@ -151,7 +151,9 @@ public struct PackChooserOverlay: View {
                     actionButton("RESUME", filled: true) {
                         onClose()
                     }
+                    #if !os(tvOS)
                     .keyboardShortcut(.escape, modifiers: [])
+                    #endif
                     actionButton("NEW GAME", filled: false) {
                         onPick(selectedPack, selectedTheme)
                     }
@@ -161,7 +163,9 @@ public struct PackChooserOverlay: View {
                     actionButton("PLAY", filled: true) {
                         onPick(selectedPack, selectedTheme)
                     }
+                    #if !os(tvOS)
                     .keyboardShortcut(.return, modifiers: [])
+                    #endif
                 }
                 if let onPickLevel {
                     actionButton("SELECT LEVEL", filled: false) {

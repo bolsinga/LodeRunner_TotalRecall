@@ -492,7 +492,17 @@ public struct GameView: View {
     /// - Ctrl+J — gamepad on/off (`key.js:47-49`'s `toggleGamepadMode`, tip
     ///   "GAMEPAD ON/OFF" @ 2500 ms — the JS's own duration, matching
     ///   `showTipsText("GAMEPAD ON/OFF", 2500)` at `key.js:161,164`).
+    ///
+    /// tvOS-excluded entirely: these buttons exist only to carry a
+    /// `.keyboardShortcut`, which is unavailable on tvOS (no hardware-
+    /// keyboard-shortcut concept there — the Siri Remote drives focus and
+    /// selection instead), so an empty view is the honest tvOS behavior
+    /// rather than shipping dead hidden buttons that can never fire.
+    @ViewBuilder
     private var hotkeyButtons: some View {
+        #if os(tvOS)
+        EmptyView()
+        #else
         Group {
             Button("") {
                 soundEnabled.toggle()
@@ -552,6 +562,7 @@ public struct GameView: View {
             .keyboardShortcut("r", modifiers: .control)
         }
         .hidden()
+        #endif
     }
 
     /// Starting gold count on the current level. Read directly from
