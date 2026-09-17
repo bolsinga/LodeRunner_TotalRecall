@@ -27,7 +27,15 @@ public struct FittedBoardView<Content: View>: View {
             let scale = min(geo.size.width / boardWidth, geo.size.height / boardHeight)
             content
                 .frame(width: boardWidth, height: boardHeight, alignment: .topLeading)
-                .scaleEffect(scale, anchor: .topLeading)
+                .scaleEffect(scale, anchor: .center)
+                // `scaleEffect` doesn't change the board's reported layout
+                // size (still boardWidth × boardHeight), so without this
+                // outer frame the GeometryReader places it at its default
+                // top-leading alignment — leaving the scaled-down content
+                // pinned to the top-left corner instead of centered in
+                // whichever axis has slack (e.g. width on a wide iPhone
+                // landscape screen against the board's ~1.59:1 aspect).
+                .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 }
