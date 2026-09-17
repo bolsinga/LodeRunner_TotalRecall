@@ -73,18 +73,19 @@ public final class SoundPlayer {
     }
 }
 
-/// Owns every `AVAudioPlayer` instance and the shared `AVAudioSession`
-/// activation, isolated to a background executor so none of AVFoundation's
-/// internal synchronous session/queue work ever runs on the main thread.
-/// `SoundEffect`/`Theme` are the only values that cross into this actor —
-/// both plain `Sendable` enums — so no `AVAudioPlayer` reference ever
-/// touches the main actor.
+/// Owns every `AVAudioPlayer` instance, isolated to a background executor so
+/// `AVAudioPlayer.play()`'s internal, implicit `AVAudioSession` activation
+/// never runs on the main thread. No explicit session setup lives here —
+/// `.soloAmbient` (the default category) is fine as-is, and `play()`
+/// activates the session itself regardless of anything done ahead of time
+/// (see `SoundPlayer.backend`'s doc comment), so there's nothing left to
+/// pre-configure. `SoundEffect`/`Theme` are the only values that cross into
+/// this actor — both plain `Sendable` enums — so no `AVAudioPlayer`
+/// reference ever touches the main actor.
 private actor SoundPlaybackBackend {
     private var players: [CacheKey: AVAudioPlayer] = [:]
-    private var didActivateSession = false
 
     func play(_ effect: SoundEffect, theme: Theme) {
-        activateAudioSessionIfNeeded()
         let key = CacheKey(theme: theme, effect: effect)
         let player: AVAudioPlayer?
         if let existing = players[key] {
@@ -105,33 +106,6 @@ private actor SoundPlaybackBackend {
         guard let player = players[key] else { return }
         player.stop()
         player.currentTime = 0
-    }
-
-    /// Activates the shared `AVAudioSession` once, before the first
-    /// `play()`. Still worth doing even though it doesn't by itself stop
-    /// `AVAudioPlayer`'s own per-call activation (see `SoundPlayer.backend`'s
-    /// doc comment) — this sets the category and gets the *first* activation
-    /// off the ground on this same background actor rather than leaving it
-    /// to whatever thread happens to call `play()` first. `.soloAmbient`
-    /// matches `AVAudioSession`'s own default category, so this doesn't
-    /// change any observed audio behavior. iOS-only: macOS has no
-    /// `AVAudioSession` concept.
-    private func activateAudioSessionIfNeeded() {
-        #if os(iOS)
-        guard !didActivateSession else { return }
-        didActivateSession = true
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.soloAmbient)
-        } catch {
-            return
-        }
-        if #available(iOS 27, *) {
-            session.activate(options: []) { _, _ in }
-        } else {
-            try? session.setActive(true)
-        }
-        #endif
     }
 
     private static func makePlayer(theme: Theme, effect: SoundEffect) -> AVAudioPlayer? {
