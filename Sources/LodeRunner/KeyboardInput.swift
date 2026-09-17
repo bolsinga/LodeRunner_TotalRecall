@@ -142,11 +142,26 @@ public final class KeyboardInput: RunnerInput {
 /// small delays) covers the transition without needing an AppKit bridge.
 /// Also uses `.defaultFocus`, which SwiftUI honors on the *first* render
 /// of a focusable view — the fast-path when NavigationStack cooperates.
+///
+/// No-op on tvOS: `GameView` stays mounted underneath every overlay (menu,
+/// settings, help, …), and `PackChooserView`'s `ZStack` never unmounts it
+/// while an overlay is on top. If this modifier's `.focusable()` +
+/// `.defaultFocus` kept re-grabbing focus there, the Siri Remote's D-pad
+/// presses would keep landing on `.onKeyPress` as gameplay input instead of
+/// driving the system focus engine between the overlay's buttons — which is
+/// exactly the "arrow keys don't select Settings/Help/etc." bug this
+/// avoids. tvOS gameplay input is a `GameController` (`GamepadInput`)
+/// problem instead, and the "any key stops the demo" affordance this
+/// modifier also drove is superseded there by the visible stop-demo (■)
+/// button, now reachable via normal focus navigation.
 private struct KeyboardInputModifier: ViewModifier {
     let input: KeyboardInput
     @FocusState private var isFocused: Bool
 
     func body(content: Content) -> some View {
+        #if os(tvOS)
+        content
+        #else
         content
             .focusable()
             .focusEffectDisabled()
@@ -165,6 +180,7 @@ private struct KeyboardInputModifier: ViewModifier {
             .onKeyPress(phases: [.down, .repeat, .up]) { press in
                 input.handle(press)
             }
+        #endif
     }
 }
 
