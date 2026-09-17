@@ -137,7 +137,9 @@ public struct InfoOverlay: View {
                 .background(Color.yellow)
         }
         .buttonStyle(.plain)
+        #if !os(tvOS)
         .keyboardShortcut(.return, modifiers: [])
+        #endif
     }
 }
 
