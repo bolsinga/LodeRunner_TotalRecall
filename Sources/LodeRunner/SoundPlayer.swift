@@ -22,33 +22,101 @@ public final class SoundPlayer {
     /// `\.tileTheme` from the environment.
     public var theme: Theme
 
-    private var players: [CacheKey: AVAudioPlayer] = [:]
+    /// Every `AVAudioPlayer`/`AVAudioSession` touch lives on this background
+    /// actor, never the main actor. `[AVAudioPlayer play]` internally
+    /// allocates its audio queue and (re-)activates the session via the
+    /// legacy synchronous `AudioSessionSetActive` path on *every* call, not
+    /// just the first — pre-activating the session ahead of time (an earlier
+    /// version of this fix) doesn't stop that internal call from happening,
+    /// it only moves what our own code does. The only way to silence
+    /// AVFoundation's "can lead to UI unresponsiveness" warning, which is
+    /// gated on "is this the main thread," is to make sure `play()`/`stop()`
+    /// themselves never run on the main thread — hence routing everything
+    /// through this actor instead.
+    private let backend = SoundPlaybackBackend()
 
     public init(theme: Theme = .apple2) {
         self.theme = theme
-        Self.activateAudioSessionIfNeeded()
     }
 
-    /// Activates the shared `AVAudioSession` once, up front. Without this,
-    /// the *first* `AVAudioPlayer.play()` call implicitly activates the
-    /// session via AVFoundation's deprecated synchronous path on whatever
-    /// thread asked to play — the main actor here — which triggers
-    /// `AVAudioSession_iOS.mm`'s "This method can lead to UI
-    /// unresponsiveness" runtime warning. `.soloAmbient` matches
-    /// `AVAudioSession`'s own default category, so this doesn't change any
-    /// observed audio behavior (mute-switch / other-app-audio interaction)
-    /// — it only moves *when* activation happens. iOS-only: macOS has no
+    /// Play `effect` for the current `theme`. No-op if `isEnabled == false`
+    /// or if the bundled file / decode fails (i.e. audio is best-effort,
+    /// never a hard error surface for the game). Fire-and-forget: the actual
+    /// `AVAudioPlayer` work happens asynchronously on `backend`, off the
+    /// main actor.
+    public func play(_ effect: SoundEffect) {
+        guard isEnabled else { return }
+        let theme = self.theme
+        Task { await backend.play(effect, theme: theme) }
+    }
+
+    /// Stop a currently-playing effect. Mirrors `soundStop(soundFall)` in the
+    /// JS — used to cut the fall clip on landing so it doesn't ring past the
+    /// end of the actual fall (fall.mp3 is ~4s; most falls are a fraction of
+    /// that). No-op if the effect was never played or is already stopped.
+    public func stop(_ effect: SoundEffect) {
+        let theme = self.theme
+        Task { await backend.stop(effect, theme: theme) }
+    }
+
+    /// Bundle URL for `effect`'s `theme` variant, or `nil` if the file isn't
+    /// shipped. Exposed for tests to verify the resource layout without
+    /// touching AVFoundation. `nonisolated` because it reads only from the
+    /// module bundle (no player state), so tests can hit it off the main
+    /// actor.
+    public nonisolated static func resourceURL(theme: Theme, effect: SoundEffect) -> URL? {
+        Bundle.module.url(
+            forResource: effect.rawValue,
+            withExtension: "mp3",
+            subdirectory: "Sounds/\(theme.rawValue)"
+        )
+    }
+}
+
+/// Owns every `AVAudioPlayer` instance and the shared `AVAudioSession`
+/// activation, isolated to a background executor so none of AVFoundation's
+/// internal synchronous session/queue work ever runs on the main thread.
+/// `SoundEffect`/`Theme` are the only values that cross into this actor —
+/// both plain `Sendable` enums — so no `AVAudioPlayer` reference ever
+/// touches the main actor.
+private actor SoundPlaybackBackend {
+    private var players: [CacheKey: AVAudioPlayer] = [:]
+    private var didActivateSession = false
+
+    func play(_ effect: SoundEffect, theme: Theme) {
+        activateAudioSessionIfNeeded()
+        let key = CacheKey(theme: theme, effect: effect)
+        let player: AVAudioPlayer?
+        if let existing = players[key] {
+            player = existing
+        } else {
+            player = Self.makePlayer(theme: theme, effect: effect)
+            players[key] = player
+        }
+        guard let player else { return }
+        // Rewind so a rapidly-repeated effect (getGold on consecutive pickups)
+        // restarts from frame 0 rather than continuing a still-playing clip.
+        player.currentTime = 0
+        player.play()
+    }
+
+    func stop(_ effect: SoundEffect, theme: Theme) {
+        let key = CacheKey(theme: theme, effect: effect)
+        guard let player = players[key] else { return }
+        player.stop()
+        player.currentTime = 0
+    }
+
+    /// Activates the shared `AVAudioSession` once, before the first
+    /// `play()`. Still worth doing even though it doesn't by itself stop
+    /// `AVAudioPlayer`'s own per-call activation (see `SoundPlayer.backend`'s
+    /// doc comment) — this sets the category and gets the *first* activation
+    /// off the ground on this same background actor rather than leaving it
+    /// to whatever thread happens to call `play()` first. `.soloAmbient`
+    /// matches `AVAudioSession`'s own default category, so this doesn't
+    /// change any observed audio behavior. iOS-only: macOS has no
     /// `AVAudioSession` concept.
-    ///
-    /// The asynchronous `activate(options:completionHandler:)` API (the one
-    /// the runtime warning itself recommends) needs iOS 27, one version past
-    /// this package's `iOS(.v26)` minimum (`Package.swift`), so iOS 26 falls
-    /// back to the older synchronous `setActive` — still ahead of the first
-    /// `play()`, at init time, which is enough to avoid a *repeated*
-    /// per-effect warning even though the one-time init-time call still logs
-    /// it once on iOS 26.
-    private static var didActivateSession = false
-    private static func activateAudioSessionIfNeeded() {
+    private func activateAudioSessionIfNeeded() {
         #if os(iOS)
         guard !didActivateSession else { return }
         didActivateSession = true
@@ -66,52 +134,8 @@ public final class SoundPlayer {
         #endif
     }
 
-    /// Play `effect` for the current `theme`. No-op if `isEnabled == false`
-    /// or if the bundled file / decode fails (i.e. audio is best-effort,
-    /// never a hard error surface for the game).
-    public func play(_ effect: SoundEffect) {
-        guard isEnabled else { return }
-        let key = CacheKey(theme: theme, effect: effect)
-        let player: AVAudioPlayer?
-        if let existing = players[key] {
-            player = existing
-        } else {
-            player = Self.makePlayer(theme: theme, effect: effect)
-            players[key] = player
-        }
-        guard let player else { return }
-        // Rewind so a rapidly-repeated effect (getGold on consecutive pickups)
-        // restarts from frame 0 rather than continuing a still-playing clip.
-        player.currentTime = 0
-        player.play()
-    }
-
-    /// Stop a currently-playing effect. Mirrors `soundStop(soundFall)` in the
-    /// JS — used to cut the fall clip on landing so it doesn't ring past the
-    /// end of the actual fall (fall.mp3 is ~4s; most falls are a fraction of
-    /// that). No-op if the effect was never played or is already stopped.
-    public func stop(_ effect: SoundEffect) {
-        let key = CacheKey(theme: theme, effect: effect)
-        guard let player = players[key] else { return }
-        player.stop()
-        player.currentTime = 0
-    }
-
-    /// Bundle URL for `effect`'s `theme` variant, or `nil` if the file isn't
-    /// shipped. Exposed for tests to verify the resource layout without
-    /// touching AVFoundation. `nonisolated` because it reads only from the
-    /// module bundle (no player state), so tests can hit it off the main
-    /// actor.
-    public nonisolated static func resourceURL(theme: Theme, effect: SoundEffect) -> URL? {
-        Bundle.module.url(
-            forResource: effect.rawValue,
-            withExtension: "mp3",
-            subdirectory: "Sounds/\(theme.rawValue)"
-        )
-    }
-
     private static func makePlayer(theme: Theme, effect: SoundEffect) -> AVAudioPlayer? {
-        guard let url = resourceURL(theme: theme, effect: effect) else { return nil }
+        guard let url = SoundPlayer.resourceURL(theme: theme, effect: effect) else { return nil }
         guard let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
         player.prepareToPlay()
         return player
