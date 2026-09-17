@@ -15,6 +15,7 @@ import SwiftUI
 public struct GameView: View {
     @State private var driver: GameSessionDriver
     @State private var keyboard = KeyboardInput()
+    @State private var gamepad = GamepadInput()
     @State private var sound = SoundPlayer()
     /// Present in demo mode. Held in `@State` (rather than reconstructed
     /// per render) so the driver keeps a stable reference across body
@@ -37,14 +38,15 @@ public struct GameView: View {
     private let onGameOver: ((_ finalScore: Int, _ levelReached: Int, _ isWinner: Bool) -> Void)?
     /// Bindings to the host's persisted `@AppStorage` values. Bindings
     /// (not plain values) so in-game hotkeys can mutate them — the Ctrl+S
-    /// / Ctrl+minus / Ctrl+= / Ctrl+T / Ctrl+K / Ctrl+H tips shortcuts flip
-    /// these and the change propagates back up to the pack chooser's
-    /// SettingsOverlay.
+    /// / Ctrl+minus / Ctrl+= / Ctrl+T / Ctrl+K / Ctrl+H / Ctrl+J tips
+    /// shortcuts flip these and the change propagates back up to the pack
+    /// chooser's SettingsOverlay.
     @Binding private var soundEnabled: Bool
     @Binding private var speedIndex: Int
     @Binding private var hudMode: HUDMode
     @Binding private var repeatActionsEnabled: Bool
     @Binding private var redhatModeEnabled: Bool
+    @Binding private var gamepadEnabled: Bool
 
     /// Local controller for the "SOUND ON", "FAST", "TRAINING OFF"…
     /// flash-messages that appear when a hotkey mutates a setting.
@@ -104,6 +106,7 @@ public struct GameView: View {
         hudMode: Binding<HUDMode> = .constant(.classic),
         repeatActionsEnabled: Binding<Bool> = .constant(false),
         redhatModeEnabled: Binding<Bool> = .constant(false),
+        gamepadEnabled: Binding<Bool> = .constant(true),
         isPaused: Bool = false,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
@@ -120,6 +123,7 @@ public struct GameView: View {
         _hudMode = hudMode
         _repeatActionsEnabled = repeatActionsEnabled
         _redhatModeEnabled = redhatModeEnabled
+        _gamepadEnabled = gamepadEnabled
         self.isPaused = isPaused
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
@@ -150,7 +154,7 @@ public struct GameView: View {
                 // any keyboard input during playback tears the demo down.
                 keyboard.onAnyKeyPress = { [onDemoEnd] in onDemoEnd?() }
             } else {
-                driver.input = keyboard
+                driver.input = CombinedInput(primary: gamepad, secondary: keyboard)
                 keyboard.onAnyKeyPress = nil
             }
             sound.theme = theme
@@ -159,6 +163,8 @@ public struct GameView: View {
             driver.tickPeriod = GameSpeed.tickPeriod(for: speedIndex)
             driver.isPaused = isPaused
             keyboard.repeatActionsEnabled = repeatActionsEnabled
+            gamepad.repeatActionsEnabled = repeatActionsEnabled
+            gamepad.isEnabled = gamepadEnabled
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -183,6 +189,10 @@ public struct GameView: View {
         }
         .onChange(of: repeatActionsEnabled) { _, newValue in
             keyboard.repeatActionsEnabled = newValue
+            gamepad.repeatActionsEnabled = newValue
+        }
+        .onChange(of: gamepadEnabled) { _, newValue in
+            gamepad.isEnabled = newValue
         }
         .onChange(of: isPaused) { _, newValue in
             driver.isPaused = newValue
@@ -479,6 +489,9 @@ public struct GameView: View {
     ///   "REDHAT MODE ON/OFF" @ 1500 ms — the JS's own duration). Port
     ///   defaults this **off**, unlike the JS's on-by-default, per an
     ///   explicit product decision (see `GuardSpriteView.sheet`).
+    /// - Ctrl+J — gamepad on/off (`key.js:47-49`'s `toggleGamepadMode`, tip
+    ///   "GAMEPAD ON/OFF" @ 2500 ms — the JS's own duration, matching
+    ///   `showTipsText("GAMEPAD ON/OFF", 2500)` at `key.js:161,164`).
     private var hotkeyButtons: some View {
         Group {
             Button("") {
@@ -520,6 +533,14 @@ public struct GameView: View {
                     duration: 1.5)
             }
             .keyboardShortcut("h", modifiers: .control)
+
+            Button("") {
+                gamepadEnabled.toggle()
+                tips.show(
+                    gamepadEnabled ? "GAMEPAD ON" : "GAMEPAD OFF",
+                    duration: 2.5)
+            }
+            .keyboardShortcut("j", modifiers: .control)
 
             // Ctrl+R — abort game, back to pack chooser (JS `key.js:93`
             // "End game — back to demo"). Routes through `onExit`, not

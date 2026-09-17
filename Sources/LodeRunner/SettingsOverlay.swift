@@ -13,9 +13,10 @@ import SwiftUI
 /// - Red hat mode on/off (JS `toggleRedhatMode`, `key.js:170-186`; see
 ///   `GuardSpriteView.sheet(forHasGold:redhatModeEnabled:)` — the port
 ///   defaults this off, unlike the JS's on-by-default)
+/// - Gamepad on/off (JS `toggleGamepadMode`, `key.js:153-167`; see
+///   `GamepadInput.isEnabled` — the port matches the JS's on-by-default)
 ///
-/// Deferred vs. the JS: gamepad (no hardware wiring), editor / import /
-/// export, and the storage-clear tab.
+/// Deferred vs. the JS: editor / import / export, and the storage-clear tab.
 ///
 /// **Permanently out of scope** (not just deferred — do not implement):
 /// color-palette slots (`Ctrl+1`–`5`, `themeColorChange` at
@@ -29,6 +30,7 @@ public struct SettingsOverlay: View {
     @Binding var hudMode: HUDMode
     @Binding var repeatActionsEnabled: Bool
     @Binding var redhatModeEnabled: Bool
+    @Binding var gamepadEnabled: Bool
     let onClose: () -> Void
 
     public init(
@@ -37,6 +39,7 @@ public struct SettingsOverlay: View {
         hudMode: Binding<HUDMode>,
         repeatActionsEnabled: Binding<Bool>,
         redhatModeEnabled: Binding<Bool>,
+        gamepadEnabled: Binding<Bool>,
         onClose: @escaping () -> Void
     ) {
         _soundEnabled = soundEnabled
@@ -44,6 +47,7 @@ public struct SettingsOverlay: View {
         _hudMode = hudMode
         _repeatActionsEnabled = repeatActionsEnabled
         _redhatModeEnabled = redhatModeEnabled
+        _gamepadEnabled = gamepadEnabled
         self.onClose = onClose
     }
 
@@ -64,6 +68,8 @@ public struct SettingsOverlay: View {
                 repeatActionsRow
                 Divider().background(Color.white.opacity(0.3))
                 redhatModeRow
+                Divider().background(Color.white.opacity(0.3))
+                gamepadRow
 
                 closeButton
             }
@@ -140,6 +146,26 @@ public struct SettingsOverlay: View {
                 }
                 toggleButton("OFF", isSelected: !redhatModeEnabled) {
                     redhatModeEnabled = false
+                }
+            }
+        }
+    }
+
+    /// ON (the JS default) reads connected `GCController` input; OFF makes
+    /// `GamepadInput` always report `.stop` regardless of controller state.
+    /// Label matches JS `toggleGamepadMode`'s tip text (`key.js:161,164`)
+    /// verbatim.
+    private var gamepadRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("GAMEPAD")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                toggleButton("ON", isSelected: gamepadEnabled) {
+                    gamepadEnabled = true
+                }
+                toggleButton("OFF", isSelected: !gamepadEnabled) {
+                    gamepadEnabled = false
                 }
             }
         }
@@ -264,6 +290,7 @@ private struct SettingsPreviewHost: View {
     @State private var hudMode: HUDMode = .classic
     @State private var repeatActionsEnabled = false
     @State private var redhatModeEnabled = false
+    @State private var gamepadEnabled = true
     var body: some View {
         SettingsOverlay(
             soundEnabled: $sound,
@@ -271,6 +298,7 @@ private struct SettingsPreviewHost: View {
             hudMode: $hudMode,
             repeatActionsEnabled: $repeatActionsEnabled,
             redhatModeEnabled: $redhatModeEnabled,
+            gamepadEnabled: $gamepadEnabled,
             onClose: {}
         )
         .frame(width: 500, height: 450)
