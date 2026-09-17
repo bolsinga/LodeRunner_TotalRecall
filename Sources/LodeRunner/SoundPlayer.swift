@@ -26,6 +26,44 @@ public final class SoundPlayer {
 
     public init(theme: Theme = .apple2) {
         self.theme = theme
+        Self.activateAudioSessionIfNeeded()
+    }
+
+    /// Activates the shared `AVAudioSession` once, up front. Without this,
+    /// the *first* `AVAudioPlayer.play()` call implicitly activates the
+    /// session via AVFoundation's deprecated synchronous path on whatever
+    /// thread asked to play — the main actor here — which triggers
+    /// `AVAudioSession_iOS.mm`'s "This method can lead to UI
+    /// unresponsiveness" runtime warning. `.soloAmbient` matches
+    /// `AVAudioSession`'s own default category, so this doesn't change any
+    /// observed audio behavior (mute-switch / other-app-audio interaction)
+    /// — it only moves *when* activation happens. iOS-only: macOS has no
+    /// `AVAudioSession` concept.
+    ///
+    /// The asynchronous `activate(options:completionHandler:)` API (the one
+    /// the runtime warning itself recommends) needs iOS 27, one version past
+    /// this package's `iOS(.v26)` minimum (`Package.swift`), so iOS 26 falls
+    /// back to the older synchronous `setActive` — still ahead of the first
+    /// `play()`, at init time, which is enough to avoid a *repeated*
+    /// per-effect warning even though the one-time init-time call still logs
+    /// it once on iOS 26.
+    private static var didActivateSession = false
+    private static func activateAudioSessionIfNeeded() {
+        #if os(iOS)
+        guard !didActivateSession else { return }
+        didActivateSession = true
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.soloAmbient)
+        } catch {
+            return
+        }
+        if #available(iOS 27, *) {
+            session.activate(options: []) { _, _ in }
+        } else {
+            try? session.setActive(true)
+        }
+        #endif
     }
 
     /// Play `effect` for the current `theme`. No-op if `isEnabled == false`
