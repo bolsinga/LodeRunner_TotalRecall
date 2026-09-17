@@ -25,9 +25,12 @@ import Observation
 ///   - Button B: dig right
 ///
 /// Only `extendedGamepad`-profile controllers (MFi/console controllers) are
-/// handled; the `microGamepad` profile (e.g. the first-generation Siri
-/// Remote) is out of scope until this package targets tvOS — see
-/// `Package.swift`'s `platforms`, which lists only iOS and macOS today.
+/// handled; the `microGamepad` profile (e.g. the first- and second-
+/// generation Siri Remote) remains unimplemented — deferred, not a build
+/// constraint, since this package does now target tvOS (`Package.swift`'s
+/// `platforms`). Wiring it up would mean picking a `microGamepad`-specific
+/// button map (it has far fewer controls than `extendedGamepad`) and is
+/// left for a future pass.
 @Observable @MainActor
 public final class GamepadInput: RunnerInput {
     /// `Ctrl+J` setting (mirrors JS `gamepadMode`, `key.js:130` — default

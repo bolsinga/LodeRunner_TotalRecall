@@ -20,7 +20,9 @@ struct LodeRunnerApp: App {
         WindowGroup {
             PackChooserView()
         }
+        #if !os(tvOS)
         .defaultSize(width: Self.naturalWindowWidth, height: Self.naturalWindowHeight)
+        #endif
         #if os(macOS)
         .windowResizability(.contentSize)
         #endif
