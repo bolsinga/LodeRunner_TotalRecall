@@ -161,6 +161,7 @@ public struct LeaderboardOverlay: View {
                         .padding(.vertical, 4)
                         .frame(width: 200)
                         .overlay(Rectangle().stroke(Color.white.opacity(0.5), lineWidth: 1))
+                        .focusOnAppear()
                         .onSubmit(saveEntry)
                         .onChange(of: nameInput) { _, newValue in
                             // Enforce the JS 12-char cap (`def.js:170`).
@@ -195,6 +196,7 @@ public struct LeaderboardOverlay: View {
                     .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .focusOnAppear()
             #if !os(tvOS)
             .keyboardShortcut(.return, modifiers: [])
             #endif

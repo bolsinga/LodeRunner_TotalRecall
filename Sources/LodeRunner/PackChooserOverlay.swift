@@ -151,6 +151,7 @@ public struct PackChooserOverlay: View {
                     actionButton("RESUME", filled: true) {
                         onClose()
                     }
+                    .focusOnAppear()
                     #if !os(tvOS)
                     .keyboardShortcut(.escape, modifiers: [])
                     #endif
@@ -163,6 +164,7 @@ public struct PackChooserOverlay: View {
                     actionButton("PLAY", filled: true) {
                         onPick(selectedPack, selectedTheme)
                     }
+                    .focusOnAppear()
                     #if !os(tvOS)
                     .keyboardShortcut(.return, modifiers: [])
                     #endif
