@@ -47,6 +47,8 @@ public struct GameView: View {
     @Binding private var repeatActionsEnabled: Bool
     @Binding private var redhatModeEnabled: Bool
     @Binding private var gamepadEnabled: Bool
+    /// tvOS only in practice — see `GamepadInput.microGamepadSplitDigButtons`.
+    @Binding private var microGamepadSplitDigButtons: Bool
 
     /// Local controller for the "SOUND ON", "FAST", "TRAINING OFF"…
     /// flash-messages that appear when a hotkey mutates a setting.
@@ -107,6 +109,7 @@ public struct GameView: View {
         repeatActionsEnabled: Binding<Bool> = .constant(false),
         redhatModeEnabled: Binding<Bool> = .constant(false),
         gamepadEnabled: Binding<Bool> = .constant(true),
+        microGamepadSplitDigButtons: Binding<Bool> = .constant(false),
         isPaused: Bool = false,
         onExit: (() -> Void)? = nil,
         onLevelPassed: ((_ levelIndex: Int, _ score: Int) -> Int?)? = nil,
@@ -124,6 +127,7 @@ public struct GameView: View {
         _repeatActionsEnabled = repeatActionsEnabled
         _redhatModeEnabled = redhatModeEnabled
         _gamepadEnabled = gamepadEnabled
+        _microGamepadSplitDigButtons = microGamepadSplitDigButtons
         self.isPaused = isPaused
         self.onExit = onExit
         self.onLevelPassed = onLevelPassed
@@ -165,6 +169,7 @@ public struct GameView: View {
             keyboard.repeatActionsEnabled = repeatActionsEnabled
             gamepad.repeatActionsEnabled = repeatActionsEnabled
             gamepad.isEnabled = gamepadEnabled
+            gamepad.microGamepadSplitDigButtons = microGamepadSplitDigButtons
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -193,6 +198,9 @@ public struct GameView: View {
         }
         .onChange(of: gamepadEnabled) { _, newValue in
             gamepad.isEnabled = newValue
+        }
+        .onChange(of: microGamepadSplitDigButtons) { _, newValue in
+            gamepad.microGamepadSplitDigButtons = newValue
         }
         .onChange(of: isPaused) { _, newValue in
             driver.isPaused = newValue

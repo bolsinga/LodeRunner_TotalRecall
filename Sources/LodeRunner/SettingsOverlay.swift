@@ -15,6 +15,10 @@ import SwiftUI
 ///   defaults this off, unlike the JS's on-by-default)
 /// - Gamepad on/off (JS `toggleGamepadMode`, `key.js:153-167`; see
 ///   `GamepadInput.isEnabled` — the port matches the JS's on-by-default)
+/// - tvOS only: split dig buttons on/off — see
+///   `GamepadInput.microGamepadSplitDigButtons`. Not part of the JS at
+///   all (the JS has no Siri Remote concept); shown only on tvOS since
+///   it's meaningless for any other controller profile.
 ///
 /// Deferred vs. the JS: editor / import / export, and the storage-clear tab.
 ///
@@ -31,6 +35,11 @@ public struct SettingsOverlay: View {
     @Binding var repeatActionsEnabled: Bool
     @Binding var redhatModeEnabled: Bool
     @Binding var gamepadEnabled: Bool
+    /// Plumbing exists on every platform (harmless data, mirrors
+    /// `GamepadInput.microGamepadSplitDigButtons`); only the *row* below
+    /// is tvOS-gated, since that's the part that's actually meaningless
+    /// elsewhere.
+    @Binding var microGamepadSplitDigButtons: Bool
     let onClose: () -> Void
 
     public init(
@@ -40,6 +49,7 @@ public struct SettingsOverlay: View {
         repeatActionsEnabled: Binding<Bool>,
         redhatModeEnabled: Binding<Bool>,
         gamepadEnabled: Binding<Bool>,
+        microGamepadSplitDigButtons: Binding<Bool>,
         onClose: @escaping () -> Void
     ) {
         _soundEnabled = soundEnabled
@@ -48,6 +58,7 @@ public struct SettingsOverlay: View {
         _repeatActionsEnabled = repeatActionsEnabled
         _redhatModeEnabled = redhatModeEnabled
         _gamepadEnabled = gamepadEnabled
+        _microGamepadSplitDigButtons = microGamepadSplitDigButtons
         self.onClose = onClose
     }
 
@@ -70,6 +81,10 @@ public struct SettingsOverlay: View {
                 redhatModeRow
                 Divider().background(Color.white.opacity(0.3))
                 gamepadRow
+                #if os(tvOS)
+                Divider().background(Color.white.opacity(0.3))
+                microGamepadSplitDigButtonsRow
+                #endif
 
                 closeButton
             }
@@ -170,6 +185,29 @@ public struct SettingsOverlay: View {
             }
         }
     }
+
+    #if os(tvOS)
+    /// tvOS only — meaningless for any other controller profile. OFF
+    /// (default): a single auto-dig button (whichever direction the
+    /// runner last faced). ON: the Siri Remote's two buttons split into
+    /// dig-left/dig-right, matching the extendedGamepad A/B convention —
+    /// see `GamepadInput.microGamepadSplitDigButtons`.
+    private var microGamepadSplitDigButtonsRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("SPLIT DIG BUTTONS")
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            HStack(spacing: 8) {
+                toggleButton("ON", isSelected: microGamepadSplitDigButtons) {
+                    microGamepadSplitDigButtons = true
+                }
+                toggleButton("OFF", isSelected: !microGamepadSplitDigButtons) {
+                    microGamepadSplitDigButtons = false
+                }
+            }
+        }
+    }
+    #endif
 
     private var speedRow: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -294,6 +332,7 @@ private struct SettingsPreviewHost: View {
     @State private var repeatActionsEnabled = false
     @State private var redhatModeEnabled = false
     @State private var gamepadEnabled = true
+    @State private var microGamepadSplitDigButtons = false
     var body: some View {
         SettingsOverlay(
             soundEnabled: $sound,
@@ -302,6 +341,7 @@ private struct SettingsPreviewHost: View {
             repeatActionsEnabled: $repeatActionsEnabled,
             redhatModeEnabled: $redhatModeEnabled,
             gamepadEnabled: $gamepadEnabled,
+            microGamepadSplitDigButtons: $microGamepadSplitDigButtons,
             onClose: {}
         )
         .frame(width: 500, height: 450)

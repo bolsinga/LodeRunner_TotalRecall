@@ -68,4 +68,66 @@ struct GamepadInputTests {
         input.isEnabled = true
         #expect(input.currentAction == .right)
     }
+
+    // MARK: - microGamepad (Siri Remote) dig buttons
+
+    @Test("auto mode (default): buttonA digs in the last-faced direction")
+    func microAutoDigFacesLastDirection() {
+        let input = GamepadInput()
+        #expect(input.microGamepadSplitDigButtons == false)
+        input.handle(.left, pressed: true)
+        input.handleMicroButtonA(pressed: true)
+        #expect(input.currentAction == .digLeft)
+        input.handleMicroButtonA(pressed: false)
+        #expect(input.currentAction == .stop)
+
+        input.handle(.right, pressed: true)
+        input.handleMicroButtonA(pressed: true)
+        #expect(input.currentAction == .digRight)
+    }
+
+    @Test("auto mode: defaults to digRight before any direction is pressed")
+    func microAutoDigDefaultsRight() {
+        let input = GamepadInput()
+        input.handleMicroButtonA(pressed: true)
+        #expect(input.currentAction == .digRight)
+    }
+
+    @Test("auto mode: buttonX is unbound (it's the Play/Pause button)")
+    func microAutoModeIgnoresButtonX() {
+        let input = GamepadInput()
+        input.handleMicroButtonX(pressed: true)
+        #expect(input.currentAction == .stop)
+    }
+
+    @Test("changing the split setting mid-press doesn't strand the held action")
+    func microButtonAReleaseUsesPressTimeAction() {
+        let input = GamepadInput()
+        input.handle(.right, pressed: true)  // facing = .digRight
+        input.handleMicroButtonA(pressed: true)
+        #expect(input.currentAction == .digRight)
+        // Flip the setting while A is still physically held — recomputing
+        // fresh at release time would ask for .digLeft (split mode's fixed
+        // mapping), which doesn't match what's actually latched (.digRight),
+        // silently stranding it forever. The cached press-time action must
+        // be released instead.
+        input.microGamepadSplitDigButtons = true
+        input.handleMicroButtonA(pressed: false)
+        #expect(input.currentAction == .stop)
+    }
+
+    @Test("split mode: buttonA digs left, buttonX digs right")
+    func microSplitModeMapsAToLeftXToRight() {
+        let input = GamepadInput()
+        input.microGamepadSplitDigButtons = true
+        input.handleMicroButtonA(pressed: true)
+        #expect(input.currentAction == .digLeft)
+        input.handleMicroButtonA(pressed: false)
+        #expect(input.currentAction == .stop)
+
+        input.handleMicroButtonX(pressed: true)
+        #expect(input.currentAction == .digRight)
+        input.handleMicroButtonX(pressed: false)
+        #expect(input.currentAction == .stop)
+    }
 }
