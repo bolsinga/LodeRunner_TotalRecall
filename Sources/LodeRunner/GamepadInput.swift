@@ -20,17 +20,17 @@ import Observation
 /// abstract Xbox-style profile, so there's no byte-exact mapping to
 /// preserve):
 ///
-///   - D-pad or left thumbstick: up / down / left / right
-///   - Button A: dig left
-///   - Button B: dig right
+///   - `extendedGamepad` (MFi/console controllers): D-pad or left
+///     thumbstick → up / down / left / right; button A → dig left;
+///     button B → dig right.
+///   - `microGamepad` (the Siri Remote — tvOS only in practice, but the
+///     profile check itself isn't platform-gated): touch-surface `dpad` →
+///     up / down / left / right, same as above. Only two real buttons
+///     exist, so digging is a `microGamepadSplitDigButtons`-controlled
+///     choice — see that property.
 ///
-/// Only `extendedGamepad`-profile controllers (MFi/console controllers) are
-/// handled; the `microGamepad` profile (e.g. the first- and second-
-/// generation Siri Remote) remains unimplemented — deferred, not a build
-/// constraint, since this package does now target tvOS (`Package.swift`'s
-/// `platforms`). Wiring it up would mean picking a `microGamepad`-specific
-/// button map (it has far fewer controls than `extendedGamepad`) and is
-/// left for a future pass.
+/// A controller reporting `extendedGamepad` wins if it reports both (real
+/// hardware never does; this just fixes the precedence).
 @Observable @MainActor
 public final class GamepadInput: RunnerInput {
     /// `Ctrl+J` setting (mirrors JS `gamepadMode`, `key.js:130` — default
@@ -49,12 +49,37 @@ public final class GamepadInput: RunnerInput {
     /// toggle applies here too.
     public var repeatActionsEnabled: Bool = false
 
+    /// tvOS Settings row, "SPLIT DIG BUTTONS" — only meaningful for
+    /// `microGamepad` controllers (the Siri Remote), which have just two
+    /// real buttons (A, X). **Off** (default): a single "auto" dig via
+    /// `buttonA` — digs whichever direction the runner last faced
+    /// (`facingDigAction`), leaving `buttonX` unbound, since it's
+    /// physically the Play/Pause button on 1st/2nd-gen Siri Remotes
+    /// (`GCInputMicroGamepadButtonX`'s docs) and hijacking it isn't free.
+    /// **On**: `buttonA`/`buttonX` split into dig-left/dig-right, matching
+    /// the `extendedGamepad` A/B convention, at the cost of overloading
+    /// Play/Pause.
+    public var microGamepadSplitDigButtons: Bool = false
+
     /// The action currently latching `rawAction`, so a release can tell
     /// "this is the button driving the action" apart from "an already-
     /// superseded button" — same role as `KeyboardInput.heldKey`, keyed by
     /// `RunnerAction` directly since every gamepad control this port reads
     /// maps 1:1 to a distinct action.
     private var heldAction: RunnerAction?
+
+    /// Which dig direction `microGamepad`'s `buttonA` fires in "auto" mode
+    /// — the direction the runner last faced. Updated by every `.left`/
+    /// `.right` press regardless of source (D-pad, thumbstick, ...), so it
+    /// stays correct even for controllers that never touch this at all.
+    private var facingDigAction: RunnerAction = .digRight
+
+    /// `buttonA`'s dig action in "auto" mode depends on `facingDigAction`,
+    /// which can change while the button is held (if the runner also
+    /// presses a direction). Caching the press-time action and reusing it
+    /// verbatim for the matching release avoids a mismatched
+    /// `handle(_:pressed:false)` call that would never clear `heldAction`.
+    private var microButtonADigAction: RunnerAction?
 
     private var connectObserver: NSObjectProtocol?
     private var disconnectObserver: NSObjectProtocol?
@@ -96,20 +121,57 @@ public final class GamepadInput: RunnerInput {
     }
 
     private func attach(_ controller: GCController) {
-        guard let gamepad = controller.extendedGamepad else { return }
+        if let gamepad = controller.extendedGamepad {
+            bind(gamepad.dpad.up, to: .up)
+            bind(gamepad.dpad.down, to: .down)
+            bind(gamepad.dpad.left, to: .left)
+            bind(gamepad.dpad.right, to: .right)
 
-        bind(gamepad.dpad.up, to: .up)
-        bind(gamepad.dpad.down, to: .down)
-        bind(gamepad.dpad.left, to: .left)
-        bind(gamepad.dpad.right, to: .right)
+            bind(gamepad.leftThumbstick.up, to: .up)
+            bind(gamepad.leftThumbstick.down, to: .down)
+            bind(gamepad.leftThumbstick.left, to: .left)
+            bind(gamepad.leftThumbstick.right, to: .right)
 
-        bind(gamepad.leftThumbstick.up, to: .up)
-        bind(gamepad.leftThumbstick.down, to: .down)
-        bind(gamepad.leftThumbstick.left, to: .left)
-        bind(gamepad.leftThumbstick.right, to: .right)
+            bind(gamepad.buttonA, to: .digLeft)
+            bind(gamepad.buttonB, to: .digRight)
+        } else if let micro = controller.microGamepad {
+            bind(micro.dpad.up, to: .up)
+            bind(micro.dpad.down, to: .down)
+            bind(micro.dpad.left, to: .left)
+            bind(micro.dpad.right, to: .right)
+            bindMicroGamepadDigButtons(micro)
+        }
+    }
 
-        bind(gamepad.buttonA, to: .digLeft)
-        bind(gamepad.buttonB, to: .digRight)
+    private func bindMicroGamepadDigButtons(_ micro: GCMicroGamepad) {
+        micro.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in
+            MainActor.assumeIsolated {
+                self?.handleMicroButtonA(pressed: pressed)
+            }
+        }
+        micro.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in
+            MainActor.assumeIsolated {
+                self?.handleMicroButtonX(pressed: pressed)
+            }
+        }
+    }
+
+    /// Module-internal (not `private`) for the same testability reason as
+    /// `handle(_:pressed:)`.
+    func handleMicroButtonA(pressed: Bool) {
+        if pressed {
+            let action: RunnerAction = microGamepadSplitDigButtons ? .digLeft : facingDigAction
+            microButtonADigAction = action
+            handle(action, pressed: true)
+        } else if let action = microButtonADigAction {
+            handle(action, pressed: false)
+            microButtonADigAction = nil
+        }
+    }
+
+    func handleMicroButtonX(pressed: Bool) {
+        guard microGamepadSplitDigButtons else { return }
+        handle(.digRight, pressed: pressed)
     }
 
     private func bind(_ button: GCControllerButtonInput, to action: RunnerAction) {
@@ -131,6 +193,11 @@ public final class GamepadInput: RunnerInput {
         if pressed {
             rawAction = action
             heldAction = action
+            switch action {
+            case .left: facingDigAction = .digLeft
+            case .right: facingDigAction = .digRight
+            default: break
+            }
         } else if !repeatActionsEnabled, heldAction == action {
             rawAction = .stop
             heldAction = nil
@@ -140,5 +207,6 @@ public final class GamepadInput: RunnerInput {
     public func resetAction() {
         rawAction = .stop
         heldAction = nil
+        microButtonADigAction = nil
     }
 }
