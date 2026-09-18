@@ -240,6 +240,7 @@ public struct SettingsOverlay: View {
                 .background(Color.yellow)
         }
         .buttonStyle(.plain)
+        .focusOnAppear()
         #if !os(tvOS)
         .keyboardShortcut(.return, modifiers: [])
         #endif

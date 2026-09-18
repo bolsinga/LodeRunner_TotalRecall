@@ -157,7 +157,15 @@ public struct PackChooserView: View {
 
     public var body: some View {
         ZStack {
+            // Disabled whenever an overlay is up (gameplay is already
+            // paused in that state via `isPaused: overlay != nil` below) —
+            // on tvOS this also keeps GameView's background buttons
+            // (exitBar's Menu / Stop-demo icons) out of the focus engine's
+            // candidate set. Without this, they stay focusable even though
+            // the overlay's opaque panel visually covers them, so a D-pad
+            // press never hands focus into the overlay's own buttons.
             gameLayer
+                .disabled(overlay != nil)
             if let overlay {
                 overlayView(overlay)
             }

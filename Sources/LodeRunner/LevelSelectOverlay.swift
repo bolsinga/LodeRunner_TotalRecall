@@ -76,6 +76,7 @@ public struct LevelSelectOverlay: View {
                     .overlay(Rectangle().stroke(Color.white.opacity(0.7), lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .focusOnAppear()
             #if !os(tvOS)
             .keyboardShortcut(.escape, modifiers: [])
             #endif

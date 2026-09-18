@@ -147,6 +147,7 @@ public struct HelpOverlay: View {
                 .background(Color.yellow)
         }
         .buttonStyle(.plain)
+        .focusOnAppear()
         #if !os(tvOS)
         .keyboardShortcut(.return, modifiers: [])
         #endif
