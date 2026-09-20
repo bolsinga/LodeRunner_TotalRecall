@@ -68,7 +68,7 @@ public struct SettingsOverlay: View {
             }
             .padding(12)
             .background(Color.black)
-            .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
+            .overlay(Rectangle().stroke(Color.white, lineWidth: OverlayChrome.borderWidth))
         }
     }
 
@@ -114,7 +114,7 @@ public struct SettingsOverlay: View {
     {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: OverlayChrome.secondaryLabelFontSize, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
             HStack(spacing: 6) {
                 toggleButton("ON", isSelected: isOn) { onChange(true) }
@@ -139,7 +139,7 @@ public struct SettingsOverlay: View {
     private var speedRow: some View {
         HStack(spacing: 8) {
             Text("SPEED")
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: OverlayChrome.secondaryLabelFontSize, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: Self.speedLabelWidth, alignment: .trailing)
             stepperButton("-") {
@@ -157,7 +157,11 @@ public struct SettingsOverlay: View {
                 speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
             }
             Text(GameSpeed.label(for: speedIndex))
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(
+                    .system(
+                        size: OverlayChrome.secondaryLabelFontSize, weight: .bold,
+                        design: .monospaced)
+                )
                 .foregroundStyle(.yellow)
                 .frame(width: Self.speedLabelWidth, alignment: .leading)
         }
@@ -178,7 +182,7 @@ public struct SettingsOverlay: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 3)
                 .background(isSelected ? Color.yellow : Color.clear)
-                .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                .overlay(Rectangle().stroke(Color.yellow, lineWidth: OverlayChrome.borderWidth))
         }
         .buttonStyle(.plain)
     }
@@ -189,7 +193,7 @@ public struct SettingsOverlay: View {
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(.yellow)
                 .frame(width: 20, height: 18)
-                .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                .overlay(Rectangle().stroke(Color.yellow, lineWidth: OverlayChrome.borderWidth))
         }
         .buttonStyle(.plain)
     }
@@ -199,7 +203,9 @@ public struct SettingsOverlay: View {
             onClose()
         } label: {
             Text("CLOSE")
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .font(
+                    .system(
+                        size: OverlayChrome.buttonFontSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(.black)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 4)
