@@ -1,32 +1,38 @@
 import SwiftUI
 
-/// Top-10 leaderboard modal — ports the JS `showScoreTable` UI at
-/// `hiscore.js:172-238`. Renders a scrollable per-pack table (rank, name,
-/// level reached, score) in the same black/yellow monospaced style as
-/// `LevelPassDialog` and `PackChooserOverlay`.
+/// Full-board leaderboard screen — a port of `drawHiScoreList` /
+/// `showScoreTable` at `hiscore.js:61-237`. Unlike the port's other
+/// system-font modal overlays, this one covers the *entire* board (same
+/// footprint as `GameView`'s combined playfield + HUD) and renders every
+/// character with the game's own glyph sheet (`TextRow`/`SpriteFrame`
+/// over `SpriteSheetSpec.text`), matching the original arcade look instead
+/// of a native dialog panel.
+///
+/// Layout constants below (column/row positions in tile units) are lifted
+/// directly from `drawHiScoreList` (`hiscore.js:183-219`) and
+/// `getNameStartPos` (`hiscore.js:175-181`).
 ///
 /// Two modes:
-/// - **Read-only**: `pendingScore == nil`. Table displays, dismiss via tap
-///   or Return.
-/// - **Name entry**: `pendingScore != nil`. Table is shown with a name
-///   input row inline; SAVE commits the entry via `onSubmit(name)`.
-///
-/// The JS's A-Z/0-9 arrow-key cycler is intentionally *not* ported —
-/// SwiftUI's native `TextField` gives macOS-appropriate editing without
-/// re-implementing keyboard handling from scratch. Name length is capped
-/// at `LeaderboardEntry.maxNameLength` (JS `MAX_HISCORE_NAME_LENGTH`).
+/// - **Read-only**: `pendingScore == nil`. Table displays; CLOSE (or
+///   Return) dismisses.
+/// - **Name entry**: `pendingScore != nil`. The qualifying score is
+///   spliced into the table at its landing rank (mirroring
+///   `updateScoreInfo`'s immediate splice-before-naming at
+///   `hiscore.js:142-159`) and that row shows an `ArcadeNameField` with a
+///   blinking block cursor in place of the name column.
 ///
 /// Deferred vs. the JS:
 /// - **Music callbacks** (`endingMusicPlay/Stop` in JS) — no music yet.
 /// - **Attract-mode auto-rotate** — no attract mode in the port.
-/// - **Blinking cursor animation** — SwiftUI `TextField` shows its own.
+/// - **Arrow-key character cycling** (`nextChar` in JS) — typed input only.
 public struct LeaderboardOverlay: View {
     let pack: LevelPack
     let entries: [LeaderboardEntry]
     let pendingScore: PendingScore?
     /// True when this overlay is opened for a player who cleared the whole
     /// pack. Ports JS `hiscore.js:246,286`'s `winner` flag — gates the
-    /// `endingMusic.mp3` playback so a plain game-over stays silent.
+    /// `endingMusic.mp3` playback so a plain game-over stays silent, and
+    /// swaps the subtitle caption for a celebratory one.
     let isWinner: Bool
     /// Global sound toggle from the settings overlay. Muted overlays skip
     /// the ending music.
@@ -34,6 +40,13 @@ public struct LeaderboardOverlay: View {
     let onSubmit: (LeaderboardEntry?) -> Void
 
     @State private var nameInput: String = ""
+    /// Drives the real (invisible) name-capture `TextField` in
+    /// `nameCapture`. Set on appear rather than via `.focusOnAppear()` —
+    /// that helper is a tvOS-only no-op elsewhere, and this field also
+    /// needs a working *click*-to-focus fallback, which is why it's kept
+    /// out of `FittedBoardView`'s scaled coordinate space entirely (see
+    /// `nameCapture`'s doc comment).
+    @FocusState private var isNameFieldFocused: Bool
     /// Sound player local to this overlay so the ending music's lifetime
     /// matches the overlay's — starts in `.task`, stops in `.onDisappear`.
     /// A fresh instance instead of an injected `SoundPlayer` because no
@@ -71,20 +84,33 @@ public struct LeaderboardOverlay: View {
 
     public var body: some View {
         ZStack {
-            Color.black.opacity(0.75).ignoresSafeArea()
-            VStack(spacing: 12) {
-                Text(isWinner ? "YOU WIN!" : "HIGH SCORES")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isWinner ? .green : .yellow)
-                Text(pack.displayName.uppercased())
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
-                table
-                footer
+            // Full-window backdrop — outside `FittedBoardView` so it
+            // covers the whole overlay area, not just the letterboxed
+            // board-sized rect. `PackChooserView`'s underlying `gameLayer`
+            // (exitBar + HUD) stays mounted (just `.disabled`) behind this
+            // overlay, so without a backdrop sized to the *actual*
+            // available space, its chrome peeks through the gaps left by
+            // aspect-fit letterboxing.
+            Color.black.ignoresSafeArea()
+            // Sits *behind* the board content on purpose — see this
+            // property's doc comment for why (SAVE/CLOSE need click
+            // priority over this field's full-size hit area).
+            nameCapture
+            FittedBoardView(boardHeight: Self.boardHeight) {
+                ZStack(alignment: .topLeading) {
+                    glyphRow(pack.displayName.uppercased(), col: titleColumn, row: 0)
+                    glyphRow(
+                        isWinner ? "YOU WIN" : "LOCAL HIGH SCORES",
+                        col: subtitleColumn, row: 1.5)
+                    glyphRow("NO", col: 0.5, row: 3)
+                    glyphRow("NAME", col: 7.75, row: 3)
+                    glyphRow("LEVEL", col: 15.75, row: 3)
+                    glyphRow("SCORE", col: 22, row: 3)
+                    groundBar
+                    table
+                    footer
+                }
             }
-            .padding(24)
-            .background(Color.black)
-            .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
         }
         .task {
             // Ports `endingMusicPlay()` at `hiscore.js:246` — winner-only.
@@ -96,6 +122,9 @@ public struct LeaderboardOverlay: View {
             if isWinner {
                 sound.play(.ending)
             }
+            if pendingScore != nil {
+                isNameFieldFocused = true
+            }
         }
         .onDisappear {
             // `endingMusicStop()` at `hiscore.js:286`. Safe to call whether
@@ -104,103 +133,185 @@ public struct LeaderboardOverlay: View {
         }
     }
 
-    private var table: some View {
-        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 4) {
-            GridRow {
-                Text("#").foregroundStyle(.white.opacity(0.5))
-                Text("NAME").foregroundStyle(.white.opacity(0.5))
-                Text("LVL").foregroundStyle(.white.opacity(0.5))
-                Text("SCORE").foregroundStyle(.white.opacity(0.5))
-            }
-            .font(.system(size: 10, design: .monospaced))
-            ForEach(Array(entries.enumerated()), id: \.offset) { rank, entry in
-                row(rank: rank, entry: entry)
+    /// The *real* text-capture control — kept as a plain, unscaled sibling
+    /// of `FittedBoardView` rather than living inside the tile-coordinate
+    /// content (where an earlier version embedded it). Nesting an
+    /// interactive `TextField` inside `FittedBoardView`'s `.scaleEffect` +
+    /// several layers of tile-unit `.offset` broke both click hit-testing
+    /// and this overlay's own `.focusOnAppear()`-based auto-focus (that
+    /// helper is a tvOS-only no-op elsewhere) — the field never actually
+    /// received focus or clicks on macOS/iOS. Splitting capture (here,
+    /// full-size and invisible) from display (`ArcadeNameField`, purely
+    /// visual, inside the scaled board content) fixes both: `.task` above
+    /// grabs focus programmatically the moment the overlay appears
+    /// (state-driven, so it works regardless of z-order).
+    ///
+    /// Placed *behind* the board content in `body`'s `ZStack` — its own
+    /// full-size hit area would otherwise sit on top of, and swallow
+    /// clicks meant for, the SAVE/CLOSE buttons rendered inside
+    /// `FittedBoardView`. Focus assignment doesn't need click priority to
+    /// work, so this ordering keeps both working: SAVE/CLOSE stay
+    /// clickable, and the field is still focused (and typable) the moment
+    /// the overlay appears.
+    @ViewBuilder
+    private var nameCapture: some View {
+        if pendingScore != nil {
+            TextField("", text: $nameInput)
+                .focused($isNameFieldFocused)
+                .textFieldStyle(.plain)
+                .foregroundStyle(.clear)
+                .tint(.clear)
+                .autocorrectionDisabled()
+                #if os(iOS) || os(tvOS)
+                    .textInputAutocapitalization(.characters)
+                #endif
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .focusEffectDisabled()
+                .onSubmit(saveEntry)
+                .onChange(of: nameInput) { _, newValue in
+                    nameInput = ArcadeNameField.sanitize(
+                        newValue, maxLength: LeaderboardEntry.maxNameLength)
+                }
+        }
+    }
+
+    // MARK: - Layout
+
+    /// Board footprint this overlay covers — the same combined playfield +
+    /// HUD height `GameView` uses, since the JS draws the score screen
+    /// over its *entire* canvas (`setScoreBackground` at `hiscore.js:169-
+    /// 173`), not just the playfield.
+    private static let boardHeight = CGFloat((LevelGrid.tilesY + 1) * TileGeometry.tileHeight)
+
+    private var titleColumn: CGFloat {
+        CGFloat(LevelGrid.tilesX - pack.displayName.count) / 2
+    }
+
+    private var subtitleColumn: CGFloat {
+        let caption = isWinner ? "YOU WIN" : "LOCAL HIGH SCORES"
+        return CGFloat(LevelGrid.tilesX - caption.count) / 2
+    }
+
+    /// Renders `text` as a glyph row positioned at `(col, row)` in tile
+    /// units, matching `makeGlyphText(x, y, str, numberType)`'s `x = col *
+    /// tileW, y = row * tileH` (`hiscore.js:51-59`).
+    private func glyphRow(
+        _ text: String, col: CGFloat, row: CGFloat, digitVariant: DigitVariant = .normal
+    ) -> some View {
+        TextRow(text, digitVariant: digitVariant)
+            .offset(
+                x: col * CGFloat(TileGeometry.tileWidth),
+                y: row * CGFloat(TileGeometry.tileHeight)
+            )
+    }
+
+    /// Horizontal ground-tile divider under the header row — port of the
+    /// `for(x...) barTile` loop at `hiscore.js:197-204`. Drawn at native
+    /// `ground.png` size (40×20), not a full tile height, matching the
+    /// JS's `barTile.scaleX = barTile.scaleY = 1`.
+    private var groundBar: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<LevelGrid.tilesX, id: \.self) { _ in
+                Image("\(theme.rawValue)/ground", bundle: .module)
+                    .resizable()
+                    .interpolation(.none)
+                    .frame(width: CGFloat(TileGeometry.tileWidth), height: 20)
             }
         }
+        .offset(x: 0, y: 4.5 * CGFloat(TileGeometry.tileHeight))
+    }
+
+    private var table: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(0..<LeaderboardStore.slotCount, id: \.self) { rank in
+                row(rank)
+            }
+        }
+    }
+
+    /// 0-based rank the pending score would land at, mirroring
+    /// `LeaderboardStore.insert`'s own `firstIndex(where: score <)` rule.
+    private var pendingRank: Int? {
+        guard let pendingScore else { return nil }
+        return entries.firstIndex(where: { pendingScore.score > $0.score }) ?? entries.count
+    }
+
+    /// `entries` with the pending score spliced in (name still blank) and
+    /// trimmed back to `slotCount` — same shift-and-drop behavior as
+    /// `updateScoreInfo`'s splice at `hiscore.js:152-153`. Only the
+    /// *shifted-down* real entries are read off this; the pending row
+    /// itself renders live from `pendingScore`/`nameInput` instead.
+    private var mergedEntries: [LeaderboardEntry] {
+        guard let pendingScore, let rank = pendingRank, rank < entries.count else { return entries }
+        var merged = entries
+        merged.insert(
+            LeaderboardEntry(score: pendingScore.score, name: "", levelReached: pendingScore.levelReached),
+            at: rank)
+        if merged.count > LeaderboardStore.slotCount {
+            merged.removeLast(merged.count - LeaderboardStore.slotCount)
+        }
+        return merged
     }
 
     @ViewBuilder
-    private func row(rank: Int, entry: LeaderboardEntry) -> some View {
-        let isEmpty = entry == .empty
-        GridRow {
-            Text(String(format: "%2d.", rank + 1))
-                .foregroundStyle(.yellow.opacity(isEmpty ? 0.3 : 1))
-            if isEmpty {
-                Text("---").foregroundStyle(.white.opacity(0.3))
-                Text("---").foregroundStyle(.white.opacity(0.3))
-                Text("---").foregroundStyle(.white.opacity(0.3))
-            } else {
-                Text(entry.name).foregroundStyle(.white)
-                Text(String(format: "%03d", entry.levelReached)).foregroundStyle(.white)
-                Text(String(format: "%07d", entry.score)).foregroundStyle(.yellow)
+    private func row(_ rank: Int) -> some View {
+        let y = CGFloat(rank) * 1.2 + 5
+        glyphRow(String(format: "%02d.", rank + 1), col: 0.25, row: y)
+        if let pendingScore, rank == pendingRank {
+            glyphRow(String(format: "%03d", pendingScore.levelReached), col: 16.75, row: y)
+            glyphRow(String(format: "%07d", pendingScore.score), col: 21, row: y)
+            let namePos =
+                3.75 + CGFloat(LeaderboardEntry.maxNameLength - nameInput.count) / 2
+            ArcadeNameField(text: nameInput)
+                .offset(
+                    x: namePos * CGFloat(TileGeometry.tileWidth),
+                    y: y * CGFloat(TileGeometry.tileHeight)
+                )
+        } else {
+            let entry = mergedEntries[rank]
+            if entry.score > 0 {
+                if !entry.name.isEmpty {
+                    let namePos =
+                        3.75 + CGFloat(LeaderboardEntry.maxNameLength - entry.name.count) / 2
+                    glyphRow(entry.name, col: namePos, row: y, digitVariant: .blue)
+                }
+                glyphRow(String(format: "%03d", entry.levelReached), col: 16.75, row: y)
+                glyphRow(String(format: "%07d", entry.score), col: 21, row: y)
             }
         }
-        .font(.system(size: 14, design: .monospaced))
     }
 
+    /// SAVE (name-entry mode) / CLOSE (read-only mode) caption, rendered
+    /// with the same glyph font rather than a system button — the JS has
+    /// no equivalent (ENTER always commits, any key always closes), but a
+    /// touch/click affordance is needed for platforms without a keyboard.
     @ViewBuilder
     private var footer: some View {
-        if let pendingScore {
-            VStack(spacing: 8) {
-                Divider().background(Color.white.opacity(0.3))
-                Text("NEW HIGH SCORE!")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.green)
-                Text(
-                    "LEVEL \(String(format: "%03d", pendingScore.levelReached)) — "
-                        + "\(String(format: "%07d", pendingScore.score))"
-                )
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.yellow)
-                HStack(spacing: 8) {
-                    TextField("NAME", text: $nameInput)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 14, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(width: 200)
-                        .overlay(Rectangle().stroke(Color.white.opacity(0.5), lineWidth: 1))
-                        .focusOnAppear()
-                        .onSubmit(saveEntry)
-                        .onChange(of: nameInput) { _, newValue in
-                            // Enforce the JS 12-char cap (`def.js:170`).
-                            if newValue.count > LeaderboardEntry.maxNameLength {
-                                nameInput = String(newValue.prefix(LeaderboardEntry.maxNameLength))
-                            }
-                        }
-                    Button(action: saveEntry) {
-                        Text("SAVE")
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(Color.yellow)
-                    }
-                    .buttonStyle(.plain)
-                    #if !os(tvOS)
-                    .keyboardShortcut(.return, modifiers: [])
-                    #endif
-                    .disabled(!isNameValid)
-                }
+        let y = CGFloat(LeaderboardStore.slotCount - 1) * 1.2 + 5 + 2
+        if pendingScore != nil {
+            Button(action: saveEntry) {
+                glyphRow(">SAVE<", col: footerColumn(for: ">SAVE<"), row: y)
             }
+            .buttonStyle(.plain)
+            .disabled(!isNameValid)
+            .opacity(isNameValid ? 1 : 0.4)
         } else {
             Button {
                 onSubmit(nil)
             } label: {
-                Text("CLOSE")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.yellow)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 6)
-                    .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                glyphRow(">CLOSE<", col: footerColumn(for: ">CLOSE<"), row: y)
             }
             .buttonStyle(.plain)
             .focusOnAppear()
             #if !os(tvOS)
-            .keyboardShortcut(.return, modifiers: [])
+                .keyboardShortcut(.return, modifiers: [])
             #endif
         }
+    }
+
+    private func footerColumn(for caption: String) -> CGFloat {
+        CGFloat(LevelGrid.tilesX - caption.count) / 2
     }
 
     /// Trim + validate: at least 1 non-whitespace character, at most
@@ -223,7 +334,7 @@ public struct LeaderboardOverlay: View {
 
 // MARK: - Preview
 
-#Preview("Leaderboard — read-only") {
+#Preview("Leaderboard — read-only", traits: .landscapeLeft) {
     LeaderboardOverlay(
         pack: .classic,
         entries: [
@@ -234,15 +345,30 @@ public struct LeaderboardOverlay: View {
             + Array(repeating: LeaderboardEntry.empty, count: 7),
         onSubmit: { _ in }
     )
-    .frame(width: 500, height: 500)
+    .environment(\.tileTheme, .apple2)
 }
 
-#Preview("Leaderboard — name entry") {
+#Preview("Leaderboard — name entry", traits: .landscapeLeft) {
     LeaderboardOverlay(
         pack: .revenge,
-        entries: Array(repeating: LeaderboardEntry.empty, count: 10),
-        pendingScore: LeaderboardOverlay.PendingScore(score: 4200, levelReached: 6),
+        entries: [
+            LeaderboardEntry(score: 15000, name: "ALICE", levelReached: 42),
+            LeaderboardEntry(score: 12500, name: "BOB", levelReached: 33),
+        ]
+            + Array(repeating: LeaderboardEntry.empty, count: 8),
+        pendingScore: LeaderboardOverlay.PendingScore(score: 13200, levelReached: 6),
         onSubmit: { _ in }
     )
-    .frame(width: 500, height: 500)
+    .environment(\.tileTheme, .c64)
+}
+
+#Preview("Leaderboard — winner", traits: .landscapeLeft) {
+    LeaderboardOverlay(
+        pack: .classic,
+        entries: Array(repeating: LeaderboardEntry.empty, count: 10),
+        pendingScore: LeaderboardOverlay.PendingScore(score: 4200, levelReached: 50),
+        isWinner: true,
+        onSubmit: { _ in }
+    )
+    .environment(\.tileTheme, .apple2)
 }
