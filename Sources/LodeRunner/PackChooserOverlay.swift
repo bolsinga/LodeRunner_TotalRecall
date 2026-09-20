@@ -30,11 +30,17 @@ public struct PackChooserOverlay: View {
     /// Optional callback fired when the user taps INFO. Receives the
     /// current pack + theme so the host can render the right facts.
     let onPickInfo: ((LevelPack, Theme) -> Void)?
-    /// Optional callback fired when the user taps RESUME. Only rendered
-    /// when set — meaningful only when a game is running underneath the
-    /// menu (so there's something to return to). Analog of dismissing
-    /// the JS `boardIcons.js` sidebar without picking a new mode.
-    let onClose: (() -> Void)?
+    /// Optional callback fired when the user taps RESUME, receiving the
+    /// currently-selected theme. Only rendered when set — meaningful only
+    /// when a game is running underneath the menu (so there's something
+    /// to return to). Analog of dismissing the JS `boardIcons.js` sidebar
+    /// without picking a new mode.
+    ///
+    /// Unlike the level-pack selection (which RESUME silently discards —
+    /// switching packs mid-session doesn't make sense without restarting),
+    /// the theme is purely cosmetic, so RESUME applies it live to the
+    /// already-running session instead of requiring NEW GAME.
+    let onClose: ((Theme) -> Void)?
 
     @State private var selectedPack: LevelPack
     @State private var selectedTheme: Theme
@@ -48,7 +54,7 @@ public struct PackChooserOverlay: View {
         onPickSettings: ((Theme) -> Void)? = nil,
         onPickHelp: ((Theme) -> Void)? = nil,
         onPickInfo: ((LevelPack, Theme) -> Void)? = nil,
-        onClose: (() -> Void)? = nil
+        onClose: ((Theme) -> Void)? = nil
     ) {
         _selectedPack = State(initialValue: initialPack)
         _selectedTheme = State(initialValue: initialTheme)
@@ -149,7 +155,7 @@ public struct PackChooserOverlay: View {
             HStack(spacing: 12) {
                 if let onClose {
                     actionButton("RESUME", filled: true) {
-                        onClose()
+                        onClose(selectedTheme)
                     }
                     .focusOnAppear()
                     #if !os(tvOS)
