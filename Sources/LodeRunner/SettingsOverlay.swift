@@ -54,163 +54,129 @@ public struct SettingsOverlay: View {
     public var body: some View {
         ZStack {
             Color.black.opacity(0.75).ignoresSafeArea()
-            VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 Text("SETTINGS")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
 
-                soundRow
-                Divider().background(Color.white.opacity(0.3))
                 speedRow
                 Divider().background(Color.white.opacity(0.3))
-                hudRow
+                toggleRow
                 Divider().background(Color.white.opacity(0.3))
-                repeatActionsRow
-                Divider().background(Color.white.opacity(0.3))
-                redhatModeRow
-                Divider().background(Color.white.opacity(0.3))
-                gamepadRow
 
                 closeButton
             }
-            .padding(24)
+            .padding(12)
             .background(Color.black)
             .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
         }
     }
 
-    private var soundRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("SOUND")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: soundEnabled) { soundEnabled = true }
-                toggleButton("OFF", isSelected: !soundEnabled) { soundEnabled = false }
+    /// All the plain on/off toggles, packed into a single row — at this
+    /// panel width there's plenty of room, and one row is shorter than
+    /// stacking them two-per-row. Order matches the original
+    /// single-column layout read left-to-right.
+    private var toggleRow: some View {
+        HStack(alignment: .top, spacing: 16) {
+            booleanRow("SOUND", isOn: soundEnabled) { soundEnabled = $0 }
+            // TRAINING on = modern HUD (@ / # / TIME); off = classic HUD
+            // (SCORE / MEN). Label + wording match the JS
+            // `settings.js:147`'s "Training on/off" toggle verbatim;
+            // internally still drives the same `HUDMode` enum.
+            booleanRow("TRAINING", isOn: hudMode == .modern) {
+                hudMode = $0 ? .modern : .classic
             }
+            // ON = repeat/"Apple II" mode (held key persists past
+            // release); OFF = sticky/"NES" mode (releasing stops), the JS
+            // default. Label matches JS `toggleRepeatAction`'s tip text
+            // (`key.js:143-147`) verbatim.
+            booleanRow("REPEAT ACTIONS", isOn: repeatActionsEnabled) {
+                repeatActionsEnabled = $0
+            }
+            // ON shows a red hat on any guard currently carrying gold
+            // (worth trapping to recover it); OFF — the port's default,
+            // unlike the JS's on-by-default — leaves gold-carrying guards
+            // indistinguishable from empty-handed ones. Label matches JS
+            // `toggleRedhatMode`'s tip text (`key.js:179,184`) verbatim.
+            booleanRow("RED HAT", isOn: redhatModeEnabled) {
+                redhatModeEnabled = $0
+            }
+            // ON (the JS default) reads connected `GCController` input;
+            // OFF makes `GamepadInput` always report `.stop` regardless of
+            // controller state. Label matches JS `toggleGamepadMode`'s tip
+            // text (`key.js:161,164`) verbatim.
+            booleanRow("GAMEPAD", isOn: gamepadEnabled) { gamepadEnabled = $0 }
         }
     }
 
-    /// TRAINING on = modern HUD (@ / # / TIME); off = classic HUD (SCORE
-    /// / MEN). Label + wording match the JS `settings.js:147`'s
-    /// "Training on/off" toggle verbatim; internally still drives the
-    /// same `HUDMode` enum.
-    private var hudRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("TRAINING")
-                .font(.system(size: 12, design: .monospaced))
+    private func booleanRow(_ label: String, isOn: Bool, onChange: @escaping (Bool) -> Void)
+        -> some View
+    {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: hudMode == .modern) {
-                    hudMode = .modern
-                }
-                toggleButton("OFF", isSelected: hudMode == .classic) {
-                    hudMode = .classic
-                }
+            HStack(spacing: 6) {
+                toggleButton("ON", isSelected: isOn) { onChange(true) }
+                toggleButton("OFF", isSelected: !isOn) { onChange(false) }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// ON = repeat/"Apple II" mode (held key persists past release); OFF =
-    /// sticky/"NES" mode (releasing stops), the JS default. Label matches
-    /// JS `toggleRepeatAction`'s tip text (`key.js:143-147`) verbatim.
-    private var repeatActionsRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("REPEAT ACTIONS")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: repeatActionsEnabled) {
-                    repeatActionsEnabled = true
-                }
-                toggleButton("OFF", isSelected: !repeatActionsEnabled) {
-                    repeatActionsEnabled = false
-                }
-            }
-        }
-    }
-
-    /// ON shows a red hat on any guard currently carrying gold (worth
-    /// trapping to recover it); OFF — the port's default, unlike the JS's
-    /// on-by-default — leaves gold-carrying guards indistinguishable from
-    /// empty-handed ones. Label matches JS `toggleRedhatMode`'s tip text
-    /// (`key.js:179,184`) verbatim.
-    private var redhatModeRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("RED HAT")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: redhatModeEnabled) {
-                    redhatModeEnabled = true
-                }
-                toggleButton("OFF", isSelected: !redhatModeEnabled) {
-                    redhatModeEnabled = false
-                }
-            }
-        }
-    }
-
-    /// ON (the JS default) reads connected `GCController` input; OFF makes
-    /// `GamepadInput` always report `.stop` regardless of controller state.
-    /// Label matches JS `toggleGamepadMode`'s tip text (`key.js:161,164`)
-    /// verbatim.
-    private var gamepadRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("GAMEPAD")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: gamepadEnabled) {
-                    gamepadEnabled = true
-                }
-                toggleButton("OFF", isSelected: !gamepadEnabled) {
-                    gamepadEnabled = false
-                }
-            }
-        }
-    }
-
+    /// A single compact, centered control rather than a full-width row —
+    /// spreading the "-"/dots/"+" across the panel's whole width (to
+    /// match the two edge-anchored labels) looked disconnected once the
+    /// panel widened to fit all five toggles on one row below.
+    ///
+    /// The speed label ("SLOW" .. "VERY SLOW") varies in width as
+    /// `speedIndex` changes; without a fixed-width frame that changes the
+    /// whole `HStack`'s content width, which shifts the centered buttons
+    /// left/right on every tap. Both side labels get a fixed-width frame
+    /// (sized for the longest label, "VERY SLOW"/"VERY FAST") so only the
+    /// text grows/shrinks away from a stable anchor next to the buttons,
+    /// which stay put.
     private var speedRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("SPEED")
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
-                Spacer()
-                Text(GameSpeed.label(for: speedIndex))
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.yellow)
+        HStack(spacing: 8) {
+            Text("SPEED")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: Self.speedLabelWidth, alignment: .trailing)
+            stepperButton("-") {
+                speedIndex = max(0, speedIndex - 1)
             }
-            HStack(spacing: 8) {
-                stepperButton("-") {
-                    speedIndex = max(0, speedIndex - 1)
-                }
-                // Visual "dot" indicator for the 5 discrete positions.
-                HStack(spacing: 6) {
-                    ForEach(0..<GameSpeed.stepCount, id: \.self) { i in
-                        Circle()
-                            .fill(i == speedIndex ? Color.yellow : Color.white.opacity(0.25))
-                            .frame(width: 10, height: 10)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                stepperButton("+") {
-                    speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
+            // Visual "dot" indicator for the 5 discrete positions.
+            HStack(spacing: 6) {
+                ForEach(0..<GameSpeed.stepCount, id: \.self) { i in
+                    Circle()
+                        .fill(i == speedIndex ? Color.yellow : Color.white.opacity(0.25))
+                        .frame(width: 8, height: 8)
                 }
             }
+            stepperButton("+") {
+                speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
+            }
+            Text(GameSpeed.label(for: speedIndex))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(.yellow)
+                .frame(width: Self.speedLabelWidth, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
+
+    /// Wide enough for the longest speed label ("VERY SLOW"/"VERY FAST",
+    /// 9 monospaced characters at 10pt) plus a little breathing room.
+    private static let speedLabelWidth: CGFloat = 62
 
     private func toggleButton(_ title: String, isSelected: Bool, action: @escaping () -> Void)
         -> some View
     {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(isSelected ? .black : .yellow)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 3)
                 .background(isSelected ? Color.yellow : Color.clear)
                 .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
@@ -220,9 +186,9 @@ public struct SettingsOverlay: View {
     private func stepperButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(symbol)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(.yellow)
-                .frame(width: 32, height: 32)
+                .frame(width: 20, height: 18)
                 .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -233,10 +199,10 @@ public struct SettingsOverlay: View {
             onClose()
         } label: {
             Text("CLOSE")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(.black)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 4)
                 .background(Color.yellow)
         }
         .buttonStyle(.plain)
