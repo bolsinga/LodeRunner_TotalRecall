@@ -54,9 +54,9 @@ public struct SettingsOverlay: View {
     public var body: some View {
         ZStack {
             Color.black.opacity(0.75).ignoresSafeArea()
-            VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 Text("SETTINGS")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
 
                 speedRow
@@ -66,20 +66,20 @@ public struct SettingsOverlay: View {
 
                 closeButton
             }
-            .padding(24)
+            .padding(12)
             .background(Color.black)
             .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
         }
     }
 
     /// All the plain on/off toggles, packed two-per-row so the overlay
-    /// doesn't need a full-width row (and a scroll) per switch on narrow
-    /// screens. Order matches the original single-column layout read
+    /// takes less vertical space than one full-width row per switch.
+    /// Order matches the original single-column layout read
     /// left-to-right, top-to-bottom.
     private var toggleGrid: some View {
         LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())],
-            alignment: .leading, spacing: 16
+            columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible())],
+            alignment: .leading, spacing: 6
         ) {
             booleanRow("SOUND", isOn: soundEnabled) { soundEnabled = $0 }
             // TRAINING on = modern HUD (@ / # / TIME); off = classic HUD
@@ -115,11 +115,11 @@ public struct SettingsOverlay: View {
     private func booleanRow(_ label: String, isOn: Bool, onChange: @escaping (Bool) -> Void)
         -> some View
     {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.system(size: 12, design: .monospaced))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 toggleButton("ON", isSelected: isOn) { onChange(true) }
                 toggleButton("OFF", isSelected: !isOn) { onChange(false) }
             }
@@ -128,17 +128,17 @@ public struct SettingsOverlay: View {
     }
 
     private var speedRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("SPEED")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.7))
                 Spacer()
                 Text(GameSpeed.label(for: speedIndex))
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 stepperButton("-") {
                     speedIndex = max(0, speedIndex - 1)
                 }
@@ -147,7 +147,7 @@ public struct SettingsOverlay: View {
                     ForEach(0..<GameSpeed.stepCount, id: \.self) { i in
                         Circle()
                             .fill(i == speedIndex ? Color.yellow : Color.white.opacity(0.25))
-                            .frame(width: 10, height: 10)
+                            .frame(width: 8, height: 8)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -163,10 +163,10 @@ public struct SettingsOverlay: View {
     {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(isSelected ? .black : .yellow)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 3)
                 .background(isSelected ? Color.yellow : Color.clear)
                 .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
@@ -176,9 +176,9 @@ public struct SettingsOverlay: View {
     private func stepperButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(symbol)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundStyle(.yellow)
-                .frame(width: 32, height: 32)
+                .frame(width: 24, height: 24)
                 .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -189,10 +189,10 @@ public struct SettingsOverlay: View {
             onClose()
         } label: {
             Text("CLOSE")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(.black)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 4)
                 .background(Color.yellow)
         }
         .buttonStyle(.plain)
