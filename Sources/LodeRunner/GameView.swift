@@ -140,6 +140,40 @@ public struct GameView: View {
     }
 
     public var body: some View {
+        #if os(tvOS)
+            // Claim exclusive controller input only for real, player-driven
+            // gameplay (`!isPaused && demoRecord == nil`) — see
+            // `GameControllerEventHost`. Demo/attract-mode playback is
+            // scripted, not controller-driven, so it must keep normal focus
+            // navigation for its exitBar's Stop-demo/Menu buttons; without
+            // this exclusion, attract mode's own exit path becomes
+            // unreachable the same way live gameplay's does. Overlays live
+            // outside this subtree (siblings in `PackChooserView`'s
+            // ZStack), so they keep normal focus navigation regardless.
+            GameControllerEventHost(
+                controllerUserInteractionEnabled: !isLiveGameplay
+            ) {
+                gameContent
+            }
+        #else
+            gameContent
+        #endif
+    }
+
+    /// True only during real, player-driven, unpaused gameplay. Drives
+    /// both `GameControllerEventHost`'s exclusivity switch above and
+    /// exitBar's `.focusable()` gates below: the Siri Remote's touch
+    /// surface shares one click sensor across its whole area (including
+    /// the outer ring on 2nd-gen remotes), so a stray hard press can
+    /// select whatever's currently focused. Making exitBar's buttons
+    /// non-focusable during live play means there's nothing for that to
+    /// accidentally activate (pausing the game), regardless of whether
+    /// the click also reaches `GamepadInput` as a button press.
+    #if os(tvOS)
+        private var isLiveGameplay: Bool { !isPaused && demoRecord == nil }
+    #endif
+
+    private var gameContent: some View {
         VStack(spacing: 0) {
             exitBar
             gameBody
@@ -170,6 +204,7 @@ public struct GameView: View {
             gamepad.repeatActionsEnabled = repeatActionsEnabled
             gamepad.isEnabled = gamepadEnabled
             gamepad.microGamepadSplitDigButtons = microGamepadSplitDigButtons
+            gamepad.onMenuButtonPressed = { [self] in triggerExit() }
             driver.soundHandler = { [sound] effect in
                 // Landing/death/level-pass all cut the fall clip in the JS
                 // (`runner.js:269,286`, `main.js:1465,1615,1621`). fall.mp3 is
@@ -258,6 +293,9 @@ public struct GameView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Menu")
+            #if os(tvOS)
+                .focusable(!isLiveGameplay)
+            #endif
 
             Spacer()
 
@@ -280,6 +318,9 @@ public struct GameView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Choose level")
+                    #if os(tvOS)
+                        .focusable(!isLiveGameplay)
+                    #endif
                 }
                 demoButton
             }
@@ -324,6 +365,9 @@ public struct GameView: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .accessibilityLabel(label)
+        #if os(tvOS)
+            .focusable(!isLiveGameplay)
+        #endif
     }
 
     /// User-initiated menu open: unmounts the current game session and

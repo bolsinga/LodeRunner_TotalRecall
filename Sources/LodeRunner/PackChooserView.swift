@@ -31,6 +31,15 @@ public struct PackChooserView: View {
         let pack: LevelPack
         let theme: Theme
         let startingLevelIndex: Int
+        /// Defaulted so every construction gets a fresh value — makes
+        /// `.id(currentGame)` force a new `GameView` (and thus a fresh
+        /// `GameSessionDriver`/session) on every "start a game" action,
+        /// even when pack/theme/startingLevelIndex exactly match the
+        /// previous selection (e.g. picking the same pack again after
+        /// game over). Without this, re-picking identical values left
+        /// the old, already-`.gameOver` session mounted, since SwiftUI's
+        /// `.id()` saw an equal value and didn't rebuild.
+        let attempt = UUID()
     }
 
     /// Which overlay (if any) is on top of the current game.
