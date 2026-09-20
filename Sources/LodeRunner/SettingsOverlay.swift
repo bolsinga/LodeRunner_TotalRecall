@@ -128,11 +128,20 @@ public struct SettingsOverlay: View {
     /// spreading the "-"/dots/"+" across the panel's whole width (to
     /// match the two edge-anchored labels) looked disconnected once the
     /// panel widened to fit all five toggles on one row below.
+    ///
+    /// The speed label ("SLOW" .. "VERY SLOW") varies in width as
+    /// `speedIndex` changes; without a fixed-width frame that changes the
+    /// whole `HStack`'s content width, which shifts the centered buttons
+    /// left/right on every tap. Both side labels get a fixed-width frame
+    /// (sized for the longest label, "VERY SLOW"/"VERY FAST") so only the
+    /// text grows/shrinks away from a stable anchor next to the buttons,
+    /// which stay put.
     private var speedRow: some View {
         HStack(spacing: 8) {
             Text("SPEED")
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
+                .frame(width: Self.speedLabelWidth, alignment: .trailing)
             stepperButton("-") {
                 speedIndex = max(0, speedIndex - 1)
             }
@@ -150,9 +159,14 @@ public struct SettingsOverlay: View {
             Text(GameSpeed.label(for: speedIndex))
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .foregroundStyle(.yellow)
+                .frame(width: Self.speedLabelWidth, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
+
+    /// Wide enough for the longest speed label ("VERY SLOW"/"VERY FAST",
+    /// 9 monospaced characters at 10pt) plus a little breathing room.
+    private static let speedLabelWidth: CGFloat = 62
 
     private func toggleButton(_ title: String, isSelected: Bool, action: @escaping () -> Void)
         -> some View
