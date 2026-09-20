@@ -59,17 +59,10 @@ public struct SettingsOverlay: View {
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
 
-                soundRow
-                Divider().background(Color.white.opacity(0.3))
                 speedRow
                 Divider().background(Color.white.opacity(0.3))
-                hudRow
+                toggleGrid
                 Divider().background(Color.white.opacity(0.3))
-                repeatActionsRow
-                Divider().background(Color.white.opacity(0.3))
-                redhatModeRow
-                Divider().background(Color.white.opacity(0.3))
-                gamepadRow
 
                 closeButton
             }
@@ -79,96 +72,59 @@ public struct SettingsOverlay: View {
         }
     }
 
-    private var soundRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("SOUND")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: soundEnabled) { soundEnabled = true }
-                toggleButton("OFF", isSelected: !soundEnabled) { soundEnabled = false }
+    /// All the plain on/off toggles, packed two-per-row so the overlay
+    /// doesn't need a full-width row (and a scroll) per switch on narrow
+    /// screens. Order matches the original single-column layout read
+    /// left-to-right, top-to-bottom.
+    private var toggleGrid: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())],
+            alignment: .leading, spacing: 16
+        ) {
+            booleanRow("SOUND", isOn: soundEnabled) { soundEnabled = $0 }
+            // TRAINING on = modern HUD (@ / # / TIME); off = classic HUD
+            // (SCORE / MEN). Label + wording match the JS
+            // `settings.js:147`'s "Training on/off" toggle verbatim;
+            // internally still drives the same `HUDMode` enum.
+            booleanRow("TRAINING", isOn: hudMode == .modern) {
+                hudMode = $0 ? .modern : .classic
             }
+            // ON = repeat/"Apple II" mode (held key persists past
+            // release); OFF = sticky/"NES" mode (releasing stops), the JS
+            // default. Label matches JS `toggleRepeatAction`'s tip text
+            // (`key.js:143-147`) verbatim.
+            booleanRow("REPEAT ACTIONS", isOn: repeatActionsEnabled) {
+                repeatActionsEnabled = $0
+            }
+            // ON shows a red hat on any guard currently carrying gold
+            // (worth trapping to recover it); OFF — the port's default,
+            // unlike the JS's on-by-default — leaves gold-carrying guards
+            // indistinguishable from empty-handed ones. Label matches JS
+            // `toggleRedhatMode`'s tip text (`key.js:179,184`) verbatim.
+            booleanRow("RED HAT", isOn: redhatModeEnabled) {
+                redhatModeEnabled = $0
+            }
+            // ON (the JS default) reads connected `GCController` input;
+            // OFF makes `GamepadInput` always report `.stop` regardless of
+            // controller state. Label matches JS `toggleGamepadMode`'s tip
+            // text (`key.js:161,164`) verbatim.
+            booleanRow("GAMEPAD", isOn: gamepadEnabled) { gamepadEnabled = $0 }
         }
     }
 
-    /// TRAINING on = modern HUD (@ / # / TIME); off = classic HUD (SCORE
-    /// / MEN). Label + wording match the JS `settings.js:147`'s
-    /// "Training on/off" toggle verbatim; internally still drives the
-    /// same `HUDMode` enum.
-    private var hudRow: some View {
+    private func booleanRow(_ label: String, isOn: Bool, onChange: @escaping (Bool) -> Void)
+        -> some View
+    {
         VStack(alignment: .leading, spacing: 8) {
-            Text("TRAINING")
+            Text(label)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
             HStack(spacing: 8) {
-                toggleButton("ON", isSelected: hudMode == .modern) {
-                    hudMode = .modern
-                }
-                toggleButton("OFF", isSelected: hudMode == .classic) {
-                    hudMode = .classic
-                }
+                toggleButton("ON", isSelected: isOn) { onChange(true) }
+                toggleButton("OFF", isSelected: !isOn) { onChange(false) }
             }
         }
-    }
-
-    /// ON = repeat/"Apple II" mode (held key persists past release); OFF =
-    /// sticky/"NES" mode (releasing stops), the JS default. Label matches
-    /// JS `toggleRepeatAction`'s tip text (`key.js:143-147`) verbatim.
-    private var repeatActionsRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("REPEAT ACTIONS")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: repeatActionsEnabled) {
-                    repeatActionsEnabled = true
-                }
-                toggleButton("OFF", isSelected: !repeatActionsEnabled) {
-                    repeatActionsEnabled = false
-                }
-            }
-        }
-    }
-
-    /// ON shows a red hat on any guard currently carrying gold (worth
-    /// trapping to recover it); OFF — the port's default, unlike the JS's
-    /// on-by-default — leaves gold-carrying guards indistinguishable from
-    /// empty-handed ones. Label matches JS `toggleRedhatMode`'s tip text
-    /// (`key.js:179,184`) verbatim.
-    private var redhatModeRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("RED HAT")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: redhatModeEnabled) {
-                    redhatModeEnabled = true
-                }
-                toggleButton("OFF", isSelected: !redhatModeEnabled) {
-                    redhatModeEnabled = false
-                }
-            }
-        }
-    }
-
-    /// ON (the JS default) reads connected `GCController` input; OFF makes
-    /// `GamepadInput` always report `.stop` regardless of controller state.
-    /// Label matches JS `toggleGamepadMode`'s tip text (`key.js:161,164`)
-    /// verbatim.
-    private var gamepadRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("GAMEPAD")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            HStack(spacing: 8) {
-                toggleButton("ON", isSelected: gamepadEnabled) {
-                    gamepadEnabled = true
-                }
-                toggleButton("OFF", isSelected: !gamepadEnabled) {
-                    gamepadEnabled = false
-                }
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var speedRow: some View {
