@@ -113,38 +113,33 @@ public struct PackChooserOverlay: View {
             Text("THEME")
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
-            // Custom two-button toggle. SwiftUI's `.segmented` picker
-            // renders in the standard macOS chrome — which both clipped
-            // "Commodore 64" (the segment splits width evenly regardless
-            // of label length) and stood out visually against the black-
-            // and-yellow monospaced panel. Building it out of plain
-            // `Button`s lets each label size to its own text and matches
-            // the PLAY button's styling.
-            HStack(spacing: 8) {
-                themeButton("Apple II", theme: .apple2)
-                themeButton("Commodore 64", theme: .c64)
-            }
+            themeToggleButton
         }
     }
 
-    private func themeButton(_ label: String, theme: Theme) -> some View {
-        let isSelected = selectedTheme == theme
-        return Button {
-            selectedTheme = theme
+    /// Single-icon toggle showing the *active* theme's logo — tapping
+    /// swaps to the other theme, and the icon swaps to match. Ports the
+    /// original `themeIconClass` behavior from the pre-DOM-dialog history
+    /// (`lodeRunner.iconClass.js`'s `updateThemeImage`/`mouseClick`): one
+    /// tappable icon whose bitmap always reflects `curTheme`, rather than
+    /// two side-by-side selectable buttons.
+    private var themeToggleButton: some View {
+        Button {
+            selectedTheme = selectedTheme == .apple2 ? .c64 : .apple2
         } label: {
-            Text(label)
-                .font(.system(size: 13, design: .monospaced))
-                .foregroundStyle(isSelected ? .black : .white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.yellow : Color.clear)
-                .overlay(
-                    Rectangle().stroke(
-                        isSelected ? Color.yellow : Color.white.opacity(0.5),
-                        lineWidth: 1)
-                )
+            Image(selectedTheme == .apple2 ? "apple2" : "commodore64", bundle: .module)
+                .resizable()
+                .interpolation(.none)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 40, height: 46)
+                .padding(6)
+                .overlay(Rectangle().stroke(Color.white.opacity(0.5), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(
+            selectedTheme == .apple2
+                ? "Apple II theme, double tap to switch to Commodore 64"
+                : "Commodore 64 theme, double tap to switch to Apple II")
     }
 
     private var actionButtons: some View {
@@ -227,8 +222,14 @@ public struct PackChooserOverlay: View {
 
 // MARK: - Preview
 
-#Preview("Pack chooser overlay") {
+#Preview("Pack chooser overlay — Apple2") {
     PackChooserOverlay(onPick: { _, _ in })
+        .frame(width: 700, height: 500)
+        .background(Color.gray.opacity(0.3))
+}
+
+#Preview("Pack chooser overlay — C64") {
+    PackChooserOverlay(initialTheme: .c64, onPick: { _, _ in })
         .frame(width: 700, height: 500)
         .background(Color.gray.opacity(0.3))
 }
