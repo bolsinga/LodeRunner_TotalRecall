@@ -70,25 +70,24 @@ public struct PackChooserOverlay: View {
     public var body: some View {
         ZStack {
             Color.black.opacity(0.75).ignoresSafeArea()
-            VStack(spacing: 16) {
+            VStack(spacing: 10) {
                 Text("LODE RUNNER")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                    .font(.system(size: 18, weight: .bold, design: .monospaced))
                     .foregroundStyle(.yellow)
                 packList
                 Divider().background(Color.white.opacity(0.3))
-                themePicker
                 actionButtons
             }
-            .padding(24)
+            .padding(14)
             .background(Color.black)
-            .overlay(Rectangle().stroke(Color.white, lineWidth: 1))
+            .overlay(Rectangle().stroke(Color.white, lineWidth: OverlayChrome.borderWidth))
         }
     }
 
     private var packList: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
             Text("LEVEL PACK")
-                .font(.system(size: 12, design: .monospaced))
+                .font(.system(size: OverlayChrome.secondaryLabelFontSize, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.7))
             ForEach(LevelPack.allCases, id: \.self) { pack in
                 Button {
@@ -99,21 +98,12 @@ public struct PackChooserOverlay: View {
                             .monospaced()
                             .foregroundStyle(.yellow)
                         Text(pack.displayName)
-                            .font(.system(size: 14, design: .monospaced))
+                            .font(.system(size: 12, design: .monospaced))
                             .foregroundStyle(.white)
                     }
                 }
                 .buttonStyle(.plain)
             }
-        }
-    }
-
-    private var themePicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("THEME")
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.7))
-            themeToggleButton
         }
     }
 
@@ -123,6 +113,11 @@ public struct PackChooserOverlay: View {
     /// (`lodeRunner.iconClass.js`'s `updateThemeImage`/`mouseClick`): one
     /// tappable icon whose bitmap always reflects `curTheme`, rather than
     /// two side-by-side selectable buttons.
+    ///
+    /// Sized to match `actionButton`'s height so it can sit inline in the
+    /// PLAY / SELECT LEVEL row instead of its own labeled section — that
+    /// extra section (with its own "THEME" header) was what pushed the
+    /// panel too tall to fit on iPhone without scrolling.
     private var themeToggleButton: some View {
         Button {
             selectedTheme = selectedTheme == .apple2 ? .c64 : .apple2
@@ -131,9 +126,12 @@ public struct PackChooserOverlay: View {
                 .resizable()
                 .interpolation(.none)
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 40, height: 46)
-                .padding(6)
-                .overlay(Rectangle().stroke(Color.white.opacity(0.5), lineWidth: 1))
+                .frame(width: 20, height: 23)
+                .padding(4)
+                .overlay(
+                    Rectangle().stroke(
+                        Color.white.opacity(0.5), lineWidth: OverlayChrome.borderWidth)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
@@ -144,10 +142,11 @@ public struct PackChooserOverlay: View {
 
     private var actionButtons: some View {
         // Two rows so the button count stays readable. First row =
-        // "start / resume a game" (RESUME / PLAY / SELECT LEVEL); second
-        // row = "explore state" (LEADERBOARD / SETTINGS / HELP / INFO).
-        VStack(spacing: 10) {
-            HStack(spacing: 12) {
+        // "start / resume a game" (RESUME / PLAY / SELECT LEVEL) plus the
+        // theme toggle, which doesn't need its own section; second row =
+        // "explore state" (LEADERBOARD / SETTINGS / HELP / INFO).
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
                 if let onClose {
                     actionButton("RESUME", filled: true) {
                         onClose(selectedTheme)
@@ -175,8 +174,9 @@ public struct PackChooserOverlay: View {
                         onPickLevel(selectedPack, selectedTheme)
                     }
                 }
+                themeToggleButton
             }
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 if let onPickLeaderboard {
                     actionButton("LEADERBOARD", filled: false) {
                         onPickLeaderboard(selectedPack, selectedTheme)
@@ -209,12 +209,15 @@ public struct PackChooserOverlay: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(
+                    .system(
+                        size: OverlayChrome.buttonFontSize, weight: .bold, design: .monospaced)
+                )
                 .foregroundStyle(filled ? .black : .yellow)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .background(filled ? Color.yellow : Color.clear)
-                .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
+                .overlay(Rectangle().stroke(Color.yellow, lineWidth: OverlayChrome.borderWidth))
         }
         .buttonStyle(.plain)
     }
