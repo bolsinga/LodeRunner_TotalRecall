@@ -61,7 +61,7 @@ public struct SettingsOverlay: View {
 
                 speedRow
                 Divider().background(Color.white.opacity(0.3))
-                toggleGrid
+                toggleRow
                 Divider().background(Color.white.opacity(0.3))
 
                 closeButton
@@ -72,15 +72,12 @@ public struct SettingsOverlay: View {
         }
     }
 
-    /// All the plain on/off toggles, packed two-per-row so the overlay
-    /// takes less vertical space than one full-width row per switch.
-    /// Order matches the original single-column layout read
-    /// left-to-right, top-to-bottom.
-    private var toggleGrid: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible())],
-            alignment: .leading, spacing: 6
-        ) {
+    /// All the plain on/off toggles, packed into a single row — at this
+    /// panel width there's plenty of room, and one row is shorter than
+    /// stacking them two-per-row. Order matches the original
+    /// single-column layout read left-to-right.
+    private var toggleRow: some View {
+        HStack(alignment: .top, spacing: 16) {
             booleanRow("SOUND", isOn: soundEnabled) { soundEnabled = $0 }
             // TRAINING on = modern HUD (@ / # / TIME); off = classic HUD
             // (SCORE / MEN). Label + wording match the JS
@@ -176,9 +173,9 @@ public struct SettingsOverlay: View {
     private func stepperButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(symbol)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(.yellow)
-                .frame(width: 24, height: 24)
+                .frame(width: 20, height: 18)
                 .overlay(Rectangle().stroke(Color.yellow, lineWidth: 1))
         }
         .buttonStyle(.plain)
