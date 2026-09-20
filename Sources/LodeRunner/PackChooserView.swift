@@ -265,7 +265,7 @@ public struct PackChooserView: View {
                             score: finalScore, levelReached: levelReached)
                         : nil
                     overlay = .leaderboard(
-                        pack: currentGame.pack, theme: currentGame.theme,
+                        pack: currentGame.pack, theme: lastTheme,
                         pending: pending, isWinner: isWinner)
                 },
                 // Wired only when Training is on so GameView shows the
@@ -278,7 +278,7 @@ public struct PackChooserView: View {
                               !levels.isEmpty
                         else { return }
                         overlay = .levelPicker(
-                            pack: currentGame.pack, theme: currentGame.theme,
+                            pack: currentGame.pack, theme: lastTheme,
                             levels: levels, returnTo: .game)
                     }
                     : nil,
@@ -306,13 +306,13 @@ public struct PackChooserView: View {
                         else { return }
                         demoState = DemoState(
                             record: record, pack: currentGame.pack,
-                            theme: currentGame.theme,
+                            theme: lastTheme,
                             returnTo: .training(levelIndex: levelIndex))
                         lastDemoLevelIndex = record.levelIndex
                     }
                     : nil
             )
-            .environment(\.tileTheme, currentGame.theme)
+            .environment(\.tileTheme, lastTheme)
             .id(currentGame)
         } else {
             // Cover splash or bootstrap. Plain black; the overlay covers
@@ -422,8 +422,15 @@ public struct PackChooserView: View {
                 // needs a way to close *without* starting a new game.
                 // Only meaningful when a game is running underneath
                 // (otherwise there's nowhere to return to); passing `nil`
-                // hides the button on the pre-game path.
-                onClose: currentGame != nil ? { self.overlay = nil } : nil
+                // hides the button on the pre-game path. Applies the
+                // picker's theme live to the already-running session —
+                // see `PackChooserOverlay.onClose`'s doc comment.
+                onClose: currentGame != nil
+                    ? { theme in
+                        lastTheme = theme
+                        self.overlay = nil
+                    }
+                    : nil
             )
         case .levelPicker(let pack, let theme, let levels, let returnTo):
             LevelSelectOverlay(
