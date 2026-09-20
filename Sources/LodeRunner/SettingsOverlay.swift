@@ -124,35 +124,34 @@ public struct SettingsOverlay: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// A single compact, centered control rather than a full-width row —
+    /// spreading the "-"/dots/"+" across the panel's whole width (to
+    /// match the two edge-anchored labels) looked disconnected once the
+    /// panel widened to fit all five toggles on one row below.
     private var speedRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("SPEED")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
-                Spacer()
-                Text(GameSpeed.label(for: speedIndex))
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.yellow)
+        HStack(spacing: 8) {
+            Text("SPEED")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.7))
+            stepperButton("-") {
+                speedIndex = max(0, speedIndex - 1)
             }
+            // Visual "dot" indicator for the 5 discrete positions.
             HStack(spacing: 6) {
-                stepperButton("-") {
-                    speedIndex = max(0, speedIndex - 1)
-                }
-                // Visual "dot" indicator for the 5 discrete positions.
-                HStack(spacing: 6) {
-                    ForEach(0..<GameSpeed.stepCount, id: \.self) { i in
-                        Circle()
-                            .fill(i == speedIndex ? Color.yellow : Color.white.opacity(0.25))
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                stepperButton("+") {
-                    speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
+                ForEach(0..<GameSpeed.stepCount, id: \.self) { i in
+                    Circle()
+                        .fill(i == speedIndex ? Color.yellow : Color.white.opacity(0.25))
+                        .frame(width: 8, height: 8)
                 }
             }
+            stepperButton("+") {
+                speedIndex = min(GameSpeed.stepCount - 1, speedIndex + 1)
+            }
+            Text(GameSpeed.label(for: speedIndex))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(.yellow)
         }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func toggleButton(_ title: String, isSelected: Bool, action: @escaping () -> Void)
