@@ -178,11 +178,22 @@ public struct LeaderboardOverlay: View {
 
     // MARK: - Layout
 
-    /// Board footprint this overlay covers — the same combined playfield +
-    /// HUD height `GameView` uses, since the JS draws the score screen
-    /// over its *entire* canvas (`setScoreBackground` at `hiscore.js:169-
-    /// 173`), not just the playfield.
-    private static let boardHeight = CGFloat((LevelGrid.tilesY + 1) * TileGeometry.tileHeight)
+    /// Board footprint this overlay covers. Roughly the same combined
+    /// playfield + HUD height `GameView` uses (the JS draws the score
+    /// screen over its *entire* canvas — `setScoreBackground` at
+    /// `hiscore.js:169-173`, not just the playfield) but taller: matching
+    /// `GameView`'s exact `(tilesY + 1)` height (17 rows) left no room for
+    /// `footer`'s row, which sits at row 17.8 (`LeaderboardStore.slotCount`
+    /// entries at 1.2 spacing starting at row 5, plus a 2-row gap). Content
+    /// laid out past `boardHeight` doesn't get clipped by `FittedBoardView`
+    /// (no `.clipped()`), but `FittedBoardView`'s *scale* is computed only
+    /// from this declared height, so on a screen short enough that the
+    /// scaled board fills the whole height (any phone in landscape), the
+    /// footer rendered below the visible window entirely — CLOSE/SAVE were
+    /// on-screen on a tall macOS window (where there's slack below the
+    /// scaled board) but unreachable on a phone. 20 rows covers the
+    /// footer's row (through 18.8) with a little breathing room below.
+    private static let boardHeight = CGFloat(20 * TileGeometry.tileHeight)
 
     private var titleColumn: CGFloat {
         CGFloat(LevelGrid.tilesX - pack.displayName.count) / 2
@@ -288,26 +299,43 @@ public struct LeaderboardOverlay: View {
     /// touch/click affordance is needed for platforms without a keyboard.
     @ViewBuilder
     private var footer: some View {
-        let y = CGFloat(LeaderboardStore.slotCount - 1) * 1.2 + 5 + 2
         if pendingScore != nil {
-            Button(action: saveEntry) {
-                glyphRow(">SAVE<", col: footerColumn(for: ">SAVE<"), row: y)
-            }
-            .buttonStyle(.plain)
-            .disabled(!isNameValid)
-            .opacity(isNameValid ? 1 : 0.4)
+            footerButton(">SAVE<", action: saveEntry)
+                .disabled(!isNameValid)
+                .opacity(isNameValid ? 1 : 0.4)
         } else {
-            Button {
-                onSubmit(nil)
-            } label: {
-                glyphRow(">CLOSE<", col: footerColumn(for: ">CLOSE<"), row: y)
-            }
-            .buttonStyle(.plain)
-            .focusOnAppear()
-            #if !os(tvOS)
-                .keyboardShortcut(.return, modifiers: [])
-            #endif
+            footerButton(">CLOSE<", action: { onSubmit(nil) })
+                .focusOnAppear()
+                #if !os(tvOS)
+                    .keyboardShortcut(.return, modifiers: [])
+                #endif
         }
+    }
+
+    /// Builds the SAVE/CLOSE button with an explicit frame + tap shape
+    /// sized to its own label, offsetting the *button* into position
+    /// rather than offsetting the label inside it (the pattern every
+    /// other `glyphRow` on this screen uses, since they're plain text with
+    /// no hit-testing to get right). A `Button` whose label is an
+    /// internally-offset `TextRow` reports an implicit, unreliable tap
+    /// target once nested this deep inside `FittedBoardView`'s
+    /// `GeometryReader` + `scaleEffect` transform — taps at the visually
+    /// correct on-screen glyphs landed nowhere. Giving the button its own
+    /// well-defined frame/`contentShape` and positioning *that* fixes it.
+    private func footerButton(_ caption: String, action: @escaping () -> Void) -> some View {
+        let row = CGFloat(LeaderboardStore.slotCount - 1) * 1.2 + 5 + 2
+        let width = CGFloat(caption.count * TileGeometry.tileWidth)
+        let height = CGFloat(TileGeometry.tileHeight)
+        return Button(action: action) {
+            TextRow(caption)
+        }
+        .buttonStyle(.plain)
+        .frame(width: width, height: height)
+        .contentShape(Rectangle())
+        .offset(
+            x: footerColumn(for: caption) * CGFloat(TileGeometry.tileWidth),
+            y: row * CGFloat(TileGeometry.tileHeight)
+        )
     }
 
     private func footerColumn(for caption: String) -> CGFloat {
