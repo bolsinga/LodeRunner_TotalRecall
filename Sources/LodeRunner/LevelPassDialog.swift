@@ -59,42 +59,42 @@ public struct LevelPassDialog: View {
         ZStack {
             Color.black.opacity(0.75).ignoresSafeArea()
             VStack(spacing: 12) {
-                Text("LEVEL COMPLETE")
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.yellow)
-                Text("LEVEL \(pad3(summary.levelNumber))")
-                    .font(.system(size: 14, design: .monospaced))
-                    .foregroundStyle(.white)
+                arcadeText("LEVEL COMPLETE", scale: Self.titleGlyphScale)
+                arcadeText("LEVEL \(pad3(summary.levelNumber))", scale: Self.bodyGlyphScale)
+                    .opacity(0.7)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     GridRow {
                         glyph(TextGlyph.gold)
-                        Text(pad3(goldDisplay)).monospaced().foregroundStyle(.yellow)
+                        arcadeText(pad3(goldDisplay), scale: Self.bodyGlyphScale)
                     }
                     GridRow {
                         glyph(TextGlyph.guard)
-                        Text(pad3(guardsDisplay)).monospaced().foregroundStyle(.yellow)
+                        arcadeText(pad3(guardsDisplay), scale: Self.bodyGlyphScale)
                     }
                     GridRow {
-                        Text("TIME").foregroundStyle(.white)
-                        Text(pad3(timeDisplay)).monospaced().foregroundStyle(.yellow)
+                        arcadeText("TIME", scale: Self.bodyGlyphScale)
+                        arcadeText(pad3(timeDisplay), scale: Self.bodyGlyphScale)
                     }
                     GridRow {
-                        Text("SCORE").foregroundStyle(.white)
-                        Text(pad6(scoreDisplay)).monospaced().foregroundStyle(.yellow)
+                        arcadeText("SCORE", scale: Self.bodyGlyphScale)
+                        arcadeText(pad6(scoreDisplay), scale: Self.bodyGlyphScale)
                     }
                     if let hiScore {
                         GridRow {
-                            Text("HI-SCORE").foregroundStyle(.white)
-                            Text(pad6(max(hiScore, scoreDisplay)))
-                                .monospaced()
-                                .foregroundStyle(scoreDisplay > hiScore ? .green : .yellow)
+                            arcadeText("HI-SCORE", scale: Self.bodyGlyphScale)
+                            arcadeText(pad6(max(hiScore, scoreDisplay)), scale: Self.bodyGlyphScale)
+                                // The glyph sheet only ships one digit
+                                // palette (orange); tint green to still
+                                // signal a beaten high score (JS `.beat`
+                                // class, `levelPass.js:203-206`) without a
+                                // second digit atlas.
+                                .colorMultiply(scoreDisplay > hiScore ? .green : .white)
                         }
                     }
                 }
-                .font(.system(size: 14, design: .monospaced))
                 if animationFinished {
-                    Text("TAP OR PRESS ANY KEY").font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.7))
+                    arcadeText("TAP OR PRESS ANY KEY", scale: Self.hintGlyphScale)
+                        .opacity(0.7)
                 }
             }
             .padding(24)
@@ -186,6 +186,36 @@ public struct LevelPassDialog: View {
     /// `LevelThumbnailView` — `.scaleEffect` alone doesn't shrink layout,
     /// so bracket it between two `.frame`s.
     private static let glyphScale: CGFloat = 24.0 / CGFloat(TileGeometry.tileHeight)
+
+    /// Renders `text` with the game's own bitmap text sheet (`TextRow`,
+    /// same font `LeaderboardOverlay` uses) instead of a system font — the
+    /// header is the dialog's one arcade-style flourish, matching the
+    /// leaderboard's screen-native look rather than the JS's plain
+    /// Helvetica title (`levelPass.css:15`, a modern-dialog-only choice
+    /// that doesn't carry the arcade feel over to this native port).
+    private func arcadeText(_ text: String, scale: CGFloat) -> some View {
+        let width = CGFloat(text.count * TileGeometry.tileWidth)
+        let height = CGFloat(TileGeometry.tileHeight)
+        return TextRow(text)
+            .frame(width: width, height: height)
+            .scaleEffect(scale)
+            .frame(width: width * scale, height: height * scale)
+    }
+
+    /// Height ≈ 36pt — bigger than the previous system-font title's 22pt.
+    /// The glyph sheet's characters don't fill their whole 44pt tile (there's
+    /// built-in padding), so matching the *tile* height 1:1 to the old font
+    /// size still rendered visibly smaller than the font it replaced; sized
+    /// up further here to actually read as a bigger, bolder banner.
+    private static let titleGlyphScale: CGFloat = 36.0 / CGFloat(TileGeometry.tileHeight)
+    /// Height ≈ 20pt — shared by the "LEVEL nnn" subtitle and every score
+    /// row (labels + counts), scaled up from the previous system-font
+    /// size (14pt) to stay proportionate to the larger title above.
+    private static let bodyGlyphScale: CGFloat = 20.0 / CGFloat(TileGeometry.tileHeight)
+    /// Height ≈ 14pt — the "TAP OR PRESS ANY KEY" dismiss hint, scaled up
+    /// from the previous system-font size (10pt) by the same proportion as
+    /// the other rows above.
+    private static let hintGlyphScale: CGFloat = 14.0 / CGFloat(TileGeometry.tileHeight)
 }
 
 // MARK: - Preview
