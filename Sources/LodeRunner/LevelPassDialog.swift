@@ -199,10 +199,15 @@ public struct LevelPassDialog: View {
             .frame(width: width * scale, height: height * scale)
     }
 
-    /// Height ≈ 24pt, close to the previous system-font title's 22pt.
-    private static let titleGlyphScale: CGFloat = 24.0 / CGFloat(TileGeometry.tileHeight)
-    /// Height ≈ 15pt, close to the previous system-font subtitle's 14pt.
-    private static let levelGlyphScale: CGFloat = 15.0 / CGFloat(TileGeometry.tileHeight)
+    /// Height ≈ 36pt — bigger than the previous system-font title's 22pt.
+    /// The glyph sheet's characters don't fill their whole 44pt tile (there's
+    /// built-in padding), so matching the *tile* height 1:1 to the old font
+    /// size still rendered visibly smaller than the font it replaced; sized
+    /// up further here to actually read as a bigger, bolder banner.
+    private static let titleGlyphScale: CGFloat = 36.0 / CGFloat(TileGeometry.tileHeight)
+    /// Height ≈ 20pt, scaled up from the previous system-font subtitle's
+    /// 14pt to stay proportionate to the larger title above.
+    private static let levelGlyphScale: CGFloat = 20.0 / CGFloat(TileGeometry.tileHeight)
 }
 
 // MARK: - Preview
