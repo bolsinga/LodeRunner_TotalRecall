@@ -93,8 +93,8 @@ public struct LevelPassDialog: View {
                     }
                 }
                 if animationFinished {
-                    Text("TAP OR PRESS ANY KEY").font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.7))
+                    arcadeText("TAP OR PRESS ANY KEY", scale: Self.hintGlyphScale)
+                        .opacity(0.7)
                 }
             }
             .padding(24)
@@ -212,6 +212,10 @@ public struct LevelPassDialog: View {
     /// row (labels + counts), scaled up from the previous system-font
     /// size (14pt) to stay proportionate to the larger title above.
     private static let bodyGlyphScale: CGFloat = 20.0 / CGFloat(TileGeometry.tileHeight)
+    /// Height ≈ 14pt — the "TAP OR PRESS ANY KEY" dismiss hint, scaled up
+    /// from the previous system-font size (10pt) by the same proportion as
+    /// the other rows above.
+    private static let hintGlyphScale: CGFloat = 14.0 / CGFloat(TileGeometry.tileHeight)
 }
 
 // MARK: - Preview
