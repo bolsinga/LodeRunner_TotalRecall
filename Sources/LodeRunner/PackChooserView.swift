@@ -31,6 +31,15 @@ public struct PackChooserView: View {
         let pack: LevelPack
         let theme: Theme
         let startingLevelIndex: Int
+        /// Defaulted so every construction gets a fresh value — makes
+        /// `.id(currentGame)` force a new `GameView` (and thus a fresh
+        /// `GameSessionDriver`/session) on every "start a game" action,
+        /// even when pack/theme/startingLevelIndex exactly match the
+        /// previous selection (e.g. picking the same pack again after
+        /// game over). Without this, re-picking identical values left
+        /// the old, already-`.gameOver` session mounted, since SwiftUI's
+        /// `.id()` saw an equal value and didn't rebuild.
+        let attempt = UUID()
     }
 
     /// Which overlay (if any) is on top of the current game.
@@ -138,6 +147,11 @@ public struct PackChooserView: View {
     /// `true` matches the JS default (`gamepadMode = 1`, `key.js:130`,
     /// `storage.js:459-462`) — see `GamepadInput.isEnabled`.
     @AppStorage(Self.gamepadEnabledKey) private var gamepadEnabled: Bool = true
+    /// tvOS only — no JS equivalent (no Siri Remote there); see
+    /// `GamepadInput.microGamepadSplitDigButtons`. `false` default keeps
+    /// the single auto-dig button behavior.
+    @AppStorage(Self.microGamepadSplitDigButtonsKey) private var microGamepadSplitDigButtons:
+        Bool = false
 
     static let soundEnabledKey = "loderunner_soundEnabled"
     static let speedIndexKey = "loderunner_speedIndex"
@@ -145,6 +159,7 @@ public struct PackChooserView: View {
     static let repeatActionsEnabledKey = "loderunner_repeatActionsEnabled"
     static let redhatModeEnabledKey = "loderunner_redhatModeEnabled"
     static let gamepadEnabledKey = "loderunner_gamepadEnabled"
+    static let microGamepadSplitDigButtonsKey = "loderunner_microGamepadSplitDigButtons"
 
     /// Deliberate namespacing: prefix every port `@AppStorage` key with
     /// `loderunner_` so `UserDefaults` inspection reads cleanly. Same
@@ -206,6 +221,7 @@ public struct PackChooserView: View {
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
                 gamepadEnabled: $gamepadEnabled,
+                microGamepadSplitDigButtons: $microGamepadSplitDigButtons,
                 isPaused: overlay != nil,
                 onExit: { overlay = .menu },
                 demoRecord: demoState.record,
@@ -246,6 +262,7 @@ public struct PackChooserView: View {
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
                 gamepadEnabled: $gamepadEnabled,
+                microGamepadSplitDigButtons: $microGamepadSplitDigButtons,
                 // Freeze the sim whenever any overlay is on top of us —
                 // JS `main.js:1668-1670`'s `GAME_PAUSE`.
                 isPaused: overlay != nil,
@@ -458,6 +475,7 @@ public struct PackChooserView: View {
                 repeatActionsEnabled: $repeatActionsEnabled,
                 redhatModeEnabled: $redhatModeEnabled,
                 gamepadEnabled: $gamepadEnabled,
+                microGamepadSplitDigButtons: $microGamepadSplitDigButtons,
                 onClose: { self.overlay = .menu }
             )
             .environment(\.tileTheme, theme)
