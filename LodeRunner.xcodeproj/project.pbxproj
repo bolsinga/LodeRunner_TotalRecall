@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 110;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -19,11 +19,9 @@
 /* Begin PBXFrameworksBuildPhase section */
 		FE6106E7301A89CC00E74F74 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				FE610716301A8BF200E74F74 /* LodeRunner in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -65,8 +63,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = LodeRunnerApp;
 			packageProductDependencies = (
 				FE610715301A8BF200E74F74 /* LodeRunner */,
@@ -103,7 +99,7 @@
 			packageReferences = (
 				FE610714301A8BF200E74F74 /* XCLocalSwiftPackageReference "../LodeRunner_TotalRecall" */,
 			);
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 110;
 			productRefGroup = FE6106EB301A89CC00E74F74 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -116,26 +112,22 @@
 /* Begin PBXResourcesBuildPhase section */
 		FE6106E8301A89CC00E74F74 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		FE6106E6301A89CC00E74F74 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				FE61071F301A910400E74F74 /* LodeRunnerApp.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		FE610709301A89CD00E74F74 /* Debug */ = {
+		FE610709301A89CD00E74F74 /* Debug configuration for PBXProject "LodeRunner" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -199,7 +191,7 @@
 			};
 			name = Debug;
 		};
-		FE61070A301A89CD00E74F74 /* Release */ = {
+		FE61070A301A89CD00E74F74 /* Release configuration for PBXProject "LodeRunner" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -255,7 +247,7 @@
 			};
 			name = Release;
 		};
-		FE61070C301A89CD00E74F74 /* Debug */ = {
+		FE61070C301A89CD00E74F74 /* Debug configuration for PBXNativeTarget "LodeRunnerApp" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -299,7 +291,7 @@
 			};
 			name = Debug;
 		};
-		FE61070D301A89CD00E74F74 /* Release */ = {
+		FE61070D301A89CD00E74F74 /* Release configuration for PBXNativeTarget "LodeRunnerApp" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -348,19 +340,17 @@
 		FE6106E5301A89CC00E74F74 /* Build configuration list for PBXProject "LodeRunner" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				FE610709301A89CD00E74F74 /* Debug */,
-				FE61070A301A89CD00E74F74 /* Release */,
+				FE610709301A89CD00E74F74 /* Debug configuration for PBXProject "LodeRunner" */,
+				FE61070A301A89CD00E74F74 /* Release configuration for PBXProject "LodeRunner" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		FE61070B301A89CD00E74F74 /* Build configuration list for PBXNativeTarget "LodeRunnerApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				FE61070C301A89CD00E74F74 /* Debug */,
-				FE61070D301A89CD00E74F74 /* Release */,
+				FE61070C301A89CD00E74F74 /* Debug configuration for PBXNativeTarget "LodeRunnerApp" */,
+				FE61070D301A89CD00E74F74 /* Release configuration for PBXNativeTarget "LodeRunnerApp" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
