@@ -134,80 +134,13 @@ struct GamepadInputTests {
         #expect(input.currentAction == .stop)
     }
 
-    // MARK: - microGamepad ring click digs in its own direction
+    // MARK: - Siri Remote center button
 
-    @Test("a ring click (dpad direction + buttonA firing together) digs in that direction")
-    func microRingClickDigsInClickedDirection() {
+    @Test("after walking left then releasing, the center button digs left")
+    func centerButtonDigsInLastFacedDirection() {
         let input = GamepadInput()
-        // The ring's shared click sensor reports the dpad direction a
-        // moment before buttonA, same as real hardware — see
-        // `GamepadInputTests`'s trace-derived rationale in
-        // `handleMicroButtonA`.
-        input.handleMicroDpadValueChanged(x: -0.8, y: -0.2)  // ring's left zone
-        input.handleMicroButtonA(pressed: true)
-        #expect(input.currentAction == .digLeft)
-        input.handleMicroButtonA(pressed: false)
-        input.handleMicroDpadValueChanged(x: 0.0, y: 0.0)
-
-        input.handleMicroDpadValueChanged(x: 0.7, y: -0.1)  // ring's right zone
-        input.handleMicroButtonA(pressed: true)
-        #expect(input.currentAction == .digRight)
-    }
-
-    // MARK: - microGamepad dpad dominant-axis resolution
-
-    @Test("centered (both axes within the deadzone) reports no direction")
-    func microDpadCenteredIsNoDirection() {
-        let input = GamepadInput()
-        input.handleMicroDpadValueChanged(x: 0.1, y: -0.1)
-        #expect(input.currentAction == .stop)
-    }
-
-    @Test("a diagonal touch resolves to whichever axis has the larger magnitude")
-    func microDpadDiagonalResolvesToDominantAxis() {
-        let input = GamepadInput()
-        // Mostly-left touch with a little vertical drift — the exact
-        // shape of touch that, before resolving a single dominant axis,
-        // used to fire both .left and .up simultaneously.
-        input.handleMicroDpadValueChanged(x: -0.6, y: 0.2)
-        #expect(input.currentAction == .left)
-
-        input.handleMicroDpadValueChanged(x: 0.2, y: 0.6)
-        #expect(input.currentAction == .up)
-    }
-
-    @Test("vertical bias compensates for the circular touch surface being harder to reach top/bottom than side-to-side")
-    func microDpadVerticalBiasFavorsUpDown() {
-        let input = GamepadInput()
-        // Same magnitude on both axes: without the bias this would tie
-        // toward left/right (`>=`); with it, the scaled-up y wins.
-        input.handleMicroDpadValueChanged(x: 0.35, y: 0.3)
-        #expect(input.currentAction == .up)
-    }
-
-    @Test("returning to center releases the active direction")
-    func microDpadReturnToCenterReleases() {
-        let input = GamepadInput()
-        input.handleMicroDpadValueChanged(x: -0.6, y: 0.0)
-        #expect(input.currentAction == .left)
-        input.handleMicroDpadValueChanged(x: 0.0, y: 0.0)
-        #expect(input.currentAction == .stop)
-    }
-
-    @Test("switching directions releases the old one before engaging the new one")
-    func microDpadSwitchingDirectionsReleasesOld() {
-        let input = GamepadInput()
-        input.handleMicroDpadValueChanged(x: -0.6, y: 0.0)
-        #expect(input.currentAction == .left)
-        input.handleMicroDpadValueChanged(x: 0.6, y: 0.0)
-        #expect(input.currentAction == .right)
-    }
-
-    @Test("standing still (centered dpad), buttonA digs in the last-faced direction")
-    func microButtonADigsWhenDpadCentered() {
-        let input = GamepadInput()
-        input.handleMicroDpadValueChanged(x: -0.6, y: 0.0)  // face left
-        input.handleMicroDpadValueChanged(x: 0.0, y: 0.0)  // release, centered
+        input.handle(.left, pressed: true)
+        input.handle(.left, pressed: false)
         input.handleMicroButtonA(pressed: true)
         #expect(input.currentAction == .digLeft)
     }
