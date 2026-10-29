@@ -7,7 +7,7 @@ on:
     branches: [ dev ]
 
 jobs:
-  build:
+  test-package:
     runs-on: xcode-27
 
     steps:
@@ -16,19 +16,33 @@ jobs:
       run: sw_vers
     - name: Available Xcodes
       run: ls /Applications | grep Xcode
-    - name: Switch to Xcode 26
+    - name: Switch to Xcode 27
       run: sudo xcode-select -s "/Applications/Xcode_27.0.app/Contents/Developer"
     - name: Xcode Version
       run: xcodebuild -version
+    - name: Test LodeRunner package
+      run: swift test -v -Xswiftc -warnings-as-errors
+
+  build-app:
+    runs-on: xcode-27
+
+    strategy:
+      fail-fast: false
+      matrix:
+        destination:
+          - 'generic/platform=iOS Simulator'
+          - 'platform=macOS'
+          - 'generic/platform=tvOS Simulator'
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Switch to Xcode 27
+      run: sudo xcode-select -s "/Applications/Xcode_27.0.app/Contents/Developer"
     - name: Install iOS
       run: xcodebuild -downloadPlatform iOS
     - name: Install tvOS
       run: xcodebuild -downloadPlatform tvOS
-    - name: Show SDKs
-      run: xcodebuild -showsdks
     - name: Show Destinations
       run: xcodebuild -scheme LodeRunnerApp -showdestinations
-    - name: Test LodeRunner package
-      run: swift test -v -Xswiftc -warnings-as-errors
-    - name: Build LodeRunnerApp (iOS / macOS / tvOS)
-      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerApp -destination "generic/platform=iOS Simulator" -destination "generic/platform=macOS" -destination "generic/platform=tvOS Simulator" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS=""
+    - name: Build LodeRunnerApp
+      run: xcodebuild -verbose -skipPackagePluginValidation -scheme LodeRunnerApp -destination '${{ matrix.destination }}' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" CODE_SIGN_ENTITLEMENTS=""
